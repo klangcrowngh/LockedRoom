@@ -47,9 +47,9 @@ function loadPreset(i){
   // сцены по умолчанию: B — вариация, C — брейк без бочки и баса, D — копия A
   for (const tr of tracks){ tr.scn[1] = cloneScene(tr.scn[0]); tr.scn[3] = cloneScene(tr.scn[0]);
     tr.scn[2] = ['Kicks','Bass'].includes((LIBM[tr.v]||{}).cat) ? newScene() : cloneScene(tr.scn[0]); }
-  scene = 1; tracks.forEach(bindScene); variate(3, true); scene = 0; tracks.forEach(bindScene); dying = [];
+  if (!P.blank){ scene = 1; tracks.forEach(bindScene); variate(3, true); scene = 0; } tracks.forEach(bindScene); dying = [];
   tracks.forEach(buildChain);
-  arr = tplArr('club'); setSongOn(false, true);
+  arr = tplArr(P.tpl || 'club'); setSongOn(false, true);
   linkFlash = {}; makeSprites(); if (!fxUser) setFx(defaultFx(P)); updateUI(); renderLib(); renderBlocks();
 }
 
@@ -1285,6 +1285,12 @@ async function autosave(force){
   if (useCloud) try { await kvSet('lr_auto', s); } catch (e) {}  // облако — следом
 }
 setInterval(autosave, 10000);
+let lastSession = null;
+function restoreLastSession(){
+  if (!lastSession) return;
+  try { deserialize(lastSession.d); curProj = lastSession.cur || null; updateUI(); toast('last session restored'); }
+  catch (e) { toast('cannot restore'); }
+}
 async function loadAutosave(){
   const parse = v => { try { const o = JSON.parse(v); return o && o.d ? o : (o && o.tracks ? { ts:0, d:o } : null); } catch (e) { return null; } };
   const loc = parse(local.get('lr_auto'));
@@ -1297,7 +1303,7 @@ function onHide(){
   releasePads();
   if (playing) setPlaying(false);
   if (ac && ac.state === 'running') ac.suspend().catch(()=>{});
-  autosave(true);
+  autosave();
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); });
 addEventListener('pagehide', onHide);
@@ -1315,6 +1321,14 @@ function renderDrawer(){
   act.querySelector('#pjName').value = curProj ? curProj.name : '';
   act.querySelector('#pjName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') saveProject(e.target.value); });
   act.querySelector('#pjSave').onclick = () => saveProject($('pjName').value);
+  if (lastSession && lastSession.d){
+    const r = document.createElement('div'); r.className = 'pr';
+    const nm = lastSession.cur ? lastSession.cur.name : lastSession.d.preset;
+    const when = lastSession.ts ? new Date(lastSession.ts) : null;
+    r.innerHTML = '<div class="t">↺ Last session<small>' + escapeHtml(nm || '') + (when ? ' · ' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '') + '</small></div>';
+    r.onclick = () => { restoreLastSession(); closeDrawer(); };
+    box.appendChild(r);
+  }
   if (!projIndex.length) H('pempty', 'no saved tracks yet');
   for (const p of projIndex){
     const r = document.createElement('div'); r.className = 'pr' + (curProj && curProj.id === p.id ? ' cur' : '');
@@ -1550,13 +1564,15 @@ $('gate').onpointerup = e=>{
 };
 $('coachOk').onclick = ()=>{ document.body.classList.remove('coach'); local.set('lr_coach', '1'); resize(); };
 
-makeGrain(); loadPreset(0); resize(); requestAnimationFrame(draw);
+const START_POOL = PRESETS.map((p, i) => i).filter(i => !PRESETS[i].blank);
+const FIRST_PRESET = START_POOL[Math.floor(Math.random()*START_POOL.length)];   // каждый запуск — случайный пресет
+makeGrain(); loadPreset(FIRST_PRESET); resize(); requestAnimationFrame(draw);
 (async function boot(){
   await loadIndex();
   try {
     if (location.hash.startsWith('#p=')){ deserialize(await decodeProject(location.hash)); toast('track from link'); history.replaceState(null, '', location.pathname); return; }
-    const auto = await loadAutosave();
-    if (auto){ deserialize(auto.d); curProj = auto.cur || null; updateUI(); lastAuto = JSON.stringify({ cur:curProj, d:serialize() }); toast('last session restored'); }
-  } catch (e) { console.warn('restore failed', e); loadPreset(0); }
+    lastSession = await loadAutosave();      // запоминаем — откроется из Tracks → Last session
+    lastAuto = JSON.stringify({ cur:curProj, d:serialize() });   // нетронутый случайный пресет не затирает прошлую сессию
+  } catch (e) { console.warn('restore failed', e); loadPreset(FIRST_PRESET); }
   finally { bootDone(); }
 })();

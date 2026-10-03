@@ -50,6 +50,9 @@ const BASE = { bass:12, sub:12, ebm:12, rumble:12, reese:12, fmbass:12, acid:24,
 const NOTE_IX = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
 
 const PRESETS = [
+  // ---------- чистый лист: звуки есть, связей нет ----------
+  { genre:'New', ref:'empty canvas · build from scratch', name:'BLANK', bpm:128, acc:'#ff2e3a', root:31, drive:3, grit:0.6, cut:2400, fx:'warp', tpl:'loop', blank:true,
+    voices:['kick','clap','hat808','ohat','sub','pluck'], pat:{} },
   { genre:'Originals', ref:'locked room', name:'ACID TECHNO', bpm:138, acc:'#c8ff1a', root:33, drive:4, grit:1.2, cut:2800,
     voices:['kick','acid303','clap','hat808','ohat','ride','sub','cowbell'], pat:{
     kick:'x...x...x...x...', acid303:'xx.x.xx.x.xxx.x.', clap:'....x.......x...', hat808:'xxxxxxxxxxxxxxxx',
@@ -215,5 +218,5 @@ const PRESETS = [
            snare909:{ vol:0.7 }, hat808:{ vol:0.5 }, laser:{ dly:0.3, dlyT:3, rev:0.3 }, sweepup:{ vol:0.7 } } },
 ];
 // порядок жанров в списке Tracks
-const GENRE_ORDER = ['Originals','Acid','Detroit / Techno','House','Trance','Minimal / Dub','EBM / Electro','Cinematic'];
+const GENRE_ORDER = ['New','Originals','Acid','Detroit / Techno','House','Trance','Minimal / Dub','EBM / Electro','Cinematic'];
 PRESETS.sort((a, b) => GENRE_ORDER.indexOf(a.genre) - GENRE_ORDER.indexOf(b.genre));
