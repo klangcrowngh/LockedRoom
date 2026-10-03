@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>LOCKED ROOM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<!-- иконки -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></symbol>
+  <symbol id="i-vary" viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+  <symbol id="i-fx" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18M3 15h6M9 8h6M15 17h6"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 12c2.5-7 5-7 7.5 0s5 7 7.5 0 3-5 5-2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+</svg>
+
+<canvas id="field"></canvas>
+<div class="fx" id="grain"></div>
+<div class="fx" id="scan"></div>
+<div class="fx" id="vig"></div>
+
+<div id="top" class="hud">
+  <div class="brand dk">
+    <div class="logo">LOCKED<i>/</i>ROOM</div>
+    <div class="sub" id="presetName">—</div>
+  </div>
+  <button id="titleBtn" class="mo"><span class="tt"><small id="titleCap">PRESET</small><b id="titleName">—</b></span><svg class="ic"><use href="#i-down"/></svg></button>
+  <div class="ctrls">
+    <button id="preBtn" class="dk"><svg class="ic"><use href="#i-list"/></svg> Tracks</button>
+    <button class="val" id="bpm"><b>134</b> BPM</button>
+    <span class="sep"></span>
+    <button id="fxBtn"><svg class="ic"><use href="#i-wave"/></svg><span class="dk"> FX · </span><span id="fxName">Tunnel</span></button>
+    <button id="libBtn"><svg class="ic"><use href="#i-plus"/></svg><span class="dk"> Sound</span></button>
+    <button id="clear" class="clearBtn warn dk">Clear</button>
+  </div>
+</div>
+
+<div id="bottom" class="hud">
+  <div id="coach" class="mo">
+    <ol>
+      <li><b>tap a sound</b> on the circle</li>
+      <li><b>tap time dots</b> — it plays on those steps</li>
+      <li><b>tap the center</b> — play / stop · <b>FX</b> — live effects</li>
+    </ol>
+    <button id="coachOk" class="acc">Got it</button>
+  </div>
+  <div id="perform">
+    <div class="grab mo"></div>
+    <div class="prow main">
+      <div class="scenes"><span class="lbl dk">Scene</span>
+        <div class="seg"><button class="scn" data-s="0">A</button><button class="scn" data-s="1">B</button><button class="scn" data-s="2">C</button><button class="scn" data-s="3">D</button></div>
+        <button id="scCopy" class="tb" title="copy this scene, then tap a scene to paste"><svg class="ic"><use href="#i-copy"/></svg><small>Copy</small></button>
+      </div>
+      <button class="lenBtn dk">16 steps</button>
+      <div class="swing dk"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
+      <button id="varBtn" class="tb acc"><svg class="ic"><use href="#i-vary"/></svg><small>Vary</small></button>
+      <button id="undoBtn" class="tb"><svg class="ic"><use href="#i-undo"/></svg><small>Undo</small></button>
+      <button id="padsBtn" class="tb mo"><svg class="ic"><use href="#i-fx"/></svg><small>FX</small></button>
+    </div>
+    <div class="sheetHead mo"><span>Live FX · hold a pad</span><button id="padsClose"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="prow pads">
+      <button class="pad" data-fx="lpf">Filter</button>
+      <button class="pad" data-fx="hpf">Highpass</button>
+      <button class="pad" data-fx="kill">Kill Low</button>
+      <button class="pad" data-fx="wash">Wash</button>
+      <button class="pad" data-fx="roll4">Roll ¼</button>
+      <button class="pad" data-fx="roll8">Roll ⅛</button>
+      <button class="pad" data-fx="build">Build ↑</button>
+      <button class="pad mo clearBtn warn">Clear</button>
+    </div>
+    <div class="prow extra mo">
+      <button class="lenBtn">16 steps</button>
+      <div class="swing"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
+    </div>
+  </div>
+  <div id="panel">
+    <div class="grab mo"></div>
+    <div class="head">
+      <div class="nm" id="pName">—</div>
+      <button id="pClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
+      <div class="chips">
+        <button id="pSolo" class="acc">◉ Solo</button><button id="pMute">Mute</button>
+        <button id="pSwap">⇄ Swap</button><button id="pReset">Reset</button>
+        <button id="pRemove" class="warn">Remove</button>
+      </div>
+    </div>
+    <div class="ptabs mo" id="pTabs"><button data-pt="steps" class="on">Steps</button><button data-pt="sound">Sound</button><button data-pt="notes" id="pTabNotes">Notes</button></div>
+    <div class="stepsWrap">
+      <div class="row">
+        <span class="dk">Steps</span>
+        <div class="tabs" id="stTabs"><button data-m="link" class="on">Link</button><button data-m="vel">Velocity</button><button data-m="prob">Chance</button><button data-m="rat">Ratchet</button></div>
+        <span class="sp" id="stHint">· tap = link / unlink</span>
+        <button id="sAll">All</button><button id="sNone">None</button>
+      </div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="knobs" id="knobs"></div>
+    <div class="notesWrap" id="notesWrap">
+      <div class="row"><span>Notes per step</span><span class="sp">· drag ↕ to change · click to hear</span><button id="nRand">Random</button><button id="nFlat">Flat</button></div>
+      <div class="notes" id="notes"></div>
+      <div class="ntype"><input id="nText" placeholder="type notes: A4 E5 A5 C6 …  or semitones 0 7 12 …  ·  - = rest" spellcheck="false"><button id="nApply" class="acc">Apply</button><span class="msg" id="nMsg"></span></div>
+    </div>
+  </div>
+  <div id="hint"><b>drag a line</b> from a time dot <i>●</i> to a sound — it plays at that moment<br><b>tap a sound</b>, then <b>tap time dots</b> — link / unlink · <b>hold</b> the pads — live effects · <b>tap the center</b> — play / stop</div>
+</div>
+
+<aside id="pre"></aside>
+<aside id="lib">
+  <div class="lhead"><div><b id="libTitle">LIBRARY</b><small id="libSub">click to listen</small></div><button id="libClose"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div id="libList"></div>
+  <div class="lfoot" id="libFoot"></div>
+</aside>
+
+<div id="bpmPop">
+  <div class="row"><span>Tempo</span><b id="bpmPopV">134</b><span>BPM</span></div>
+  <input type="range" id="bpmSlider" min="60" max="200" step="1" value="134">
+  <div class="marks"><span>60</span><span>100</span><span>130</span><span>160</span><span>200</span></div>
+</div>
+<div id="toast"></div>
+
+<div id="gate">
+  <h1>LOCKED<i>/</i>ROOM</h1>
+  <p>time · links · sound</p>
+  <div class="go">[ ENTER ]</div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
