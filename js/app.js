@@ -7,6 +7,8 @@
 const MAXS = 32, S_R = 0.86, MAX_SOUNDS = 12, SCENES = 4;
 let T_R = 0.26;               // радиус кольца времени (доля RAD) — подбирается под экран в resize()
 let STEPS = 16;
+// адрес серверной части бота (Cloudflare Worker из server/worker.js). Пусто — файлы просто скачиваются.
+const BOT_SEND_URL = 'https://locked-room-bot.klangcrown.workers.dev';
 let P, presetIdx = 0, bpm = 134, tracks = [], uid = 1;
 let scene = 0, queuedScene = -1, swing = 0, curProj = null;
 let linkFlash = {};          // "trackId:step" -> время срабатывания
@@ -47,12 +49,13 @@ function loadPreset(i){
     tr.scn[2] = ['Kicks','Bass'].includes((LIBM[tr.v]||{}).cat) ? newScene() : cloneScene(tr.scn[0]); }
   scene = 1; tracks.forEach(bindScene); variate(3, true); scene = 0; tracks.forEach(bindScene); dying = [];
   tracks.forEach(buildChain);
-  linkFlash = {}; makeSprites(); if (!fxUser) setFx(defaultFx(P)); updateUI(); renderLib();
+  arr = tplArr('club'); setSongOn(false, true);
+  linkFlash = {}; makeSprites(); if (!fxUser) setFx(defaultFx(P)); updateUI(); renderLib(); renderBlocks();
 }
 
 function firstStep(tr){ const i = tr.pat.indexOf(true); return i < 0 ? 0 : i; }
 function hit(tr, t, step = firstStep(tr), vel = 1){
-  curT = t; if (tr.id) { tr.flash = t; vq.push({tr, t}); if (vq.length > 200) vq.shift(); }
+  curT = t; if (tr.id && !RENDERING) { tr.flash = t; vq.push({tr, t}); if (vq.length > 200) vq.shift(); }
   CUR = tr; PIT = tr.params.pitch; DK = tr.params.decay; STEP = step; VEL = vel;
   try { SYNTH[tr.v](t, tr); } finally { CUR = null; PIT = 0; DK = 1; STEP = 0; VEL = 1; }
 }
@@ -78,6 +81,17 @@ function duckAt(tr, t){
   gn.setTargetAtTime(1, t + 0.012, r/3);             // плавный возврат
 }
 function processStep(s, t){
+  if (songOn && s % STEPS === 0){                                     // аранжировка: сцены по блокам
+    songBar = songBar < 0 ? 0 : songBar + 1;
+    const total = arrTotal();
+    if (songBar >= total){
+      if (songLoop) songBar = 0;
+      else { songBar = total - 1; songEnded = true; setTimeout(() => { if (playing) setPlaying(false); }, Math.max(0, (t - ac.currentTime)*1000)); }
+    }
+    const blk = blockAt(songBar).blk;
+    if (blk && blk.s !== scene) applyScene(blk.s);
+  }
+  if (songEnded) return;
   if (queuedScene >= 0 && s % STEPS === 0) applyScene(queuedScene);   // сцена меняется с начала такта
   let i = s % STEPS;
   if (rollReq && !roll) roll = { len:rollReq, s0:s, base:i - (i % rollReq) };
@@ -105,7 +119,7 @@ setInterval(scheduler, IS_MOBILE ? 25 : 20);
 
 function setPlaying(v){
   playing = v;
-  if (v){ ac.resume(); step = 0; stepLog = []; nextT = ac.currentTime+0.06; roll = null; }
+  if (v){ ac.resume(); step = 0; stepLog = []; nextT = ac.currentTime+0.06; roll = null; songBar = -1; songEnded = false; }
   else if (typeof releasePads === 'function') releasePads();
 }
 
@@ -116,6 +130,7 @@ function applyScene(k){
   updatePerform();
 }
 function setScene(k){
+  if (songOn && !copyArm){ setSongOn(false); toast('song mode off · manual scenes'); }
   if (copyArm){ for (const tr of tracks) tr.scn[k] = cloneScene(tr.scn[scene]); copyArm = false; toast('scene '+'ABCD'[scene]+' → '+'ABCD'[k]); applyScene(k); haptic('medium'); return; }
   if (playing && k !== scene){ queuedScene = k; updatePerform(); haptic('light'); }
   else applyScene(k);
@@ -408,7 +423,7 @@ function spawnFx(ev){
 // ============================================================
 let frameN = 0;
 function draw(){
-  try { drawFrame(); } catch (err) { console.warn(err); }
+  if (!RENDERING) try { drawFrame(); } catch (err) { console.warn(err); }
   requestAnimationFrame(draw);
 }
 function drawFrame(){
@@ -650,7 +665,7 @@ cv.addEventListener('pointerdown', e=>{
   const x = e.clientX, y = e.clientY;
   if (Math.hypot(x-C.x, y-C.y) < T_R*RAD-22){ setPlaying(!playing); haptic('medium'); return; }
   const h = pick(x,y) || pickLink(x, y, e.pointerType==='touch' ? 14 : 8);
-  if (!h){ closePanel(); closeLib(); closeDrawer(); if (document.body.classList.contains('pads-open')) setPadsOpen(false); }
+  if (!h){ closePanel(); closeLib(); closeDrawer(); if (document.body.classList.contains('pads-open')) setPadsOpen(false); if (document.body.classList.contains('song-open')) setSongOpen(false); }
   if (h) drag = { ...h, x, y, p:{x,y}, moved:false, target:null };
 });
 cv.addEventListener('pointermove', e=>{
@@ -907,6 +922,7 @@ function updatePerform(){
     b.classList.toggle('on', k === scene); b.classList.toggle('q', k === queuedScene); b.classList.toggle('has', sceneHas(k)); });
   $('scCopy').classList.toggle('on', copyArm);
   document.querySelectorAll('.lenBtn').forEach(b => b.textContent = STEPS + ' steps');
+  updateSongProgress();
 }
 document.querySelectorAll('.scn').forEach(b => b.onclick = () => setScene(+b.dataset.s));
 $('scCopy').onclick = ()=>{ copyArm = !copyArm; updatePerform(); if (copyArm) toast('tap a scene to paste '+'ABCD'[scene]); };
@@ -950,6 +966,195 @@ document.querySelectorAll('.pad[data-fx]').forEach(b => {
 });
 
 // ============================================================
+//  АРАНЖИРОВКА (Song): цепочка блоков «сцена × тактов», сцены переключаются сами
+// ============================================================
+const BAR_OPTS = [1, 2, 4, 8, 16];
+let arr = [], selBlk = 0, songOn = false, songLoop = true, songBar = -1, songEnded = false, RENDERING = false, expFmt = 'mp3';
+const TEMPLATES = {
+  club:  [[2,4],[0,8],[1,8],[2,4],[3,8],[0,4]],      // интро-брейк → основа → вариация → брейк → дроп → аутро
+  short: [[0,4],[1,4],[2,2],[0,4]],
+  loop:  [[0,1]],
+};
+const tplArr = k => TEMPLATES[k].map(([s, b]) => ({ s, b }));
+const arrTotal = () => arr.reduce((a, x) => a + x.b, 0) || 1;
+function blockAt(bar){
+  let acc = 0;
+  for (let k=0;k<arr.length;k++){ if (bar < acc + arr[k].b) return { idx:k, blk:arr[k], start:acc }; acc += arr[k].b; }
+  return { idx:arr.length-1, blk:arr[arr.length-1], start:acc - (arr.length ? arr[arr.length-1].b : 0) };
+}
+const fmtTime = sec => Math.floor(sec/60) + ':' + String(Math.round(sec%60)).padStart(2, '0');
+
+function setSongOn(on, quiet){
+  songOn = on; songBar = -1; songEnded = false; queuedScene = -1;
+  $('songOn').classList.toggle('on', on); $('songOn').textContent = on ? '■ Song mode on' : '▶ Song mode';
+  $('songBtn').classList.toggle('on', on);
+  if (!quiet){ toast(on ? 'song mode · scenes follow the arrangement' : 'song mode off'); haptic('medium'); }
+  if (on && !playing && ac) applyScene(arr[0] ? arr[0].s : 0);
+  renderBlocks();
+}
+function setSongOpen(on){
+  document.body.classList.toggle('song-open', on);
+  if (on && document.body.classList.contains('pads-open')) setPadsOpen(false);
+  renderBlocks(); resize(); updateBack();
+}
+function renderBlocks(){
+  const box = $('blocks'); if (!box) return;
+  selBlk = Math.max(0, Math.min(arr.length - 1, selBlk));
+  box.innerHTML = '';
+  arr.forEach((b, k) => {
+    const el = document.createElement('div'); el.className = 'blk'; el.dataset.s = b.s;
+    el.style.width = (58 + Math.min(16, b.b)*5) + 'px';
+    if (k === selBlk) el.classList.add('sel');
+    el.innerHTML = '<div class="sc">' + 'ABCD'[b.s] + '<small>' + b.b + (b.b === 1 ? ' bar' : ' bars') + '</small></div><div class="bar"></div>';
+    el.onclick = () => { selBlk = k; renderBlocks(); haptic('select'); };   // тап — выбрать блок
+    box.appendChild(el);
+  });
+  // панель выбранного блока
+  const b = arr[selBlk];
+  document.querySelectorAll('#edScene button').forEach(x => x.classList.toggle('on', b && +x.dataset.v === b.s));
+  document.querySelectorAll('#edBars button').forEach(x => x.classList.toggle('on', b && +x.dataset.v === b.b));
+  $('edLeft').disabled = selBlk <= 0; $('edRight').disabled = selBlk >= arr.length - 1; $('edDel').disabled = arr.length <= 1;
+  const sec = arrTotal()*STEPS*stepDur();
+  $('songLen').textContent = arrTotal() + ' bars · ' + fmtTime(sec);
+  $('songLoop').classList.toggle('on', songLoop);
+  updateSongProgress();
+}
+function updateSongProgress(){
+  const els = document.querySelectorAll('#blocks .blk'); if (!els.length) return;
+  const pos = playPos();
+  let cur = -1, frac = 0;
+  if (songOn && playing && songBar >= 0){
+    const r = blockAt(songBar); cur = r.idx;
+    frac = Math.min(1, ((songBar - r.start) + (pos >= 0 ? (pos % STEPS)/STEPS : 0)) / r.blk.b);
+  }
+  els.forEach((el, k) => { el.classList.toggle('cur', k === cur); el.lastChild.style.width = k === cur ? (frac*100) + '%' : (k < cur ? '100%' : '0'); });
+}
+$('songBtn').onclick = () => setSongOpen(!document.body.classList.contains('song-open'));
+$('songClose').onclick = () => setSongOpen(false);
+$('songOn').onclick = () => setSongOn(!songOn);
+$('songLoop').onclick = () => { songLoop = !songLoop; renderBlocks(); toast(songLoop ? 'loop on' : 'stops at the end'); };
+// новый блок — сразу после выбранного (следующая сцена, та же длина)
+function addBlock(copy){
+  if (arr.length >= 32){ toast('max 32 blocks'); return; }
+  const b = arr[selBlk] || { s:0, b:4 };
+  arr.splice(selBlk + 1, 0, { s: copy ? b.s : (b.s + 1) % 4, b: b.b }); selBlk++;
+  renderBlocks(); scrollToSel(); haptic('select');
+}
+function scrollToSel(){ const el = document.querySelectorAll('#blocks .blk')[selBlk]; if (el) el.scrollIntoView({ block:'nearest', inline:'nearest', behavior:'smooth' }); }
+$('blkAdd').onclick = () => addBlock(false);
+$('edDup').onclick = () => addBlock(true);
+$('edDel').onclick = () => {
+  if (arr.length <= 1){ toast('at least one block'); return; }
+  arr.splice(selBlk, 1); selBlk = Math.min(selBlk, arr.length - 1); renderBlocks(); haptic('light');
+};
+$('edLeft').onclick = () => { if (selBlk > 0){ [arr[selBlk-1], arr[selBlk]] = [arr[selBlk], arr[selBlk-1]]; selBlk--; renderBlocks(); scrollToSel(); } };
+$('edRight').onclick = () => { if (selBlk < arr.length - 1){ [arr[selBlk+1], arr[selBlk]] = [arr[selBlk], arr[selBlk+1]]; selBlk++; renderBlocks(); scrollToSel(); } };
+document.querySelectorAll('#edScene button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].s = +x.dataset.v; renderBlocks(); haptic('select'); } });
+document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].b = +x.dataset.v; renderBlocks(); haptic('select'); } });
+document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { arr = tplArr(b.dataset.tpl); selBlk = 0; songBar = -1; renderBlocks(); toast('template · ' + b.textContent); });
+$('scCopy2').onclick = () => $('scCopy').click();
+
+// ============================================================
+//  ЭКСПОРТ: офлайн-рендер аранжировки → WAV / MP3 → скачать или отправить в чат бота
+// ============================================================
+function renderStep(i, t){
+  const sd = stepDur(), fired = [];
+  for (const tr of tracks){
+    if (!tr.pat[i] || tr.mute) continue;
+    if (tr.prob[i] < 1 && Math.random() > tr.prob[i]) continue;
+    const sw = (i % 2 === 1) ? Math.min(0.75, swing + (tr.params.swing||0)) * sd * 0.5 : 0;
+    const th = t + sw, r = tr.rat[i] || 1;
+    for (let k=0;k<r;k++) hit(tr, th + k*sd/r, i, tr.vel[i] * (k ? 0.8 : 1));
+    fired.push([tr, th]);
+  }
+  for (const [src, th] of fired) for (const tr of tracks) if (tr.params.duck > 0 && scSource(tr) === src) duckAt(tr, th);
+}
+async function renderSong(onProgress){
+  const sd = stepDur(), barDur = sd*STEPS, bars = arrTotal(), SR = 44100;
+  const barScene = []; for (const b of arr) for (let k=0;k<b.b;k++) barScene.push(b.s);
+  const off = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, Math.ceil((bars*barDur + 3)*SR), SR);
+  if (playing) setPlaying(false); releasePads();
+  const live = engineSnapshot(), liveCh = tracks.map(t => t.ch), liveScene = scene, liveSolo = solo;
+  RENDERING = true; solo = null;
+  try {
+    ac = off; buildGraph(true); tracks.forEach(tr => { tr.ch = null; buildChain(tr); });
+    const scheduleBar = b => { scene = barScene[b]; tracks.forEach(bindScene); for (let i=0;i<STEPS;i++) renderStep(i, b*barDur + i*sd); };
+    scheduleBar(0); if (bars > 1) scheduleBar(1);
+    // планируем по такту на шаг вперёд, приостанавливая рендер — так не копится лишняя нагрузка, и видно прогресс
+    for (let b = 1; b < bars; b++){
+      const bb = b;
+      off.suspend(bb*barDur).then(() => { if (bb + 1 < bars) scheduleBar(bb + 1); onProgress && onProgress(bb/bars); off.resume(); });
+    }
+    return await off.startRendering();
+  } finally {
+    engineRestore(live); tracks.forEach((tr, k) => tr.ch = liveCh[k]); scene = liveScene; tracks.forEach(bindScene);
+    solo = liveSolo; RENDERING = false;
+  }
+}
+function toWav(buf){
+  const n = buf.length, L = buf.getChannelData(0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L;
+  const ab = new ArrayBuffer(44 + n*4), v = new DataView(ab);
+  const str = (o, t) => { for (let i=0;i<t.length;i++) v.setUint8(o+i, t.charCodeAt(i)); };
+  str(0,'RIFF'); v.setUint32(4, 36 + n*4, true); str(8,'WAVE'); str(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,2,true); v.setUint32(24,buf.sampleRate,true);
+  v.setUint32(28,buf.sampleRate*4,true); v.setUint16(32,4,true); v.setUint16(34,16,true); str(36,'data'); v.setUint32(40,n*4,true);
+  let o = 44;
+  for (let i=0;i<n;i++){ const l = Math.max(-1, Math.min(1, L[i])), r = Math.max(-1, Math.min(1, R[i]));
+    v.setInt16(o, l*32767, true); v.setInt16(o+2, r*32767, true); o += 4; }
+  return new Blob([ab], { type:'audio/wav' });
+}
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+async function toMp3(buf, onProgress){
+  if (!window.lamejs) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js');
+  const enc = new lamejs.Mp3Encoder(2, buf.sampleRate, 192), n = buf.length, B = 1152, out = [];
+  const L = buf.getChannelData(0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L;
+  const l16 = new Int16Array(B), r16 = new Int16Array(B);
+  for (let i=0, k=0; i<n; i+=B, k++){
+    const m = Math.min(B, n - i);
+    for (let j=0;j<m;j++){ l16[j] = Math.max(-1, Math.min(1, L[i+j]))*32767; r16[j] = Math.max(-1, Math.min(1, R[i+j]))*32767; }
+    const d = enc.encodeBuffer(m < B ? l16.subarray(0, m) : l16, m < B ? r16.subarray(0, m) : r16);
+    if (d.length) out.push(new Uint8Array(d));
+    if (k % 150 === 0){ onProgress && onProgress(i/n); await new Promise(r => setTimeout(r, 0)); }
+  }
+  const e = enc.flush(); if (e.length) out.push(new Uint8Array(e));
+  return new Blob(out, { type:'audio/mpeg' });
+}
+const trackName = () => ((curProj ? curProj.name : P.name) || 'locked room').replace(/[^\w\- ]+/g, '').trim() || 'locked-room';
+function requestWrite(){
+  return new Promise(res => { if (!tg.requestWriteAccess || !tg.isVersionAtLeast('6.9')) return res(true); try { tg.requestWriteAccess(ok => res(ok)); } catch (e) { res(true); } });
+}
+async function deliver(blob, ext){
+  const name = trackName(), fname = name + '.' + ext;
+  if (inTG && BOT_SEND_URL){
+    if (!(await requestWrite())) throw new Error('allow the bot to message you');
+    const fd = new FormData(); fd.append('initData', tg.initData); fd.append('title', name); fd.append('file', blob, fname);
+    const r = await fetch(BOT_SEND_URL, { method:'POST', body:fd });
+    const j = await r.json().catch(() => ({ ok:false }));
+    if (!r.ok || !j.ok) throw new Error(j.error || 'send failed');
+    return 'sent to the bot chat';
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  return inTG ? 'saved · bot server not configured' : 'downloaded · ' + fname;
+}
+document.querySelectorAll('.fmt button').forEach(b => b.onclick = () => { expFmt = b.dataset.fmt; document.querySelectorAll('.fmt button').forEach(x => x.classList.toggle('on', x === b)); });
+$('renderBtn').onclick = async () => {
+  if (!ac || RENDERING) return;
+  const btn = $('renderBtn'), msg = $('renderMsg'), set = t => { msg.textContent = t; };
+  btn.disabled = true;
+  try {
+    set('rendering 0%');
+    const buf = await renderSong(p => set('rendering ' + Math.round(p*100) + '%'));
+    set(expFmt === 'mp3' ? 'encoding mp3…' : 'encoding wav…');
+    const blob = expFmt === 'mp3' ? await toMp3(buf, p => set('encoding mp3 ' + Math.round(p*100) + '%')) : toWav(buf);
+    set((inTG && BOT_SEND_URL ? 'sending ' : 'saving ') + (blob.size/1048576).toFixed(1) + ' MB…');
+    const res = await deliver(blob, expFmt);
+    set(res); toast(res); haptic('success');
+  } catch (e) { console.warn(e); set('error · ' + (e.message || e)); haptic('error'); }
+  finally { btn.disabled = false; }
+};
+
+// ============================================================
 //  СОХРАНЕНИЕ: проекты, автосохранение, код для обмена
 // ============================================================
 const r3 = x => Math.round(x*1000)/1000;
@@ -966,7 +1171,7 @@ function decScene(o){
   return s;
 }
 function serialize(){
-  return { v:2, preset:P.name, bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode,
+  return { v:2, preset:P.name, bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
     tracks: tracks.map(tr => ({ v:tr.v, m:tr.mute ? 1 : 0, sc: tr.scSrc ? tracks.indexOf(tr.scSrc) : -1,
       p: Object.fromEntries(Object.entries(tr.params).map(([k,x]) => [k, r3(x)])), s: tr.scn.map(encScene) })) };
 }
@@ -975,12 +1180,14 @@ function deserialize(d){
   applyPreset(Math.max(0, PRESETS.findIndex(p => p.name === d.preset)));
   bpm = Math.max(60, Math.min(200, +d.bpm || P.bpm)); swing = +d.swing || 0; STEPS = d.steps === 32 ? 32 : 16;
   scene = Math.max(0, Math.min(SCENES-1, d.scene|0)); queuedScene = -1; undoStack = [];
+  arr = Array.isArray(d.arr) && d.arr.length ? d.arr.slice(0, 32).map(([s, b]) => ({ s:Math.max(0, Math.min(3, s|0)), b:BAR_OPTS.includes(b) ? b : 4 })) : tplArr('club');
+  songLoop = d.loop !== 0; setSongOn(!!d.song, true);
   tracks = d.tracks.slice(0, MAX_SOUNDS).map(x => {
     const tr = makeTrack(SYNTH[x.v] ? x.v : 'perc'); tr.mute = !!x.m; Object.assign(tr.params, x.p || {});
     tr.scn = Array.from({length:SCENES}, (_,k) => decScene(x.s && x.s[k])); bindScene(tr); return tr; });
   d.tracks.forEach((x,k) => { if (tracks[k] && x.sc >= 0 && tracks[x.sc] && x.sc !== k) tracks[k].scSrc = tracks[x.sc]; });
   tracks.forEach(buildChain);
-  linkFlash = {}; makeSprites(); if (d.fx && FX_MODES.includes(d.fx)) setFx(d.fx); showSwing(); updateUI(); renderLib();
+  linkFlash = {}; makeSprites(); if (d.fx && FX_MODES.includes(d.fx)) setFx(d.fx); showSwing(); updateUI(); renderLib(); renderBlocks();
 }
 
 // ---------- хранилище: Telegram CloudStorage (если внутри Telegram) + localStorage ----------
@@ -1217,7 +1424,7 @@ function haptic(kind){
 }
 function updateBack(){
   if (!inTG || !tg.BackButton) return;
-  const any = sel || bpmOpen() || document.body.classList.contains('pads-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
+  const any = sel || bpmOpen() || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
   any ? tg.BackButton.show() : tg.BackButton.hide();
 }
 function applySafeArea(){
@@ -1238,6 +1445,7 @@ if (inTG){
       else if ($('pre').classList.contains('open')) closeDrawer();
       else if (sel) closePanel();
       else if (document.body.classList.contains('pads-open')) setPadsOpen(false);
+      else if (document.body.classList.contains('song-open')) setSongOpen(false);
     });
     applySafeArea();
     for (const ev of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged']) tg.onEvent(ev, () => { applySafeArea(); resize(); });

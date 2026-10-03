@@ -15,6 +15,13 @@ const mtof = m => 440*Math.pow(2,(m-69)/12);
 function initAudio(){
   // на телефоне — больший аудиобуфер ('playback'): меньше щелчков и хрипа, задержка не важна — ноты планируются заранее
   ac = new (window.AudioContext||window.webkitAudioContext)({ latencyHint: IS_MOBILE ? 'playback' : 'interactive' });
+  buildGraph(false);
+  tracks.forEach(buildChain);
+}
+
+// общий граф: компрессор, лимитер, грязь шины, мастер-эффекты, ревербератор, дилей.
+// Строится на текущем ac — живом (динамики) или офлайн (рендер в файл).
+function buildGraph(offline){
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.12;
   master = ac.createGain(); master.gain.value = 0.8;
@@ -33,7 +40,7 @@ function initAudio(){
   washIn = ac.createGain(); washIn.gain.value = 0; washDly = ac.createDelay(2); washDly.delayTime.value = 0.33;
   washFb = ac.createGain(); washFb.gain.value = 0; const wlp = filt('lowpass', 2600), whp = filt('highpass', 300);
   pKill.connect(washIn); washIn.connect(washDly); washDly.connect(wlp); wlp.connect(whp); whp.connect(washFb); washFb.connect(washDly); whp.connect(fxRet);
-  const len = Math.round(ac.sampleRate*(IS_MOBILE ? 1.5 : 2.4)), ir = ac.createBuffer(2, len, ac.sampleRate);   // короче хвост на телефоне — меньше нагрузка
+  const len = Math.round(ac.sampleRate*(IS_MOBILE && !offline ? 1.5 : 2.4)), ir = ac.createBuffer(2, len, ac.sampleRate);   // короче хвост на телефоне — меньше нагрузка
   for (let c=0;c<2;c++){ const d = ir.getChannelData(c); for (let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3); }
   const conv = ac.createConvolver(); conv.buffer = ir;
   revIn = ac.createGain(); const rv = ac.createGain(); rv.gain.value = 0.6;
@@ -43,8 +50,12 @@ function initAudio(){
   dlyIn.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(dw); dw.connect(comp);
   NB = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
   const nd = NB.getChannelData(0); for (let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
-  tracks.forEach(buildChain);
+  dly.delayTime.value = stepDur()*3; washDly.delayTime.value = stepDur()*3;
 }
+
+// снимок / восстановление всего движка — чтобы на время рендера подменить его офлайн-копией
+function engineSnapshot(){ return { ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser }; }
+function engineRestore(e){ ({ ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser } = e); }
 
 function out(rev=0, del=0, life=1){
   const g = ac.createGain(); g.gain.value = VEL; g.connect(CUR && CUR.ch ? CUR.ch.in : bus);
@@ -358,7 +369,7 @@ const TANH_K = 8, TANH = (()=>{ const n=4096, c=new Float32Array(n); for (let i=
 function buildChain(tr){
   if (!ac) return;
   const c = tr.ch = {};
-  c.in = ac.createGain(); c.pre = ac.createGain(); c.drv = ac.createWaveShaper(); c.drv.oversample = IS_MOBILE ? '2x' : '4x'; c.comp = ac.createGain();
+  c.in = ac.createGain(); c.pre = ac.createGain(); c.drv = ac.createWaveShaper(); c.drv.oversample = IS_MOBILE && !RENDERING ? '2x' : '4x'; c.comp = ac.createGain();
   c.lp = filt('lowpass', 20000, 0.7); c.vol = ac.createGain(); c.rev = ac.createGain(); c.dly = ac.createGain();
   c.in.connect(c.pre); c.pre.connect(c.drv); c.drv.connect(c.comp); c.comp.connect(c.lp); c.duck = ac.createGain(); c.lp.connect(c.duck); c.duck.connect(c.vol); c.vol.connect(bus);
   c.vol.connect(c.rev); c.rev.connect(revIn);

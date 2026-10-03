@@ -7,7 +7,7 @@
 <title>LOCKED ROOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=19">
+<link rel="stylesheet" href="css/app.css?v=22">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -22,6 +22,8 @@
   <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 12c2.5-7 5-7 7.5 0s5 7 7.5 0 3-5 5-2"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-song" viewBox="0 0 24 24"><rect x="2" y="7" width="5" height="10"/><rect x="9.5" y="7" width="5" height="10"/><rect x="17" y="7" width="5" height="10"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
 </svg>
 
 <canvas id="field"></canvas>
@@ -54,15 +56,42 @@
     </ol>
     <button id="coachOk" class="acc">Got it</button>
   </div>
+  <div id="song">
+    <div class="grab mo"></div>
+    <div class="shead">
+      <div class="st1"><b>ARRANGEMENT</b><span id="songLen">—</span></div>
+      <button id="songOn" class="acc">Song mode</button><button id="songLoop">Loop</button>
+      <button id="songClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="blocks" id="blocks"></div>
+    <div class="blkEd" id="blkEd">
+      <div class="er"><span class="lbl">Scene</span><div class="bseg" id="edScene"><button data-v="0">A</button><button data-v="1">B</button><button data-v="2">C</button><button data-v="3">D</button></div></div>
+      <div class="er"><span class="lbl">Bars</span><div class="bseg" id="edBars"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button></div></div>
+      <div class="er acts"><button id="edLeft" title="move left">←</button><button id="edRight" title="move right">→</button><button id="edDup">Duplicate</button><button id="edDel" class="warn">Delete</button></div>
+    </div>
+    <div class="srow">
+      <span class="lbl">Template</span>
+      <button data-tpl="club">Club</button><button data-tpl="short">Short</button><button data-tpl="loop">Loop A</button>
+      <span class="sp"></span>
+      <button id="blkAdd">+ Block</button><button id="scCopy2">⧉ Copy scene</button>
+    </div>
+    <div class="srow exp">
+      <span class="lbl">Export</span>
+      <div class="fmt"><button data-fmt="mp3" class="on">MP3</button><button data-fmt="wav">WAV</button></div>
+      <button id="renderBtn" class="acc"><svg class="ic"><use href="#i-save"/></svg> <span id="renderLbl">Render &amp; save</span></button>
+      <span class="msg" id="renderMsg"></span>
+    </div>
+  </div>
   <div id="perform">
     <div class="grab mo"></div>
     <div class="prow main">
       <div class="scenes"><span class="lbl dk">Scene</span>
         <div class="seg"><button class="scn" data-s="0">A</button><button class="scn" data-s="1">B</button><button class="scn" data-s="2">C</button><button class="scn" data-s="3">D</button></div>
-        <button id="scCopy" class="tb" title="copy this scene, then tap a scene to paste"><svg class="ic"><use href="#i-copy"/></svg><small>Copy</small></button>
+        <button id="scCopy" class="tb dk" title="copy this scene, then tap a scene to paste"><svg class="ic"><use href="#i-copy"/></svg><small>Copy</small></button>
       </div>
       <button class="lenBtn dk">16 steps</button>
       <div class="swing dk"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
+      <button id="songBtn" class="tb"><svg class="ic"><use href="#i-song"/></svg><small>Song</small></button>
       <button id="varBtn" class="tb acc"><svg class="ic"><use href="#i-vary"/></svg><small>Vary</small></button>
       <button id="undoBtn" class="tb"><svg class="ic"><use href="#i-undo"/></svg><small>Undo</small></button>
       <button id="padsBtn" class="tb mo"><svg class="ic"><use href="#i-fx"/></svg><small>FX</small></button>
@@ -136,8 +165,8 @@
   <div class="go" id="gateGo">[ tap to enter ]</div>
 </div>
 
-<script src="js/data.js?v=19"></script>
-<script src="js/audio.js?v=19"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/data.js?v=22"></script>
+<script src="js/audio.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
 </body>
 </html>

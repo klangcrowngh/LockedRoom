@@ -70,6 +70,49 @@ body.panel-open #perform,body.panel-open #hint{display:none}
 .sheetHead{display:none}
 #coach{display:none}
 
+/* ---------- аранжировка (Song) ---------- */
+#song{display:none;flex-direction:column;gap:10px;width:100%;max-width:900px;margin:0 auto}
+body.song-open #song{display:flex;animation:rise .18s ease-out}
+body.song-open #perform .pads,body.song-open #hint{display:none}
+body.panel-open #song{display:none !important}
+#song .shead{display:flex;align-items:center;gap:6px}
+#song .st1{flex:1;display:flex;align-items:baseline;gap:12px;min-width:0}
+#song .st1 b{font-size:12px;letter-spacing:.3em}
+#song .st1 span{color:var(--dim);white-space:nowrap}
+#songOn.on{background:var(--acc);color:var(--bg)}
+#songBtn.on{background:var(--acc);border-color:var(--acc);color:var(--bg)}
+#song .closeX{width:36px;height:32px;padding:0;display:flex;align-items:center;justify-content:center}
+.blocks{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.blocks::-webkit-scrollbar{height:3px}.blocks::-webkit-scrollbar-thumb{background:#2a2a2a}
+.blk{position:relative;flex:0 0 auto;border:1px solid #2a2a2a;display:flex;flex-direction:column;align-items:stretch;overflow:hidden;background:#080808}
+.blk.cur{border-color:var(--acc)}
+.blk .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--acc);width:0}
+.blk .sc{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;font-weight:700;letter-spacing:0;padding:0 10px}
+.blk .sc small{display:block;font-size:8px;color:var(--dim);font-weight:400;letter-spacing:.15em;margin-top:2px}
+.blk.cur .sc{color:var(--acc)}
+.blk{cursor:pointer}
+.blk.sel{border-color:var(--fg);background:#121212}
+.blk.sel .sc{color:var(--fg)}
+.blk.sel.cur .sc{color:var(--acc)}
+.blkEd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.blkEd .er{display:flex;align-items:center;gap:8px}
+.blkEd .er .lbl{min-width:40px}
+.bseg{display:flex;border:1px solid #2a2a2a}
+.bseg button{border:none;border-right:1px solid #2a2a2a;min-width:34px;padding:7px 8px;font-weight:700}
+.bseg button:last-child{border-right:none}
+.bseg button.on{background:var(--acc);color:var(--bg)}
+.blkEd .acts{gap:6px;margin-left:auto}
+.blkEd .acts button{padding:7px 10px}
+.blk[data-s="0"] .sc{background:rgba(255,255,255,.02)}
+.srow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.srow .sp{flex:1}
+.fmt{display:flex;border:1px solid #2a2a2a}
+.fmt button{border:none;padding:7px 12px}
+.fmt button.on{background:var(--fg);color:var(--bg)}
+#renderBtn{display:inline-flex;align-items:center;gap:6px}
+#renderBtn:disabled{opacity:.5}
+.srow .msg{color:var(--dim);text-transform:none;letter-spacing:.04em}
+
 /* ---------- панель звука ---------- */
 #panel{display:none;flex-direction:column;gap:12px;width:100%;max-width:820px;margin:0 auto}
 #panel.show{display:flex;animation:rise .18s ease-out}
@@ -271,6 +314,30 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   #coach b{color:var(--fg);font-weight:400}
   #coach button{height:40px;text-transform:uppercase;letter-spacing:.2em}
   body.panel-open #coach,body.pads-open #coach{display:none !important}
+
+  /* лист аранжировки */
+  body.song-open #song{background:rgba(5,5,5,.97);border:1px solid var(--line);padding:0 10px 10px;margin:0 -10px}
+  body.song-open #song .grab{display:block !important}
+  #song .shead{flex-wrap:wrap}
+  #song .st1{flex-basis:100%;order:0;justify-content:space-between}
+  #songOn,#songLoop{flex:1;height:40px}
+  #song .closeX{width:44px;height:40px}
+  .blk .sc{height:52px;font-size:20px;padding:0 12px}
+  .blkEd{flex-direction:column;align-items:stretch;gap:8px}
+  .blkEd .er{width:100%}
+  .blkEd .er .lbl{min-width:46px}
+  .bseg{flex:1}
+  .bseg button{flex:1;height:44px;font-size:14px;padding:0}
+  .blkEd .acts{margin-left:0}
+  .blkEd .acts button{flex:1;height:44px;padding:0}
+  .srow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .srow::-webkit-scrollbar{display:none}
+  .srow>*{flex:0 0 auto}
+  .srow button{height:40px}
+  .srow.exp{flex-wrap:wrap}
+  .srow.exp #renderBtn{flex:1;justify-content:center}
+  .srow.exp .msg{flex-basis:100%}
+  body.song-open .prow.main{border-top:none}
 
   /* панель звука — нижний лист */
   #panel{height:56vh;max-height:none;overflow:auto;gap:12px;overscroll-behavior:contain;background:rgba(5,5,5,.97);border:1px solid var(--line);border-bottom:none;margin:0 -10px;padding:0 12px 12px;width:auto;max-width:none}
