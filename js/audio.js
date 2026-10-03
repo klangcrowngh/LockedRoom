@@ -4,6 +4,7 @@
 //  AUDIO ENGINE
 // ============================================================
 let curT = 0, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser = null, ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec;
+const IS_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth < 700;
 let PIT = 0, DK = 1, CUR = null, STEP = 0, VEL = 1;   // контекст текущего удара
 const curves = {};
 function curve(k){ if (curves[k]) return curves[k]; const n=1024, c=new Float32Array(n);
@@ -12,12 +13,16 @@ function osc(){ const o=ac.createOscillator(); o.detune.value=PIT*100; return o;
 const mtof = m => 440*Math.pow(2,(m-69)/12);
 
 function initAudio(){
-  ac = new (window.AudioContext||window.webkitAudioContext)();
+  // на телефоне — больший аудиобуфер ('playback'): меньше щелчков и хрипа, задержка не важна — ноты планируются заранее
+  ac = new (window.AudioContext||window.webkitAudioContext)({ latencyHint: IS_MOBILE ? 'playback' : 'interactive' });
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.12;
-  master = ac.createGain(); master.gain.value = 0.85;
+  master = ac.createGain(); master.gain.value = 0.8;
+  // лимитер на самом выходе: сигнал не выходит за 0 дБ и не «трещит»
+  const lim = ac.createDynamicsCompressor();
+  lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.08;
   an = ac.createAnalyser(); an.fftSize = 256; an.smoothingTimeConstant = 0.75; spec = new Uint8Array(an.frequencyBinCount); wave = new Uint8Array(an.fftSize);
-  comp.connect(master); master.connect(ac.destination); master.connect(an);
+  comp.connect(master); master.connect(lim); lim.connect(ac.destination); lim.connect(an);
   const hp = filt('highpass', 28); hp.connect(comp);
   fxRet = ac.createGain(); fxRet.connect(comp);
   busSh = shaper(P.grit||0); busComp = ac.createGain(); busComp.gain.value = 1/(1+(P.grit||0)*0.6);
@@ -28,7 +33,7 @@ function initAudio(){
   washIn = ac.createGain(); washIn.gain.value = 0; washDly = ac.createDelay(2); washDly.delayTime.value = 0.33;
   washFb = ac.createGain(); washFb.gain.value = 0; const wlp = filt('lowpass', 2600), whp = filt('highpass', 300);
   pKill.connect(washIn); washIn.connect(washDly); washDly.connect(wlp); wlp.connect(whp); whp.connect(washFb); washFb.connect(washDly); whp.connect(fxRet);
-  const len = ac.sampleRate*2.4, ir = ac.createBuffer(2, len, ac.sampleRate);
+  const len = Math.round(ac.sampleRate*(IS_MOBILE ? 1.5 : 2.4)), ir = ac.createBuffer(2, len, ac.sampleRate);   // короче хвост на телефоне — меньше нагрузка
   for (let c=0;c<2;c++){ const d = ir.getChannelData(c); for (let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3); }
   const conv = ac.createConvolver(); conv.buffer = ir;
   revIn = ac.createGain(); const rv = ac.createGain(); rv.gain.value = 0.6;
@@ -353,7 +358,7 @@ const TANH_K = 8, TANH = (()=>{ const n=4096, c=new Float32Array(n); for (let i=
 function buildChain(tr){
   if (!ac) return;
   const c = tr.ch = {};
-  c.in = ac.createGain(); c.pre = ac.createGain(); c.drv = ac.createWaveShaper(); c.drv.oversample = '4x'; c.comp = ac.createGain();
+  c.in = ac.createGain(); c.pre = ac.createGain(); c.drv = ac.createWaveShaper(); c.drv.oversample = IS_MOBILE ? '2x' : '4x'; c.comp = ac.createGain();
   c.lp = filt('lowpass', 20000, 0.7); c.vol = ac.createGain(); c.rev = ac.createGain(); c.dly = ac.createGain();
   c.in.connect(c.pre); c.pre.connect(c.drv); c.drv.connect(c.comp); c.comp.connect(c.lp); c.duck = ac.createGain(); c.lp.connect(c.duck); c.duck.connect(c.vol); c.vol.connect(bus);
   c.vol.connect(c.rev); c.rev.connect(revIn);

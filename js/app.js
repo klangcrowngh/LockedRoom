@@ -96,11 +96,12 @@ function processStep(s, t){
 }
 function scheduler(){
   if (!playing) return;
-  while (nextT < ac.currentTime + 0.15){ processStep(step, nextT); step++; nextT += stepDur(); }
+  const ahead = IS_MOBILE ? 0.3 : 0.15;
+  while (nextT < ac.currentTime + ahead){ processStep(step, nextT); step++; nextT += stepDur(); }
   if (dlyBpm !== bpm){ dlyBpm = bpm; dly.delayTime.setTargetAtTime(stepDur()*3, ac.currentTime, 0.05);
     washDly.delayTime.setTargetAtTime(stepDur()*3, ac.currentTime, 0.05); tracks.forEach(applyParams); }
 }
-setInterval(scheduler, 20);
+setInterval(scheduler, IS_MOBILE ? 25 : 20);
 
 function setPlaying(v){
   playing = v;
@@ -186,7 +187,7 @@ const cv = $('field'), g = cv.getContext('2d');
 let W, H, DPR, C = {x:0,y:0}, RAD = 300, hover = null, drag = null, gateT = 0;
 
 function resize(){
-  DPR = Math.min(2, window.devicePixelRatio||1); W = innerWidth; H = innerHeight;
+  DPR = Math.min(IS_MOBILE ? 1.5 : 2, window.devicePixelRatio||1); W = innerWidth; H = innerHeight;
   cv.width = W*DPR; cv.height = H*DPR;
   const top = $('top').offsetHeight, bot = $('bottom').offsetHeight;
   document.documentElement.style.setProperty('--topH', top+'px');
@@ -271,7 +272,7 @@ function setFx(m){
   if (fbA){ for (const c of [fbA, fbB]) c.getContext('2d').clearRect(0,0,c.width,c.height); }
   flowP = []; hist = []; tShapes = [];
 }
-$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length]); };
+$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length]); toast('background · ' + fxMode); };
 
 function runFX(pn){
   const dim = sel ? 0.45 : 1;
@@ -1145,10 +1146,22 @@ $('preBtn').onclick = $('titleBtn').onclick = ()=>{ $('pre').classList.contains(
 // ============================================================
 //  UI
 // ============================================================
+// название трека на телефоне: шрифт уменьшается, пока название не влезет целиком
+function fitTitle(){
+  const b = $('titleName'); if (!b || !b.offsetParent) return;
+  b.classList.remove('two'); $('titleBtn').classList.remove('two');
+  let fs = 12; b.style.fontSize = fs + 'px'; b.style.letterSpacing = '';
+  while (b.scrollWidth > b.clientWidth + 1 && fs > 9.5){ fs -= 0.5; b.style.fontSize = fs + 'px'; if (fs < 10.5) b.style.letterSpacing = '.06em'; }
+  if (b.scrollWidth > b.clientWidth + 1){            // всё равно не влезло — в две строки, подпись жанра прячем
+    b.classList.add('two'); $('titleBtn').classList.add('two'); b.style.fontSize = '11px'; b.style.letterSpacing = '.06em';
+  }
+}
+addEventListener('resize', fitTitle);
 function updateUI(){
   if ($('pre').classList.contains('open')) renderDrawer();
-  $('titleCap').textContent = curProj ? 'TRACK · ' + P.name : (P.genre === 'Originals' ? 'PRESET' : P.genre + ' · ' + P.ref);
+  $('titleCap').textContent = curProj ? 'MY TRACK' : (P.genre === 'Originals' ? 'PRESET' : P.genre);
   $('titleName').textContent = curProj ? curProj.name : P.name;
+  fitTitle();
   $('presetName').innerHTML = curProj ? 'TRACK / <b>' + escapeHtml(curProj.name) + '</b> · ' + P.name
     : 'PRESET / <b>' + P.name + '</b>' + (P.ref && P.genre !== 'Originals' ? ' · ' + P.ref : '');
   $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; if (bpmOpen()) showBpmSlider();
