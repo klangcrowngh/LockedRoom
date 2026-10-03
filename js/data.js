@@ -50,10 +50,6 @@ const BASE = { bass:12, sub:12, ebm:12, rumble:12, reese:12, fmbass:12, acid:24,
 const NOTE_IX = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
 
 const PRESETS = [
-  { genre:'Originals', ref:'locked room', name:'LOCKED CLUB', sc:{ ebm:0.55, acid303:0.35, ohat:0.25 }, bpm:134, acc:'#ff2e3a', root:31, drive:6, grit:2.2, seq:[0,0,12,0,3,0,15,10], bseq:[0,0,12,0,0,7,0,12], cut:3400,
-    voices:['kick808','snare','ebm','hat808','ohat','metal','acid303','zap'], pat:{
-    kick808:'x......x..x...x.', snare:'....x.......x...', ebm:'.xx.xx.x.xx.xx.x', hat808:'x.xxx.xxx.xxx.xx',
-    ohat:'..x...x...x...x.', metal:'...x.....x....x.', acid303:'x..x.x..x..x.x..', zap:'..............x.' }},
   { genre:'Originals', ref:'locked room', name:'ACID TECHNO', bpm:138, acc:'#c8ff1a', root:33, drive:4, grit:1.2, cut:2800,
     voices:['kick','acid303','clap','hat808','ohat','ride','sub','cowbell'], pat:{
     kick:'x...x...x...x...', acid303:'xx.x.xx.x.xxx.x.', clap:'....x.......x...', hat808:'xxxxxxxxxxxxxxxx',
@@ -145,4 +141,94 @@ const PRESETS = [
     pluck:'..x...x...x.x...', zap:'..............x.', conga:'.....x.......x..' },
     notes:{ fmbass:[0,0,3,0,-2], pluck:[12,15,10,12] },
     tune:{ pluck:{ dly:0.35, dlyT:3, rev:0.3 }, zap:{ rev:0.3 }, hat808:{ vol:0.55 } } },
+  // ---------- ещё культовые треки (оммажи: стиль, ритм, звуки; мелодии свои) ----------
+  { genre:'House', ref:'after Robin S · 1993', name:'SHOW ME LOVE', bpm:120, acc:'#ff5fa2', root:26, drive:2, grit:0.5, cut:2000, fx:'warp',
+    voices:['kick','organ','clap','hat','ohat','shaker'], pat:{
+    kick:'x...x...x...x...', organ:'x..x..x...x..x..', clap:'....x.......x...', hat:'x.x.x.x.x.x.x.x.',
+    ohat:'..x...x...x...x.', shaker:'xxxxxxxxxxxxxxxx' },
+    notes:{ organ:[0,0,0,-2,-2,3,3,0] }, sc:{ organ:0.35 },
+    tune:{ organ:{ pitch:-12, vol:1.3, tone:0.8 }, hat:{ vol:0.45 }, shaker:{ vol:0.3 }, clap:{ rev:0.3 } } },
+  { genre:'House', ref:'after Frankie Knuckles · 1987', name:'YOUR LOVE', bpm:119, acc:'#ffb347', root:29, drive:2, grit:0.4, cut:2000, fx:'rings',
+    voices:['kick808','clap','hat808','blip','pad','sqbass'], pat:{
+    kick808:'x...x...x...x...', clap:'....x.......x...', hat808:'..x...x...x...x.', blip:'xxxxxxxxxxxxxxxx',
+    pad:'x.......x.......', sqbass:'..x...x...x...x.' },
+    notes:{ blip:[0,7,12,15,12,7,0,7,10,15,19,15,10,7,3,7], sqbass:[0,0,-2,-4], pad:[0,-4] }, sc:{ pad:0.45, sqbass:0.5 },
+    tune:{ blip:{ dly:0.3, dlyT:3, rev:0.3 }, pad:{ rev:0.55 } } },
+  { genre:'House', ref:'after Stardust · 1998', name:'MUSIC SOUNDS BETTER', bpm:124, acc:'#ff9e2c', root:31, drive:3, grit:0.8, cut:2000, fx:'flow',
+    voices:['kick','chord','clap','hat','ohat','moog'], pat:{
+    kick:'x...x...x...x...', chord:'x..x..x...x..x..', clap:'....x.......x...', hat:'x.x.x.x.x.x.x.x.',
+    ohat:'..x...x...x...x.', moog:'x..x..x.x..x..x.' },
+    notes:{ chord:[0,0,5,5,3,3,-2,-2], moog:[0,0,12,0,-2,-2,10,-2] }, sc:{ chord:0.55, moog:0.5 },
+    tune:{ chord:{ tone:0.55, vol:1.2, rev:0.3, decay:0.5 }, moog:{ vol:0.9 }, hat:{ vol:0.5 } } },
+
+  { genre:'Trance', ref:'after Darude · 1999', name:'SANDSTORM', bpm:136, acc:'#2ee6ff', root:35, drive:4, grit:1.2, cut:2000, fx:'tunnel',
+    voices:['kick','supersaw','clap','ohat','hat808','sub','sweepup','crash'], pat:{
+    kick:'x...x...x...x...', supersaw:'xxxxxxxxxxxxxxxx', clap:'....x.......x...', ohat:'..x...x...x...x.',
+    hat808:'x.xxx.xxx.xxx.xx', sub:'..x...x...x...x.', sweepup:'........x.......', crash:'x...............' },
+    notes:{ supersaw:[0,0,0,0,0,0,0,0,-2,-2,-2,-2,3,3,3,3] }, sc:{ supersaw:0.4, sub:0.6 },
+    tune:{ supersaw:{ vol:0.9, dly:0.2, dlyT:3, rev:0.25, decay:0.6 }, hat808:{ vol:0.4 }, crash:{ vol:0.5 }, sweepup:{ vol:0.7 } } },
+  { genre:'Trance', ref:'after Robert Miles · 1995', name:'CHILDREN', bpm:137, acc:'#9fd8ff', root:30, drive:2, grit:0.4, cut:2000, fx:'rings',
+    voices:['kick','epiano','pad','clap','ohat','hat','sub'], pat:{
+    kick:'x...x...x...x...', epiano:'x..x..x.x..x..x.', pad:'x...............', clap:'....x.......x...',
+    ohat:'..x...x...x...x.', hat:'x.x.x.x.x.x.x.x.', sub:'..x...x...x...x.' },
+    notes:{ epiano:[7,5,3,5,7,10,7,5] }, sc:{ pad:0.5, sub:0.6, epiano:0.2 },
+    tune:{ epiano:{ rev:0.45, dly:0.3, dlyT:3, dlyFb:0.45, vol:1.2 }, pad:{ rev:0.5 }, hat:{ vol:0.35 } } },
+  { genre:'Trance', ref:'after Faithless · 1995', name:'INSOMNIA', bpm:127, acc:'#c48bff', root:33, drive:3, grit:0.8, cut:2000, fx:'flow',
+    voices:['kick','pluck','clap','hat','ohat','sub','pad'], pat:{
+    kick:'x...x...x...x...', pluck:'x.xx.x.x.x.xx.x.', clap:'....x.......x...', hat:'xxxxxxxxxxxxxxxx',
+    ohat:'..x...x...x...x.', sub:'..x...x...x...x.', pad:'x.......x.......' },
+    notes:{ pluck:[0,0,3,0,7,0,5,3], pad:[0,-4] }, sc:{ pluck:0.3, pad:0.4, sub:0.6 },
+    tune:{ pluck:{ dly:0.35, dlyT:3, rev:0.3, vol:1.1 }, pad:{ rev:0.5 }, hat:{ vol:0.35 } } },
+
+  { genre:'Detroit / Techno', ref:'after DJ Rolando · 1999', name:'KNIGHTS OF THE JAGUAR', bpm:130, acc:'#3dffb5', root:33, drive:3, grit:0.6, cut:2000, fx:'rings',
+    voices:['kick','strings','clap','hat','ride','conga','sub'], pat:{
+    kick:'x...x...x...x...', strings:'x.....x...x.....', clap:'....x.......x...', hat:'x.x.x.x.x.x.x.x.',
+    ride:'..x...x...x...x.', conga:'...x..x....x..x.', sub:'..x...x...x...x.' },
+    notes:{ strings:[0,0,3] }, sc:{ strings:0.3, sub:0.6 },
+    tune:{ strings:{ vol:1.3, rev:0.5, decay:0.7 }, ride:{ vol:0.4 }, hat:{ vol:0.45 }, conga:{ rev:0.15 } } },
+
+  { genre:'Minimal / Dub', ref:'after Ricardo Villalobos · 2003', name:'DEXTER', bpm:125, acc:'#b6ff6e', root:29, drive:2, grit:0.4, cut:1400, fx:'warp',
+    voices:['kick','clave','wood','bongo','shaker','sub','crackle'], pat:{
+    kick:'x...x...x...x...', clave:'..x..x....x..x..', wood:'.....x.......x..', bongo:'.x.x...x.x.x....',
+    shaker:'x.xxx.xxx.xxx.xx', sub:'..x...x...x...x.', crackle:'.......x.......x' },
+    sc:{ sub:0.5 },
+    tune:{ clave:{ dly:0.3, dlyT:3, rev:0.2 }, bongo:{ pitch:-2, rev:0.2 }, wood:{ dly:0.25, dlyT:2 }, shaker:{ vol:0.3 } } },
+
+  { genre:'EBM / Electro', ref:'after Afrika Bambaataa · 1982', name:'PLANET ROCK', bpm:127, acc:'#ff3df0', root:28, drive:3, grit:0.8, cut:2000, fx:'tunnel',
+    voices:['kick808','snare','hat808','cowbell','stab','zap','sub'], pat:{
+    kick808:'x......x..x.....', snare:'....x.......x...', hat808:'x.x.x.x.x.x.x.x.', cowbell:'..x...x...xx..x.',
+    stab:'x.....x...x.....', zap:'..............x.', sub:'x......x..x.....' },
+    notes:{ stab:[0,0,3] },
+    tune:{ stab:{ rev:0.4, vol:1.1 }, cowbell:{ vol:0.4 }, hat808:{ vol:0.55 } } },
+  { genre:'EBM / Electro', ref:'after Kraftwerk · 1981', name:'NUMBERS', bpm:117, acc:'#7cf0ff', root:31, drive:2, grit:0.5, cut:2000, fx:'warp',
+    voices:['kick808','snare','sqbass','blip','perc','vox'], pat:{
+    kick808:'x.....x.x.......', snare:'....x.......x...', sqbass:'x.x.x.x.x.x.x.x.', blip:'..x...x..x...x..',
+    perc:'...x.......x....', vox:'x...............' },
+    notes:{ sqbass:[0,0,12,0,0,0,10,0], blip:[12,15,19,17] },
+    tune:{ vox:{ pitch:-7, drive:0.5, rev:0.3 }, blip:{ dly:0.25, dlyT:3 } } },
+  { genre:'Cinematic', ref:'locked room', name:'NEON GRID', bpm:120, acc:'#00e5ff', root:28, drive:3, grit:1.2, cut:2200, fx:'tunnel',
+    voices:['kick','moog','blip','supersaw','snare909','hat808','ohat','vox'], pat:{
+    kick:'x...x...x...x...', moog:'x..x..x...x.x..x', blip:'x.x.x.x.x.x.x.x.', supersaw:'x.......x.......',
+    snare909:'....x.......x...', hat808:'..x...x...x...x.', ohat:'.......x.......x', vox:'x...............' },
+    notes:{ moog:[0,0,12,0,-2,10], blip:[12,7,3,7,12,15,12,7], supersaw:[0,-4], vox:[0] },
+    sc:{ supersaw:0.75, moog:0.4, blip:0.25 },
+    tune:{ moog:{ vol:1, drive:0.35 }, blip:{ dly:0.3, dlyT:3, dlyFb:0.35, vol:0.8 }, supersaw:{ vol:1, decay:2.2, tone:0.7, rev:0.35, duckRel:0.32 },
+           snare909:{ rev:0.25 }, hat808:{ vol:0.5 }, vox:{ pitch:-12, drive:0.5, rev:0.3, dly:0.25, dlyT:4 } } },
+  { genre:'Cinematic', ref:'locked room', name:'SYSTEM CRASH', bpm:135, acc:'#00e5ff', root:33, drive:4, grit:1.4, cut:2000, fx:'tunnel',
+    voices:['kick','sqbass','blip','clap','hat808','ohat','strings','zap'], pat:{
+    kick:'x...x...x...x...', sqbass:'xxxxxxxxxxxxxxxx', blip:'x.x.x.x.x.x.x.x.', clap:'....x.......x...',
+    hat808:'x.xxx.xxx.xxx.xx', ohat:'..x...x...x...x.', strings:'x...............', zap:'..............x.' },
+    notes:{ sqbass:[0,12,0,12,0,12,0,12,-2,10,-2,10,3,15,3,15], blip:[0,3,7,12,7,3,0,-5], strings:[0] }, sc:{ sqbass:0.45, strings:0.3 },
+    tune:{ sqbass:{ drive:0.6, vol:1.1 }, blip:{ dly:0.25, dlyT:3, vol:0.9 }, strings:{ rev:0.5, vol:1 }, hat808:{ vol:0.45 } } },
+  { genre:'Cinematic', ref:'locked room', name:'CRIMSON CUT', bpm:128, acc:'#ff1a1a', root:29, drive:7, grit:2, cut:2600, fx:'tunnel',
+    voices:['hardkick','reese','fmbass','bigclap','snare909','hat808','laser','sweepup'], pat:{
+    hardkick:'x...x...x...x...', reese:'..x...x...x...xx', fmbass:'.x...x.x.x...x.x', bigclap:'....x.......x...',
+    snare909:'............x.x.', hat808:'..x...x...x...x.', laser:'.......x.......x', sweepup:'........x.......' },
+    notes:{ reese:[0,0,0,-2,3], fmbass:[12,12,10,12,15,12] },
+    sc:{ reese:0.7, fmbass:0.55, laser:0.3 },
+    tune:{ reese:{ drive:0.75, vol:1.1, tone:0.85 }, fmbass:{ drive:0.6, vol:0.9 }, bigclap:{ rev:0.35, drive:0.3 },
+           snare909:{ vol:0.7 }, hat808:{ vol:0.5 }, laser:{ dly:0.3, dlyT:3, rev:0.3 }, sweepup:{ vol:0.7 } } },
 ];
+// порядок жанров в списке Tracks
+const GENRE_ORDER = ['Originals','Acid','Detroit / Techno','House','Trance','Minimal / Dub','EBM / Electro','Cinematic'];
+PRESETS.sort((a, b) => GENRE_ORDER.indexOf(a.genre) - GENRE_ORDER.indexOf(b.genre));

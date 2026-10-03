@@ -36,7 +36,7 @@ function applyPreset(i){
 }
 function loadPreset(i){
   applyPreset(i);
-  bpm = P.bpm; STEPS = 16; scene = 0; queuedScene = -1; curProj = null; undoStack = [];
+  bpm = P.bpm; swing = P.swing || 0; STEPS = 16; scene = 0; queuedScene = -1; curProj = null; undoStack = [];
   tracks = (P.voices || KIT_TECHNO).map(v => makeTrack(v, P.pat[v]||''));
   for (const tr of tracks){
     const seq = (P.notes && P.notes[tr.v]) || (FILTERED.includes(tr.v) ? P.seq : tr.v === 'ebm' ? P.bseq : null);
@@ -263,7 +263,7 @@ function makeGrain(){
 const FX_MODES = ['tunnel','rings','flow','warp','off'];
 let fxMode = 'tunnel', fxUser = false, kicks = [], hist = [], histTick = 0, flowP = [];
 function defaultFx(pr){
-  return pr.fx || ({ 'LOCKED CLUB':'rings', 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
+  return pr.fx || ({ 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
     || ({ 'Acid':'flow', 'Detroit / Techno':'rings', 'Minimal / Dub':'warp', 'EBM / Electro':'tunnel' })[pr.genre] || 'tunnel';
 }
 function setFx(m){
@@ -941,7 +941,6 @@ function releasePads(){
   rollReq = 0; roll = null; perfReset();
 }
 addEventListener('blur', releasePads);
-document.addEventListener('visibilitychange', () => { if (document.hidden) releasePads(); });
 document.querySelectorAll('.pad[data-fx]').forEach(b => {
   const fx = b.dataset.fx;
   b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); padSet(fx, true); });
@@ -1067,15 +1066,33 @@ async function copyText(txt){
   try { await navigator.clipboard.writeText(txt); return true; } catch (e) { return false; }
 }
 
-// автосохранение текущей сессии
+// автосохранение текущей сессии: { ts, cur, d } — с меткой времени, чтобы при запуске взять самую свежую копию
 let lastAuto = '';
-async function autosave(){
-  const s = JSON.stringify(serialize());
-  if (s === lastAuto) return;
-  lastAuto = s; try { await kvSet('lr_auto', s); } catch (e) {}
+async function autosave(force){
+  const body = JSON.stringify({ cur:curProj, d:serialize() });
+  if (!force && body === lastAuto) return;
+  lastAuto = body;
+  const s = JSON.stringify({ ts:Date.now(), cur:curProj, d:JSON.parse(body).d });
+  local.set('lr_auto', s);                                      // локально — сразу и синхронно
+  if (useCloud) try { await kvSet('lr_auto', s); } catch (e) {}  // облако — следом
 }
 setInterval(autosave, 10000);
-document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(); });
+async function loadAutosave(){
+  const parse = v => { try { const o = JSON.parse(v); return o && o.d ? o : (o && o.tracks ? { ts:0, d:o } : null); } catch (e) { return null; } };
+  const loc = parse(local.get('lr_auto'));
+  let cl = null; if (useCloud) try { cl = parse(await kvGet('lr_auto')); } catch (e) {}
+  return [loc, cl].filter(Boolean).sort((a, b) => (b.ts||0) - (a.ts||0))[0] || null;
+}
+
+// свернули приложение / заблокировали экран: музыка стоп, сессия сохранена
+function onHide(){
+  releasePads();
+  if (playing) setPlaying(false);
+  if (ac && ac.state === 'running') ac.suspend().catch(()=>{});
+  autosave(true);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); });
+addEventListener('pagehide', onHide);
 
 // ============================================================
 //  ПАНЕЛЬ «TRACKS»: мои треки + пресеты
@@ -1211,6 +1228,7 @@ if (inTG){
     });
     applySafeArea();
     for (const ev of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged']) tg.onEvent(ev, () => { applySafeArea(); resize(); });
+    tg.onEvent('deactivated', onHide);
     $('gate').querySelector('p').textContent = 'tap to start · sound on';
   } catch (e) { console.warn(e); }
 }
@@ -1218,9 +1236,97 @@ if (inTG){
 // ============================================================
 //  СТАРТ
 // ============================================================
-$('gate').onpointerup = e=>{ e.stopPropagation(); gateT = performance.now(); initAudio(); $('gate').remove();
+// ============================================================
+//  ЗАГРУЗОЧНЫЙ ЭКРАН: эмблема собирается, кольцо засечек = прогресс
+// ============================================================
+let gateReady = false, gateProg = 0, gateTarget = 0.1, gateShown = 0;
+(function gateIntro(){
+  const t = $('gateTitle'), html = [];
+  let k = 0;
+  for (const ch of 'LOCKED/ROOM'){
+    const inner = ch === '/' ? '<i>/</i>' : ch;
+    html.push('<span style="animation-delay:'+(0.25 + k++*0.06).toFixed(2)+'s">'+inner+'</span>');
+  }
+  t.innerHTML = html.join('');
+  const cv = $('gateCv'), x = cv.getContext('2d'), t0 = performance.now();
+  const accOf = () => getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#ff2e3a';
+  function frame(){
+    if (!document.body.contains(cv)) return;
+    const D = cv.clientWidth || 260, dpr = Math.min(2, devicePixelRatio || 1);
+    if (cv.width !== Math.round(D*dpr) || cv.height !== Math.round(D*dpr)){ cv.width = cv.height = Math.round(D*dpr); }
+    const T = (performance.now() - t0)/1000, acc = accOf(), c = D/2;
+    gateShown += (gateProg - gateShown)*0.08;
+    x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,D,D);
+    const Rt = D*0.17, Rn = D*0.36, Ro = D*0.43, ease = v => 1 - Math.pow(1 - Math.max(0, Math.min(1, v)), 3);
+    // свечение
+    const gr = x.createRadialGradient(c, c, 0, c, c, Rn*1.1); gr.addColorStop(0, acc + '33'); gr.addColorStop(1, 'transparent');
+    x.fillStyle = gr; x.fillRect(0,0,D,D);
+    // кольцо засечек = прогресс загрузки
+    const NT = 72, rot = T*0.15;
+    for (let k=0;k<NT;k++){
+      const a = -Math.PI/2 + k/NT*Math.PI*2 + rot, on = k/NT < gateShown;
+      const L = on ? D*0.03 + Math.sin(T*6 + k*0.5)*D*0.008*(gateReady?1:0.4) : D*0.015;
+      x.strokeStyle = on ? acc : 'rgba(255,255,255,.14)'; x.lineWidth = on ? 2 : 1.2;
+      x.beginPath(); x.moveTo(c+Math.cos(a)*Ro, c+Math.sin(a)*Ro); x.lineTo(c+Math.cos(a)*(Ro+L), c+Math.sin(a)*(Ro+L)); x.stroke();
+    }
+    // спиральные связи прорастают
+    const tA = i => -Math.PI/2 + i/16*Math.PI*2, nA = k => -Math.PI/2 + (k+0.5)/6*Math.PI*2;
+    const L = [[0,0],[4,0],[8,0],[12,0],[2,3],[6,3],[10,3],[14,3],[3,1],[11,2],[7,4],[13,5]];
+    L.forEach(([i,k], n) => {
+      const grow = ease((T - 0.7 - n*0.07)/0.9); if (grow <= 0) return;
+      const th = tA(i); let d = nA(k) - th; d = Math.atan2(Math.sin(d), Math.cos(d));
+      x.strokeStyle = k === 0 || k === 3 ? acc : 'rgba(255,255,255,.35)'; x.lineWidth = k === 0 || k === 3 ? 1.6 : 1;
+      x.beginPath();
+      for (let j=0;j<=40*grow;j++){ const u = j/40, e = u*u*(3-2*u), r = Rt + (Rn-Rt)*(1-(1-u)*(1-u)), an = th + d*e;
+        const px = c+Math.cos(an)*r, py = c+Math.sin(an)*r; j ? x.lineTo(px,py) : x.moveTo(px,py); }
+      x.stroke();
+    });
+    // кольцо времени: точки загораются по очереди
+    x.strokeStyle = 'rgba(255,255,255,.15)'; x.lineWidth = 1; x.beginPath(); x.arc(c, c, Rt, 0, Math.PI*2); x.stroke();
+    const beat = (T*2) % 1;
+    for (let i=0;i<16;i++){
+      const ap = ease((T - 0.15 - i*0.035)/0.3); if (ap <= 0) continue;
+      const a = tA(i), px = c+Math.cos(a)*Rt, py = c+Math.sin(a)*Rt, cur = gateReady && Math.floor(T*8) % 16 === i;
+      x.fillStyle = cur ? acc : '#fff'; x.globalAlpha = ap;
+      if (i % 4 === 0){ const s = 3.6*ap; x.fillRect(px-s, py-s, s*2, s*2); } else { x.beginPath(); x.arc(px, py, 2.4*ap, 0, Math.PI*2); x.fill(); }
+    }
+    x.globalAlpha = 1;
+    // вершины звуков
+    for (let k=0;k<6;k++){
+      const ap = ease((T - 1.0 - k*0.08)/0.4); if (ap <= 0) continue;
+      const a = nA(k), px = c+Math.cos(a)*Rn, py = c+Math.sin(a)*Rn, hot = k === 0 || k === 3, r = 6*ap;
+      x.beginPath(); x.arc(px, py, r, 0, Math.PI*2);
+      if (hot){ x.fillStyle = acc; x.fill(); } else { x.fillStyle = '#050505'; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 1.2; x.stroke(); }
+    }
+    // ромб в центре пульсирует в темп
+    const s = 6 + (1 - beat)*3*(gateReady ? 1 : 0.3);
+    x.save(); x.translate(c, c); x.rotate(Math.PI/4 + T*0.5); x.fillStyle = acc; x.fillRect(-s/2, -s/2, s, s); x.restore();
+    gateProg += (gateTarget - gateProg)*0.06;
+    $('gatePct').textContent = Math.round(gateShown*100) + '%';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+// этапы загрузки: шрифты → сохранения → готово (не быстрее 1.6 с, чтобы анимация успела собраться)
+let bootDone; const bootP = new Promise(r => bootDone = r);
+(async function gateLoad(){
+  const t0 = performance.now(), step = (v, txt) => { gateTarget = v; $('gateTxt').textContent = txt; };
+  step(0.25, 'loading fonts');
+  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+  step(0.6, 'restoring session'); await bootP;
+  step(0.9, 'tuning synths'); await new Promise(r => setTimeout(r, Math.max(250, 1600 - (performance.now() - t0))));
+  step(1, 'ready'); gateProg = 1;
+  setTimeout(() => { gateReady = true; $('gate').classList.add('ready'); }, 450);
+})();
+$('gate').onpointerup = e=>{
+  e.stopPropagation();
+  if (!gateReady || $('gate').classList.contains('out')) return;
+  gateT = performance.now(); initAudio();
+  $('gate').classList.add('out'); setTimeout(() => $('gate').remove(), 750);
   if (!local.get('lr_coach')) document.body.classList.add('coach');
-  resize(); setPlaying(true); haptic('medium'); };
+  ac.resume().catch(()=>{});            // звук включён, но старт — тапом по центру
+  resize(); haptic('medium');
+};
 $('coachOk').onclick = ()=>{ document.body.classList.remove('coach'); local.set('lr_coach', '1'); resize(); };
 
 makeGrain(); loadPreset(0); resize(); requestAnimationFrame(draw);
@@ -1228,7 +1334,8 @@ makeGrain(); loadPreset(0); resize(); requestAnimationFrame(draw);
   await loadIndex();
   try {
     if (location.hash.startsWith('#p=')){ deserialize(await decodeProject(location.hash)); toast('track from link'); history.replaceState(null, '', location.pathname); return; }
-    const auto = await kvGet('lr_auto');
-    if (auto){ deserialize(JSON.parse(auto)); lastAuto = auto; toast('last session restored'); }
+    const auto = await loadAutosave();
+    if (auto){ deserialize(auto.d); curProj = auto.cur || null; updateUI(); lastAuto = JSON.stringify({ cur:curProj, d:serialize() }); toast('last session restored'); }
   } catch (e) { console.warn('restore failed', e); loadPreset(0); }
+  finally { bootDone(); }
 })();
