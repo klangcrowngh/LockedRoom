@@ -100,15 +100,6 @@ const PRESETS = [
     chord:'x..x..x...x..x..', ride:'x.x.x.x.x.x.x.x.', conga:'...x..x.....x.x.' },
     notes:{ chord:[0,0,0,5,5,3,3,7] },
     tune:{ chord:{ rev:0.45, tone:0.8, vol:1.1 }, ride:{ vol:0.4 }, hat:{ vol:0.5 }, conga:{ rev:0.15 } } },
-  { genre:'Detroit / Techno', ref:'after Jeff Mills · Blue Potential (orchestral)', name:'THE BELLS', fx:'rings',
-    bpm:136, acc:'#4dd2ff', root:33, drive:3, grit:0.5, cut:2000,
-    voices:['kick','glock','hat','ohat','timpani','strings','brass','crash'], pat:{
-    kick:'x...x...x...x...', glock:'xxxxxxxxxxxxxxxx', hat:'xxxxxxxxxxxxxxxx', ohat:'..x...x...x...x.',
-    timpani:'x.......x.....x.', strings:'x.......x.......', brass:'......x.......x.', crash:'x...............' },
-    notes:{ glock:[0,7,12,7,3,7,10,7,0,7,12,15,12,10,7,3], timpani:[0,0,-5], strings:[0,-4], brass:[0,3,0,-2] },
-    sc:{ strings:0.25, glock:0.15 },
-    tune:{ glock:{ vol:0.8, rev:0.3, dly:0.12, dlyT:3, dlyFb:0.3 }, hat:{ vol:0.35, tone:0.85 }, ohat:{ vol:0.6 },
-           timpani:{ vol:1, rev:0.3 }, strings:{ vol:1.1, rev:0.45 }, brass:{ vol:0.9, rev:0.3 }, crash:{ vol:0.5, rev:0.3 } } },
   { genre:'Detroit / Techno', ref:'after Second Phase · 1991', name:'MENTASM', bpm:135, acc:'#ff7a1a', root:29, drive:7, grit:2, cut:2400,
     voices:['kick','hoover','snare','hat','ohat','rumble','noiz'], pat:{
     kick:'x...x...x...x...', hoover:'x.....x...x.....', snare:'....x.......x...', hat:'xxxxxxxxxxxxxxxx',
@@ -214,12 +205,6 @@ const PRESETS = [
     sc:{ supersaw:0.75, moog:0.4, blip:0.25 },
     tune:{ moog:{ vol:1, drive:0.35 }, blip:{ dly:0.3, dlyT:3, dlyFb:0.35, vol:0.8 }, supersaw:{ vol:1, decay:2.2, tone:0.7, rev:0.35, duckRel:0.32 },
            snare909:{ rev:0.25 }, hat808:{ vol:0.5 }, vox:{ pitch:-12, drive:0.5, rev:0.3, dly:0.25, dlyT:4 } } },
-  { genre:'Cinematic', ref:'locked room', name:'SYSTEM CRASH', bpm:135, acc:'#00e5ff', root:33, drive:4, grit:1.4, cut:2000, fx:'tunnel',
-    voices:['kick','sqbass','blip','clap','hat808','ohat','strings','zap'], pat:{
-    kick:'x...x...x...x...', sqbass:'xxxxxxxxxxxxxxxx', blip:'x.x.x.x.x.x.x.x.', clap:'....x.......x...',
-    hat808:'x.xxx.xxx.xxx.xx', ohat:'..x...x...x...x.', strings:'x...............', zap:'..............x.' },
-    notes:{ sqbass:[0,12,0,12,0,12,0,12,-2,10,-2,10,3,15,3,15], blip:[0,3,7,12,7,3,0,-5], strings:[0] }, sc:{ sqbass:0.45, strings:0.3 },
-    tune:{ sqbass:{ drive:0.6, vol:1.1 }, blip:{ dly:0.25, dlyT:3, vol:0.9 }, strings:{ rev:0.5, vol:1 }, hat808:{ vol:0.45 } } },
   { genre:'Cinematic', ref:'locked room', name:'CRIMSON CUT', bpm:128, acc:'#ff1a1a', root:29, drive:7, grit:2, cut:2600, fx:'tunnel',
     voices:['hardkick','reese','fmbass','bigclap','snare909','hat808','laser','sweepup'], pat:{
     hardkick:'x...x...x...x...', reese:'..x...x...x...xx', fmbass:'.x...x.x.x...x.x', bigclap:'....x.......x...',
