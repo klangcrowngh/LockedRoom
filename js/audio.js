@@ -688,4 +688,5 @@ function perfReset(){
   pKill.frequency.setTargetAtTime(10, T, 0.02);
   washIn.gain.setTargetAtTime(0, T, 0.02); washFb.gain.setTargetAtTime(0, T, 0.15);
   stopRiser(false);
+  master.gain.cancelScheduledValues(T); master.gain.setTargetAtTime(0.8, T, 0.05);
 }

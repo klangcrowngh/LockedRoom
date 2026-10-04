@@ -112,7 +112,6 @@ body.panel-open #song{display:none !important}
 .tl{display:flex;gap:4px;align-items:stretch}
 .tl .blocks{flex:1;min-width:0}
 #blkAdd{flex:0 0 44px;height:54px;padding:0;font-size:20px;border-style:dashed}
-.stabs{display:none}
 .spane{display:flex;flex-direction:column;gap:10px}
 .ehint{color:var(--dim);text-transform:none;letter-spacing:.04em;font-size:11px}
 .blk[data-s="0"] .sc{background:rgba(255,255,255,.02)}
@@ -332,7 +331,9 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .seg .scn{flex:1;min-width:0;height:48px;border:none;border-right:1px solid #2a2a2a;font-size:13px;font-weight:700}
   .seg .scn:last-child{border-right:none}
   .scn.has:after{right:5px;top:5px;width:4px;height:4px}
-  .tb{flex-direction:column;justify-content:center;gap:4px;height:48px;min-width:48px;padding:0 6px}
+  .tb{flex-direction:column;justify-content:center;gap:4px;height:48px;min-width:42px;padding:0 2px;flex:0 0 auto}
+  .prow.main{gap:5px}
+  .scenes{min-width:0}
   .tb .ic{width:18px;height:18px}
   .tb small{font-size:8px;letter-spacing:.12em}
   #padsBtn.on{background:var(--acc);border-color:var(--acc);color:var(--bg)}
@@ -344,7 +345,10 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .sheetHead .ic{width:18px;height:18px}
   .prow.extra,.prow.pads{display:none !important}
   body.pads-open #perform{background:rgba(5,5,5,.96);border:1px solid var(--line);padding:0 10px 10px;margin-bottom:4px}
-  body.pads-open .prow.pads{display:grid !important;grid-template-columns:repeat(4,1fr);gap:6px}
+  body.pads-open .prow.pads{display:grid !important;grid-template-columns:repeat(3,1fr);gap:6px}
+  body.pads-open .sheetHead.sub{padding-top:6px}
+  body.pads-open .sheetHead.sub span{flex:1;display:flex;align-items:center;gap:10px}
+  body.pads-open .sheetHead.sub span:after{content:'';flex:1;height:1px;background:var(--line)}
   body.pads-open .prow.extra{display:flex !important;gap:8px}
   body.pads-open .prow.main{border-top:none;padding-top:0;order:9}
   .pad{min-width:0;height:62px;padding:0 4px;font-size:10px;font-weight:700;letter-spacing:.1em;border-color:#333}
@@ -372,11 +376,6 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .stg button{flex:1;height:42px;justify-content:center}
   #songOn{flex:1.4}
   /* вкладки */
-  .stabs{display:flex;border-bottom:1px solid var(--line)}
-  .stabs button{flex:1;border:none;border-bottom:2px solid transparent;height:36px;color:var(--dim);margin-bottom:-1px}
-  .stabs button.on{color:var(--fg);border-bottom-color:var(--acc);background:transparent}
-  .spane{display:flex;flex-direction:column;gap:10px}
-  #song[data-tab="arr"] .spane[data-p="exp"],#song[data-tab="exp"] .spane[data-p="arr"]{display:none}
   /* таймлайн */
   .blk .sc{height:54px;font-size:19px;padding:0 6px}
   #blkAdd{height:auto;flex-basis:46px}
@@ -391,7 +390,10 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .blkEd .acts #edLeft,.blkEd .acts #edRight{flex:0 0 52px;font-size:16px}
   .srow.tpl .lbl,.srow.tpl .sp{display:none}
   .srow.tpl{overflow:visible}
+  .srow.tpl{flex-wrap:wrap}
   .srow.tpl button{flex:1 1 0}
+  .srow.tpl #songGen{flex:1 1 100%}
+  #songGen button{height:44px}
   .ehint{padding:2px 2px 0}
   .srow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .srow::-webkit-scrollbar{display:none}
@@ -424,7 +426,7 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .tabs{flex:1;gap:0;border:1px solid #2a2a2a}
   .tabs button{flex:1;height:38px;padding:0 2px;border:none;border-right:1px solid #2a2a2a;font-size:9px}
   .tabs button:last-child{border-right:none}
-  #sAll,#sNone{height:38px;padding:0 10px}
+  #sAll,#sNone,#sVary{height:38px;padding:0 10px}
   .steps{grid-template-columns:repeat(8,1fr);height:auto;grid-auto-rows:44px;gap:5px}
   .steps.tall{grid-auto-rows:60px}
   .st{font-size:10px}
@@ -458,3 +460,97 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .gcard .pr{padding:12px}
   .pbox .pbh button{padding:9px 12px}
 }
+.clearBtn.arm{background:#ff2e3a;border-color:#ff2e3a;color:#050505}
+/* меню стилей Vary */
+#varyMenu,.popMenu{position:fixed;z-index:12;display:none;flex-direction:column;min-width:190px;background:#070707;border:1px solid var(--acc);padding:4px;box-shadow:0 10px 40px rgba(0,0,0,.7)}
+#varyMenu.open,.popMenu.open{display:flex;animation:rise .15s ease-out}
+#varyMenu .vmh,.popMenu .vmh{padding:8px 10px 6px;color:var(--dim);font-size:9px;letter-spacing:.18em;text-transform:uppercase}
+#varyMenu button,.popMenu button{border:none;text-align:left;padding:11px 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+#varyMenu button:hover,.popMenu button:hover{background:#121212;color:var(--acc)}
+#varyMenu button.orig{border-top:1px solid #1d1d1d;margin-top:2px;color:var(--dim)}
+#varyMenu button:disabled,.popMenu button:disabled{opacity:.3}
+#varBtn{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.popMenu button.danger{border-top:1px solid #1d1d1d;margin-top:2px;color:#ff5a5a}
+.popMenu button.danger.arm{background:#ff2e3a;color:#050505}
+.popMenu .vmh.sub,#varyMenu .vmh.sub{border-top:1px solid #1d1d1d;margin-top:4px;padding-top:10px}
+/* Build song from A/B/C/D */
+#songGen{display:flex;align-items:stretch;border:1px solid var(--acc)}
+#songGen span{display:flex;align-items:center;padding:0 12px;color:var(--acc);font-size:10px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+#songGen button{flex:1;min-width:38px;border:none;border-left:1px solid #2a2a2a;font-weight:700;color:var(--fg)}
+#songGen button:hover:not(:disabled){background:var(--acc);color:var(--bg)}
+#songGen button:disabled{opacity:.25}
+
+#sVary{display:inline-flex;align-items:center;gap:6px}
+#sVary .ic{width:13px;height:13px}
+/* ===== лист Song: вкладки Timeline / Build / Export ===== */
+.stabs{display:flex;border-bottom:1px solid var(--line)}
+.stabs button{flex:1;border:none;border-bottom:2px solid transparent;height:36px;color:var(--dim);margin-bottom:-1px;background:transparent}
+.stabs button.on,.stabs button.on:hover{color:var(--fg);border-bottom-color:var(--acc);background:transparent}
+#song .spane{display:none}
+#song[data-tab="arr"] .spane[data-p="arr"],#song[data-tab="build"] .spane[data-p="build"],#song[data-tab="exp"] .spane[data-p="exp"]{display:flex;flex-direction:column;gap:10px}
+.blk .sc i{display:block;font-style:normal;font-size:8px;letter-spacing:.12em;color:var(--acc);font-weight:400;margin-top:2px;text-transform:uppercase}
+.ehint{color:var(--dim);text-transform:none;letter-spacing:.04em;font-size:11px;line-height:1.5}
+.ehint b{color:var(--fg);font-weight:400}
+.bsec{display:flex;flex-direction:column;gap:8px;padding:10px 0 12px;border-bottom:1px solid #1a1a1a}
+.bsec:last-child{border-bottom:none}
+.bsec .bh b{display:block;font-size:11px;letter-spacing:.18em}
+.bsec .bh small{display:block;margin-top:4px;color:var(--dim);font-size:10px;letter-spacing:.04em;text-transform:none}
+.brow{display:flex;gap:6px}
+.brow button{flex:1;height:40px}
+.mkrow{display:flex;align-items:center;gap:10px}
+.mkrow .lbl{min-width:40px}
+.mkrow .bseg{flex:1}
+.mkrow .bseg button{flex:1;height:38px}
+.mkType{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mkType button{height:40px;padding:0 4px}
+#songGen button{height:40px}
+#edBars button:disabled{opacity:.25}
+
+body.song-open #song{background:rgba(5,5,5,.96);border:1px solid var(--line);padding:4px 14px 14px;max-height:62vh;overflow:auto;overscroll-behavior:contain}
+@media (max-width:700px){body.song-open #song{max-height:none;overflow:visible;padding:0 12px 12px}}
+
+/* телефон: все кнопки не меньше ~40px под палец */
+@media (pointer:coarse), (max-width:700px){
+  .pact input{height:40px;font-size:14px}
+  .pact button{min-height:40px;padding:0 12px}
+  .item{padding:6px 14px 6px 8px !important}
+  .item .play{width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;font-size:12px}
+  .item button.add{min-height:40px;padding:0 14px}
+  #libClose,#drClose{width:44px;height:40px}
+  #nRand,#nFlat{min-height:40px;padding:0 14px}
+}
+/* узкие телефоны (≤380px): нижняя панель влезает целиком */
+@media (max-width:380px){
+  .prow.main{gap:4px}
+  .scenes{flex:1 1 0;min-width:0}
+  .seg{min-width:0;flex:1 1 0}
+  .seg .scn{min-width:0;flex:1 1 0;font-size:12px}
+  .tb{min-width:39px;padding:0 1px}
+  .tb small{font-size:7px;letter-spacing:.08em}
+  .tb .ic{width:16px;height:16px}
+}
+#varyMenu .vmh .back{border:none;padding:0 10px 0 0;font-size:14px;color:var(--acc);min-height:0;display:inline}
+#varyMenu .vmh{display:flex;align-items:center}
+/* ===== Build: главная сцена → песня ===== */
+.mainSel{display:flex;align-items:center;gap:10px}
+.mainSel .lbl{min-width:76px}
+.mainSel .bseg{flex:1}
+.mainSel .bseg button{flex:1;height:44px;font-size:15px}
+.plan{display:flex;flex-wrap:wrap;align-items:center;gap:4px 2px;padding:10px;border:1px solid #1d1d1d;background:#080808}
+.plan span{display:flex;flex-direction:column;align-items:center;min-width:30px;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.plan span b{font-size:14px;color:var(--fg);letter-spacing:0}
+.plan span.pk b,.plan span.pk{color:var(--acc)}
+.plan i{font-style:normal;color:#444;font-size:10px}
+.plan{flex-wrap:nowrap;justify-content:space-between;overflow-x:auto}
+button.big{height:50px;font-size:12px;letter-spacing:.24em}
+.warnline{font-size:10px;letter-spacing:.06em;color:var(--dim);text-transform:none;margin-top:-4px}
+.warnline.hot{color:#ff8a5a}
+button.ghost{border-style:dashed;color:var(--dim);height:40px}
+button.ghost:hover{color:var(--fg)}
+details.more{border-top:1px solid #1a1a1a;padding-top:8px}
+details.more summary{cursor:pointer;color:var(--dim);font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:8px 0;list-style:none}
+details.more summary::before{content:'▸ ';color:var(--acc)}
+details.more[open] summary::before{content:'▾ '}
+details.more[open]{display:flex;flex-direction:column;gap:8px}
+#song .spane[data-p="arr"] button.ghost{align-self:flex-start;padding:0 14px}
+

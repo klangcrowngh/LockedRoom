@@ -28,9 +28,14 @@ function makeTrack(v, patStr=''){
 }
 const sceneHas = k => tracks.some(tr => tr.scn[k].pat.some((on,i) => on && i < STEPS));
 
+// цвета для новых треков
+const TRACK_COLORS = ['#ff2e3a','#ff8a00','#ffd400','#b6ff3b','#2bff88','#00e5ff','#3d6bff','#9b5cff','#ff3df0','#ff5fa2'];
+const curAcc = () => (typeof P !== 'undefined' && P && P.acc) || '';
+function setAcc(c){ P.acc = c; document.documentElement.style.setProperty('--acc', c); }
 function applyPreset(i){
   presetIdx = (i + PRESETS.length) % PRESETS.length;
-  P = PRESETS[presetIdx];
+  P = Object.assign({}, PRESETS[presetIdx]);   // копия: цвет своего трека можно менять, не трогая пресет
+  if (P.blank){ const pool = TRACK_COLORS.filter(c => c !== curAcc()); P.acc = pool[Math.floor(Math.random()*pool.length)]; }   // новый трек — случайный цвет
   document.documentElement.style.setProperty('--acc', P.acc);
   if (busSh){ busSh.curve = curve(P.grit||0); busComp.gain.value = 1/(1+(P.grit||0)*0.6); }
   closePanel(); tracks.forEach(dropChain);
@@ -38,7 +43,7 @@ function applyPreset(i){
 }
 function loadPreset(i){
   applyPreset(i);
-  bpm = P.bpm; swing = P.swing || 0; STEPS = 16; scene = 0; queuedScene = -1; curProj = null; undoStack = [];
+  bpm = P.bpm; swing = P.swing || 0; STEPS = 16; scene = 0; sceneTypes = ['', '', '', '']; queuedScene = -1; curProj = null; undoStack = [];
   tracks = (P.voices || KIT_TECHNO).map(v => makeTrack(v, P.pat[v]||''));
   for (const tr of tracks){
     const seq = (P.notes && P.notes[tr.v]) || (FILTERED.includes(tr.v) ? P.seq : tr.v === 'ebm' ? P.bseq : null);
@@ -80,6 +85,11 @@ function duckAt(tr, t){
   gn.setTargetAtTime(1 - d*0.97, t, 0.003);          // быстрое приглушение
   gn.setTargetAtTime(1, t + 0.012, r/3);             // плавный возврат
 }
+
+// «плотность» сцены — для Arrange (что интро, что дроп)
+const sceneEnergy = k => tracks.reduce((a, t) => { const r = roleOfGen(t.v), w = r === 'kick' ? 3 : r === 'bass' ? 2 : 1;
+  return a + w * t.scn[k].pat.slice(0, STEPS).filter(Boolean).length; }, 0);
+
 function processStep(s, t){
   if (songOn && s % STEPS === 0){                                     // аранжировка: сцены по блокам
     songBar = songBar < 0 ? 0 : songBar + 1;
@@ -120,7 +130,7 @@ setInterval(scheduler, IS_MOBILE ? 25 : 20);
 function setPlaying(v){
   playing = v;
   if (v){ ac.resume(); step = 0; stepLog = []; nextT = ac.currentTime+0.06; roll = null; songBar = -1; songEnded = false; }
-  else if (typeof releasePads === 'function') releasePads();
+  else { if (typeof releasePads === 'function') releasePads(); }
 }
 
 // ---------- сцены и длина ----------
@@ -148,13 +158,27 @@ function setLength(n){
 
 // ---------- генератор вариаций и отмена ----------
 let undoStack = [], copyArm = false;
-function pushUndo(){
-  undoStack.push({ scene, ids:tracks.map(t=>t.id), data:tracks.map(t=>cloneScene(t.scn[scene])) });
+function pushUndo(all){
+  undoStack.push({ scene, ids:tracks.map(t=>t.id), data:tracks.map(t=>cloneScene(t.scn[scene])), all: all ? tracks.map(t => t.scn.map(cloneScene)) : null, steps: all ? STEPS : 0, arr: all ? arr.map(b => ({ ...b })) : null, bpm: all ? bpm : 0, types: sceneTypes.slice() });
   if (undoStack.length > 30) undoStack.shift();
 }
 function undo(){
   const u = undoStack.pop(); if (!u){ toast('nothing to undo'); return; }
+  if (u.types) sceneTypes = u.types.slice();   // роли сцен тоже возвращаются
+  if (u.full){
+    for (const tr of tracks.slice()) if (!u.list.includes(tr)){ if (sel === tr) closePanel(); dropChain(tr); }
+    for (const tr of u.list) if (!tracks.includes(tr) && ac) buildChain(tr);
+    tracks = u.list.slice();
+    tracks.forEach((tr, k) => { tr.scn = u.all[k].map(cloneScene); tr.scSrc = u.sc[k] && tracks.includes(u.sc[k]) ? u.sc[k] : null; tr.spawn = performance.now(); bindScene(tr); });
+    if (sel){ buildSteps(sel); buildNotes(sel); }
+    vState = null; renderLib(); updateUI(); toast('undo'); haptic('light'); return;
+  }
+  // звуки, добавленные через Vary после этого шага, убираем
+  for (const tr of tracks.slice()) if (tr.gen && !u.ids.includes(tr.id)){ if (sel === tr) closePanel(); dropChain(tr); tracks.forEach(x => { if (x.scSrc === tr) x.scSrc = null; }); tracks.splice(tracks.indexOf(tr), 1); }
   tracks.forEach(tr => { const k = u.ids.indexOf(tr.id); if (k >= 0) tr.scn[u.scene] = u.data[k]; });
+  if (u.all) tracks.forEach(tr => { const k = u.ids.indexOf(tr.id); if (k >= 0) tr.scn = u.all[k].map(cloneScene); });
+  if (u.all){ STEPS = u.steps || STEPS; if (u.arr) arr = u.arr; if (u.bpm) bpm = u.bpm; tracks.forEach(bindScene); updatePerform(); renderBlocks(); }
+  renderLib(); updateUI();
   tracks.forEach(bindScene); if (sel){ buildSteps(sel); buildNotes(sel); }
   toast('undo'); haptic('light');
 }
@@ -164,35 +188,638 @@ function moveStep(tr, i, j){
   tr.pat[i] = false; tr.vel[i] = 1; tr.prob[i] = 1; tr.rat[i] = 1; tr.born[j] = performance.now();
   dying.push({ i, tr, t:performance.now() });
 }
-// аккуратно меняет 2–3 детали текущей сцены; сильные доли бочки не трогает
-function variate(n = 2 + (Math.random()*2|0), quiet = false){
-  if (!quiet) pushUndo();
-  const cand = tracks.filter(t => !t.v.includes('kick') && t.v !== 'boom');
-  let done = 0, guard = 0;
-  while (done < n && guard++ < 60 && cand.length){
-    const tr = pickR(cand), on = [];
-    for (let i=0;i<STEPS;i++) if (tr.pat[i]) on.push(i);
-    const op = pickR(['shift','ghost','drop','ratchet','note','chance']);
-    if (op === 'shift' && on.length){
-      const i = pickR(on), j = (i + (Math.random()<0.5 ? -1 : 1) + STEPS) % STEPS;
-      if (!tr.pat[j] && i % 4 !== 0){ moveStep(tr, i, j); done++; }
-    } else if (op === 'ghost' && on.length >= 2){
-      const free = []; for (let i=1;i<STEPS;i+=2) if (!tr.pat[i]) free.push(i);
-      if (free.length){ const j = pickR(free); tr.pat[j] = true; tr.born[j] = performance.now(); tr.vel[j] = 0.45; tr.prob[j] = 0.75; tr.notes[j] = tr.notes[on[0]]; done++; }
-    } else if (op === 'drop' && on.length >= 5){
-      const c = on.filter(x => x % 4 !== 0);
-      if (c.length){ const i = pickR(c); tr.pat[i] = false; dying.push({ i, tr, t:performance.now() }); done++; }
-    } else if (op === 'ratchet' && on.length && /hat|tick|shaker|snare|clap|perc|rim|tom|conga/.test(tr.v)){
-      const late = on.filter(i => i >= STEPS*0.75);
-      if (late.length){ const i = pickR(late); tr.rat[i] = tr.rat[i] >= 3 ? 1 : tr.rat[i]+1; done++; }
-    } else if (op === 'note' && on.length && MELODIC.includes(tr.v)){
-      const i = pickR(on); tr.notes[i] = pickR(SCALE) - (Math.random()<0.25 ? 12 : 0); done++;
-    } else if (op === 'chance' && on.length >= 3){
-      const i = pickR(on.filter(x => x % 4 !== 0).concat([-1])); if (i >= 0){ tr.prob[i] = tr.prob[i] < 1 ? 1 : 0.6; done++; }
+// ============================================================
+//  VARY — «умная» вариация сцены
+// ============================================================
+// Каждое нажатие строит НОВУЮ вариацию от исходной сцены (той, что была до первого Vary),
+// поэтому изменения не копятся в кашу. Стиль выбирается по-разному: грув, проредить, сбивка,
+// мелодия, разгон, брейк. Кик держит долю, снейр — бэкбит, мелодия — лад. Undo — шаг назад.
+const roleOf = v => {
+  const c = (LIBM[v] || {}).cat || '';
+  if (c === 'Kicks') return 'kick';
+  if (c === 'Snares' || c === 'Claps') return 'snare';
+  if (c === 'Hats & Cymbals') return v === 'crash' ? 'fx' : 'hat';
+  if (c === 'Toms & Perc') return 'perc';
+  if (c === 'Bass') return 'bass';
+  if (c === 'FX') return 'fx';
+  return MELODIC.includes(v) ? 'mel' : 'perc';
+};
+const HAT_TPL  = ['..x...x...x...x.', 'x.x.x.x.x.x.x.x.', 'xxxxxxxxxxxxxxxx', 'x.xxx.xxx.xxx.xx', '..xx..xx..xx..xx', 'x.x.x.xxx.x.x.xx', '.xx..xx..xx..xx.'];
+const OHAT_TPL = ['..x...x...x...x.', '......x.......x.', '..x.......x.....', '..x...x...x...xx'];   // открытые хэты и райд — только редкие офбиты
+const isOpen = v => /^ohat|ride|crash/.test(v);
+const BASS_TPL = ['..x...x...x...x.', '.xxx.xxx.xxx.xxx', 'x..x..x...x..x..', 'x.xx..x.x.xx..x.', '..xx..x...xx..x.', 'x.......x..x....'];
+const euclid = (k, n, rot) => { const out = []; for (let i=0;i<n;i++) out.push(((i + rot) * k) % n < k); return out; };
+const tplOn = (t, i) => t[i % 16] === 'x';
+let vState = null, lastStyle = '';
+const sceneSig = () => tracks.map(t => t.id + ':' + [0,1,2,3,4].map(k => t[STEP_KEYS[k]].slice(0, STEPS).join(',')).join('|')).join('/');
+
+
+// ============================================================
+//  ГЕНЕРАТОР — Vary в пустом проекте собирает трек; стиль «add» добавляет звук
+// ============================================================
+const RECIPES = {
+  techno:  { kick:['kick','kick909','hardkick'], snare:['clap909','clap','snare909'], hat:['hat909','hat808','hat'], ohat:['ohat909','ohat'],
+             bass:['rumble','sub','reese'], perc:['metal','perc','rim707'], mel:['stab','chord','pluck'], hatTpl:['..x...x...x...x.','xxxxxxxxxxxxxxxx'], bassTpl:[1,3] },
+  house:   { kick:['kick909','kick808','punchkick'], snare:['clap909','clap808','clap'], hat:['shaker','hat909','hat707'], ohat:['ohat909','ohat808'],
+             bass:['offbass','bass','moog'], perc:['conga','bongo','tamb'], mel:['organ','housepiano','rhodes'], hatTpl:['x.xxx.xxx.xxx.xx','..x...x...x...x.'], bassTpl:[0,4] },
+  acid:    { kick:['kick909','kick'], snare:['clap909','snare909'], hat:['hat909','hat808'], ohat:['ohat909'],
+             bass:['sub'], perc:['rim','cowbell'], mel:['acid303'], hatTpl:['x.x.x.x.x.x.x.x.','..x...x...x...x.'], bassTpl:[5], melTpl:['x.xx.xx.x.xxx.x.','xx.x.xx.xx.x.x.x'] },
+  electro: { kick:['kick808','kick707'], snare:['snare808','clap808','snare707'], hat:['hat808','hat707'], ohat:['ohat808'],
+             bass:['fmbass','sqbass','mono'], perc:['cowbell','rim707'], mel:['blip','sqlead','pwm'], hatTpl:['x.x.x.x.x.x.x.x.'], bassTpl:[2,3], broken:true },
+  minimal: { kick:['deepkick','clickkick','kick'], snare:['rim','snap','tightclap'], hat:['shaker','tick','crisphat'], ohat:['ride'],
+             bass:['sub','dubbass'], perc:['clave','wood','bongo'], mel:['dubchord','deepchord','bell'], hatTpl:['x.xxx.xxx.xxx.xx','..xx..xx..xx..xx'], bassTpl:[4,0] },
+  trance:  { kick:['kick909','punchkick'], snare:['clap909','roomclap'], hat:['hat909','hat'], ohat:['ohat909'],
+             bass:['offbass','sawbass'], perc:['ride','tamb'], mel:['tpluck','supersaw','junopad'], hatTpl:['..x...x...x...x.','x.x.x.x.x.x.x.x.'], bassTpl:[0] },
+  dark:    { kick:['distkick','hardkick'], snare:['darksnare','steel'], hat:['hat808','tick'], ohat:['ohat808'],
+             bass:['buzz','mono','reese'], perc:['indhit','metal'], mel:['diststab','chant','darksaw'], hatTpl:['..x...x...x...x.','x.x.x.x.x.x.x.x.'], bassTpl:[1,3] },
+};
+const GENRE_RECIPE = { 'Techno':'techno', 'House':'house', 'Acid':'acid', 'Electro / EBM':'electro', 'Minimal / Dub':'minimal', 'Trance':'trance', 'Dark Electro':'dark' };
+const MEL_TPL = ['x.....x...x.....', 'x..x..x...x..x..', '..x...x...x...x.', 'x.x.x.x.x.x.x.x.', 'x...x...x.x.....'];
+const recipeNow = () => RECIPES[GENRE_RECIPE[P.genre]] ? GENRE_RECIPE[P.genre] : (P.genKey || null);
+
+// новый звук без открытия панели (помечен gen — Undo его уберёт)
+function addGenTrack(v){
+  if (tracks.length >= MAX_SOUNDS) return null;
+  const tr = makeTrack(v); tr.gen = true; tracks.push(tr); tr.a = targetAng(tracks.length - 1);
+  if (ac) buildChain(tr);
+  return tr;
+}
+// рисунок для звука по его роли (в текущей сцене)
+function fillRole(t, role, R){
+  const L = STEPS, now = performance.now();
+  const set = (fn, vel) => { for (let i=0;i<L;i++){ const on = !!fn(i); t.pat[i] = on; t.vel[i] = on && vel ? vel(i) : 1; t.prob[i] = 1; t.rat[i] = 1; if (on) t.born[i] = now; } };
+  const tp = x => i => x[i % 16] === 'x';
+  if (role === 'kick') set(R.broken && Math.random() < 0.7 ? tp(pickR(KICK_BROKEN)) : tp('x...x...x...x...'));
+  else if (role === 'snare') set(i => i % 16 === 4 || i % 16 === 12 || (Math.random() < 0.25 && i === L - 1), i => i % 16 === 4 || i % 16 === 12 ? 1 : 0.5);
+  else if (role === 'hat') set(tp(pickR(R.hatTpl)), i => i % 4 === 2 ? 1 : i % 2 ? 0.55 : 0.75);
+  else if (role === 'ohat') set(tp(pickR(OHAT_TPL)));
+  else if (role === 'perc'){ const e = euclid(pickR([3,5,5,7]), 16, Math.random()*16|0); set(i => e[i % 16], () => 0.8); }
+  else if (role === 'bass') set(tp(BASS_TPL[pickR(R.bassTpl)]), i => i % 4 === 2 ? 1 : 0.85);
+  else if (role === 'mel'){ const pad = /pad|choir|strings/.test(t.v); set(tp(pad ? 'x...............' : pickR(R.melTpl || MEL_TPL))); }
+  // ноты: фраза «вопрос–ответ», бас — тоника на сильных долях
+  if (MELODIC.includes(t.v)){
+    const bass = role === 'bass', pool = bass ? [0,0,7,12,10,3] : SCALE.slice(0, 6);
+    const m = [0, pickR(pool), pickR(pool), pickR(pool)], ans = [0, m[1], pickR(pool), pickR([0,7,12])];
+    let k = 0; for (let i=0;i<L;i++) if (t.pat[i]){ let nn = (i >= L/2 ? ans : m)[k++ % 4]; if (bass && i % 4 === 0) nn = 0; if (/acid/.test(t.v) && Math.random() < 0.2) nn += 12; t.notes[i] = nn; if (/acid/.test(t.v)) t.vel[i] = Math.random() < 0.35 ? 1 : 0.7; }
+  }
+}
+const sceneEmpty = k => !tracks.some(t => t.scn[k].pat.some((x, i) => x && i < STEPS));
+
+// ---------- жанровые наборы слоёв: из них собирается трек ----------
+// у каждой роли несколько вариантов: [звуки], рисунок на 16 шагов, ноты (если нет — сочиняются), громкости ударов.
+// Варианты одной роли взаимозаменяемы, поэтому сочетаний тысячи, а слои остаются согласованы.
+const K4 = 'x...x...x...x...', BB = '....x.......x...';
+const GENRE_POOLS = {
+  techno: { bpm:[128,136], drive:5, grit:1.4, fx:['tunnel','rings'],
+    kick:[[['kick','kick909'], K4], [['hardkick','kick909'], K4], [['kick','punchkick'], 'x...x...x...x..x']],
+    snare:[[['clap909','clap'], BB], [['snare909','clap'], '....x.......x.x.'], [['bigclap','clap909'], '............x...'], [['rim707','rim'], '..x..x....x..x..']],
+    hat:[[['hat909','hat808'], '..x...x...x...x.'], [['hat','hat909'], 'xxxxxxxxxxxxxxxx'], [['hat909','tick'], 'x.xxx.xxx.xxx.xx'], [['hat808','hat909'], '.xx..xx..xx..xx.']],
+    ohat:[[['ohat909','ohat'], '..x...x...x...x.'], [['ride'], 'x.x.x.x.x.x.x.x.']],
+    perc:[[['metal','rim707'], '...x.....x....x.'], [['perc','click'], 'x..x..x...x..x..'], [['tom909','tom'], '..........x..x.x'], [['metal','steel'], '.......x.......x']],
+    bass:[[['rumble','sub'], '.xxx.xxx.xxx.xxx', [0]], [['sub','reese'], '..x...x...x...x.', [0,0,0,3]], [['reese','sawbass'], '..xx..xx..xx..xx'], [['rumble'], '.x.x.x.x.x.x.x.x', [0]], [['fmbass','mono'], 'x..x..x...x..x..']],
+    mel:[[['stab','chord'], '..x.......x..x..'], [['pluck','darksaw'], 'x..x..x.x..x..x.'], [['bell','blip'], 'x...x.x...x.x...'], [['hoover'], 'x.......x.......'], [['stab','diststab'], 'x..x..x.........']],
+    pad:[[['pad','warmpad'], 'x...............', [0]], [['strings'], 'x.......x.......', [0,-2]]],
+    opt:{ ohat:0.5, perc:0.6, mel:0.75, pad:0.3 } },
+  acid: { bpm:[126,134], drive:4, grit:1.2, fx:['flow','warp'],
+    kick:[[['kick909','kick'], K4], [['kick808','kick909'], 'x...x...x...x.x.']],
+    snare:[[['clap909','snare909'], BB], [['clap','clap909'], '....x.......x..x'], [['rim'], '..x...x...x..x..']],
+    hat:[[['hat909','hat808'], '..x...x...x...x.'], [['hat808'], 'x.x.x.x.x.x.x.x.'], [['hat909'], 'xxxxxxxxxxxxxxxx']],
+    ohat:[[['ohat909'], '..x...x...x...x.']],
+    perc:[[['cowbell','rim'], '......x.......x.'], [['clave','cowbell'], '..x..x.....x..x.'], [['tom909'], '...........x.x.x']],
+    bass:[[['sub'], 'x.......x.......', [0]], [['sub','bass808'], 'x.....x...x.....', [0,0,-2]]],
+    mel:[[['acid303'], 'x.xx.xx.x.xxx.x.', null, [1,.7,1,.7,.7,1,.7,.7,1,.7]], [['acid303'], 'xx.x.xx.xx.x.x.x', null, [1,.7,.7,1,.7,.7,1,.7,.7,1]],
+         [['acid303','acid'], 'xxxxxxxxxxxxxxxx', null, [1,.6,.8,.6]], [['acid303'], 'x.x.xx.xx.x.xx.x', null, [1,.7,.7,1]]],
+    opt:{ ohat:0.4, perc:0.5, bass:0.4, mel:1 } },
+  house: { bpm:[120,126], drive:2, grit:0.5, fx:['warp','flow'],
+    kick:[[['kick909','kick808'], K4], [['punchkick','kick909'], K4]],
+    snare:[[['clap909','clap808'], BB], [['clap','roomclap'], BB], [['snap','clap808'], '....x.......x..x']],
+    hat:[[['shaker'], 'x.xxx.xxx.xxx.xx'], [['hat909','hat707'], '..x...x...x...x.'], [['tamb','shaker'], 'xxxxxxxxxxxxxxxx'], [['hat707'], '.xx..xx..xx..xx.']],
+    ohat:[[['ohat909','ohat808'], '..x...x...x...x.']],
+    perc:[[['conga','bongo'], '...x.x.....x.x..'], [['cowbell','clave'], '..x....x..x....x'], [['bongo','conga'], '.x.x..x..x.x..x.'], [['rim'], '...x.......x....']],
+    bass:[[['offbass','bass'], '..x...x...x...x.', [0,0,10,7]], [['moog','offbass'], '.x.x..x..x.x..x.'], [['bass','dubbass'], 'x..x..x...x..x..'], [['offbass'], '..xx..x...xx..x.']],
+    mel:[[['organ','housepiano'], '...x..x....x..x.', [0]], [['rhodes','epiano'], 'x.....x...x.....'], [['housepiano'], '..x...x...x...x.', [0,0,3,-2]], [['organ'], 'x..x..x.........', [0,0,-2]], [['epiano','rhodes'], '...x.......x....']],
+    pad:[[['warmpad','junopad'], 'x...............', [0]], [['strings'], 'x.......x.......', [0,3]]],
+    opt:{ ohat:0.7, perc:0.6, mel:0.85, pad:0.3 } },
+  electro: { bpm:[116,126], drive:3, grit:0.8, fx:['tunnel','warp'],
+    kick:[[['kick808'], 'x......x..x.....'], [['kick808','kick707'], 'x.....x...x..x..'], [['kick707'], 'x..x......x.....'], [['kick808'], 'x.......x.x.....']],
+    snare:[[['snare808','clap808'], BB], [['snare707','snare808'], '....x.......x...'], [['clap808'], '....x.......x..x']],
+    hat:[[['hat808'], 'x.x.x.x.x.x.x.x.'], [['hat707','hat808'], 'x.xxx.xxx.xxx.xx'], [['hat808'], 'xxxxxxxxxxxxxxxx']],
+    ohat:[[['ohat808'], '......x.......x.']],
+    perc:[[['cowbell'], '..x...x...xx..x.'], [['rim707','click'], '.......x.......x'], [['zap','laser'], '..............x.'], [['conga','cowbell'], '.....x.......x..']],
+    bass:[[['fmbass','sqbass'], 'x..x..x...x..x..'], [['sqbass','mono'], '..x..x....x..xx.'], [['bass808'], 'x......x..x.....', [0,0,-2]], [['mono','fmbass'], 'x.x...x.x.x...x.']],
+    mel:[[['blip','sqlead'], '..x...x...x.x...'], [['pwm','sawlead'], 'x.......x...x...'], [['blip'], 'x.x.x.x.x.x.x.x.'], [['sqlead','synclead'], 'x..x..x.....x...'], [['vox','sinelead'], 'x...............', [0]]],
+    pad:[[['pad','junopad'], 'x...............', [0]]],
+    opt:{ ohat:0.4, perc:0.7, mel:0.8, pad:0.2 } },
+  minimal: { bpm:[122,128], drive:2, grit:0.4, fx:['warp','flow'],
+    kick:[[['deepkick','kick'], K4], [['clickkick','deepkick'], K4], [['lofikick','deepkick'], K4]],
+    snare:[[['rim'], '..x..x....x..x..'], [['snap','tightclap'], BB], [['rim707','snap'], '.....x.......x..']],
+    hat:[[['shaker'], 'x.xxx.xxx.xxx.xx'], [['tick','crisphat'], 'x.x.x.x.x.x.x.x.'], [['crisphat'], '..x...x...x...x.'], [['tick'], 'xxxxxxxxxxxxxxxx']],
+    ohat:[[['ride'], '..x...x...x...x.']],
+    perc:[[['clave','wood'], '.....x.......x..'], [['wood','bongo'], '.x.x...x.x.x....'], [['click','clave'], '..x....x.x....x.'], [['crackle'], '.......x.......x'], [['bongo'], '...x..x....x..x.']],
+    bass:[[['sub'], '..x...x...x...x.', [0]], [['dubbass','sub'], '..x.....x.x.....', [0,0,-2]], [['sub'], '.x.....x.x......', [0,0,3]]],
+    mel:[[['dubchord'], '...x.......x....', [0]], [['deepchord','bell'], '..x.......x.....'], [['marimba','kalimba'], 'x..x...x..x.....'], [['dubchord'], '......x.......x.', [0,3]]],
+    pad:[[['airpad','pad'], 'x...............', [0]]],
+    opt:{ ohat:0.3, perc:0.85, mel:0.7, pad:0.25 } },
+  trance: { bpm:[134,140], drive:3, grit:0.6, fx:['rings','tunnel'],
+    kick:[[['kick909','punchkick'], K4]],
+    snare:[[['clap909'], BB], [['roomclap','clap909'], BB]],
+    hat:[[['hat909'], '..x...x...x...x.'], [['hat'], 'xxxxxxxxxxxxxxxx'], [['hat909','hat'], 'x.xxx.xxx.xxx.xx']],
+    ohat:[[['ohat909'], '......x.......x.'], [['ride'], '..x...x...x...x.']],
+    perc:[[['tamb'], '..x...x...x...x.'], [['crash'], 'x...............']],
+    bass:[[['offbass'], '..x...x...x...x.', [0]], [['sawbass','offbass'], '.xxx.xxx.xxx.xxx', [0]], [['offbass'], '.xx..xx..xx..xx.', [0,0,0,0,3,3,5,5]]],
+    mel:[[['tpluck'], 'x.xx.xx.x.xx.xx.'], [['supersaw'], 'x.....x.....x...'], [['tpluck','pluck'], 'x.x.x.x.x.x.x.x.'], [['supersaw','hoover'], 'x.......x.......'], [['bell','tpluck'], 'x..x..x...x..x..']],
+    pad:[[['junopad','warmpad'], 'x...............', [0]], [['glasspad'], 'x...............', [0]], [['strings','choir'], 'x.......x.......', [0,-2]]],
+    opt:{ ohat:0.5, perc:0.3, mel:1, pad:0.7 } },
+  dark: { bpm:[120,128], drive:7, grit:2.2, fx:['tunnel','rings'],
+    kick:[[['distkick','hardkick'], K4], [['hardkick'], 'x...x...x...x.x.']],
+    snare:[[['darksnare'], BB], [['steel','darksnare'], BB], [['darksnare'], '............x.xx']],
+    hat:[[['hat808'], '..x...x...x...x.'], [['tick'], 'xxxxxxxxxxxxxxxx'], [['hat808','tick'], 'x.x.x.x.x.x.x.x.']],
+    ohat:[[['ohat808'], '..x...x...x...x.']],
+    perc:[[['metal'], '..x.......x..x..'], [['indhit'], '.......x.......x'], [['steel','metal'], '...x.....x......']],
+    bass:[[['buzz'], '..xx..xx..xx..xx', [0,0,1,0,0,0,3,1]], [['mono','buzz'], '.x.x.x.x.x.x.x.x', [0,0,0,1,0,0,3,0]], [['reese','buzz'], '..x...x...x...xx', [0,0,0,-2,3]], [['ebm'], '.xxx.xxx.xxx.xxx', [0,0,1,0]]],
+    mel:[[['diststab'], 'x..........x....', [0,1]], [['chant','darksaw'], 'x.....x.........', [0,-2]], [['darksaw'], 'x..x..x.....x...', [0,1,0,3]], [['vox','chant'], 'x...x...........', [0,-2]]],
+    pad:[[['pad'], 'x...............', [0]], [['choir'], 'x.......x.......', [0,1]]],
+    opt:{ ohat:0.3, perc:0.7, mel:0.85, pad:0.3 } },
+};
+const BLUEPRINTS = GENRE_POOLS;   // совместимость
+// собрать один вариант трека: по слою каждой роли (обязательные + часть необязательных)
+function composeV(key){
+  const G = GENRE_POOLS[key], V = {};
+  for (const r of ['kick','snare','hat','bass','ohat','perc','mel','pad']){
+    if (!G[r]) continue;
+    const chance = (G.opt || {})[r]; if (chance !== undefined && Math.random() > chance) continue;
+    V[r] = pickR(G[r]);
+  }
+  if (!V.mel && !V.bass && G.mel) V.mel = pickR(G.mel);   // хоть что-то мелодическое
+  // не меньше 6 слоёв (иногда 7): добираем мелодию, перкуссию, открытый хэт, пэд
+  const want = 6 + (Math.random() < 0.4 ? 1 : 0);
+  for (const r of ['mel','perc','ohat','pad','bass']) if (Object.keys(V).length < want && !V[r] && G[r]) V[r] = pickR(G[r]);
+  return V;
+}
+// сочинить ноты под рисунок: фраза «вопрос–ответ», бас — тоника на сильных долях
+function composeNotes(pat, role, v, bars = 1){
+  const bass = role === 'bass', acid = /acid/.test(v);
+  const pool = bass ? [0,0,0,7,12,10,3,-2] : acid ? [0,0,3,7,10,12,15] : [0,3,5,7,10,12];
+  // фраза: «вопрос» (1-я половина такта), «ответ» (2-я); во 2-м такте ответ уходит в другую сторону и разрешается
+  const m = [0, pickR(pool), pickR(pool), pickR(pool)], ans = [m[0], m[1], pickR(pool), pickR([7,10,12])], fin = [m[0], m[1], pickR(pool), 0];
+  const out = [];
+  for (let b=0;b<bars;b++){ let k = 0;
+    for (let i=0;i<16;i++) if (pat[i] === 'x'){
+      let nn = (i >= 8 ? (b === bars - 1 ? fin : ans) : m)[k % 4];
+      if (bass && i % 4 === 0) nn = 0;
+      if (acid && nn <= 7 && Math.random() < 0.15) nn += 12;   // октавный прыжок, но не выше 2-й октавы
+      out.push(nn); k++;
     }
   }
-  if (!quiet){ if (sel){ buildSteps(sel); buildNotes(sel); } toast('variation · ' + done + ' changes'); haptic('medium'); }
+  return out.length ? out : [0];
 }
+// сведение по ролям: громкость, сайдчейн, ревер, дилей
+const MIX = {
+  kick:{ vol:0.95 }, snare:{ vol:0.8, rev:0.2 }, hat:{ vol:0.5 }, ohat:{ vol:0.42, rev:0.1 },
+  perc:{ vol:0.55, rev:0.15, dly:0.2, dlyT:3 }, bass:{ vol:0.9, duck:0.6, duckRel:0.18 },
+  mel:{ vol:0.75, duck:0.4, rev:0.3, dly:0.25, dlyT:3 }, pad:{ vol:0.6, duck:0.7, duckRel:0.3, rev:0.5 },
+};
+const BP_ROLES = ['kick','snare','hat','ohat','bass','perc','mel','pad'];
+const roleOfGen = v => /pad|choir|strings/.test(v) ? 'pad' : /^(shaker|tamb)$/.test(v) ? 'hat' : roleGen(v);
+function writeLayer(t, pat, notes, vels, L){
+  const now = performance.now(); let k = 0;
+  for (let i=0;i<L;i++){
+    const on = pat[i % 16] === 'x';
+    t.pat[i] = on; t.prob[i] = 1; t.rat[i] = 1; t.vel[i] = 1;
+    if (on){ t.born[i] = now; if (notes) t.notes[i] = notes[k % notes.length]; if (vels) t.vel[i] = vels[k % vels.length]; k++; }
+  }
+}
+function genGlobals(key){
+  const B = BLUEPRINTS[key];
+  bpm = B.bpm[0] + Math.round(Math.random()*(B.bpm[1]-B.bpm[0]));
+  P.drive = B.drive; P.grit = B.grit; P.root = pickR([26,28,29,31,33]);
+  if (busSh){ busSh.curve = curve(P.grit); busComp.gain.value = 1/(1+P.grit*0.6); }
+  const fx = Array.isArray(B.fx) ? pickR(B.fx) : B.fx; if (FX_MODES.includes(fx)) setFx(fx);
+  const SW = { house:[0.12,0.22], minimal:[0.1,0.2], electro:[0.04,0.12], acid:[0,0.08], techno:[0,0.06], trance:[0,0.03], dark:[0,0.05] }[key] || [0,0];
+  swing = Math.round((SW[0] + Math.random()*(SW[1]-SW[0]))*100)/100; if (typeof showSwing === 'function') showSwing();
+}
+// доводка сгенерированной сцены: открытый хэт глушит закрытый, пэды меняют аккорд во 2-м такте,
+// перкуссия чуть иначе во 2-м такте, акценты хэтов
+function polishScene(L){
+  const R = t => t.role || roleOfGen(t.v);
+  const oh = tracks.filter(t => R(t) === 'ohat');
+  for (const t of tracks){
+    const r = R(t);
+    if (r === 'hat' && !isOpen(t.v)){
+      const hitsN = [...Array(L).keys()].filter(i => t.pat[i]).length, clash = [...Array(L).keys()].filter(i => t.pat[i] && oh.some(o => o.pat[i]));
+      if (clash.length && clash.length <= hitsN / 2) clash.forEach(i => t.pat[i] = false);          // choke: открытый глушит закрытый
+      else if (clash.length) oh.forEach(o => { for (const i of clash) o.pat[i] = false; if (!o.pat.slice(0, L).some(Boolean)) for (let i=0;i<L;i++) if (i % 16 === 14) o.pat[i] = true; });   // совпадают все — открытый уходит на другие доли
+      for (let i=0;i<L;i++) if (t.pat[i]) t.vel[i] = i % 4 === 2 ? 1 : i % 4 === 0 ? 0.75 : 0.55;
+    }
+    if (r === 'pad' && MELODIC.includes(t.v) && L >= 32){
+      const ch = pickR([-2, 3, 5, -4, 7]);
+      for (let i=16;i<L;i++) if (t.pat[i]) t.notes[i] = ch;
+      if (!t.pat[16]){ t.pat[16] = true; t.notes[16] = ch; t.vel[16] = 1; }
+    }
+    if (r === 'perc' && L >= 32 && Math.random() < 0.7){
+      const j = pickR([27, 29, 30, 31]); if (!t.pat[j]){ t.pat[j] = true; t.vel[j] = 0.6; t.prob[j] = 1; t.rat[j] = 1; }
+    }
+    if (r === 'snare'){ for (let i=0;i<L;i++) if (t.pat[i] && i % 16 !== 4 && i % 16 !== 12) t.vel[i] = Math.min(t.vel[i], 0.45); }   // вне бэкбита — тихо
+  }
+}
+
+// пустой проект: собрать трек целиком (звуки + 4 сцены)
+
+// ---------- аранжировка от выбранной сцены (пик) ----------
+// пик — твоя сцена (не меняется). Остальные три по порядку становятся: грув (ударные + бас, без мелодии),
+// брейк (без кика, мелодия/пэды, бас тише) и интро/аутро (кик, хэты, перкуссия).
+// Порядок: интро → грув → ДРОП → брейк → ДРОП → грув → аутро.
+const ARR_NAMES = { peak:'peak', groove:'groove', brk:'break', intro:'intro' };
+let arrRoles = null;   // { peak:k, groove:k, brk:k, intro:k } — что за сцены построены
+// какая сцена чем стала (intro / groove / build / peak / peak2 / break) — для «Arrange only»
+let sceneTypes = ['', '', '', ''];
+// одна сцена из другой: intro / groove / break / build / var (вариация пика)
+function deriveScene(t, base, type, hasMusic){
+  const L = STEPS, r = t.role || roleOfGen(t.v), S = cloneScene(base);
+  const wipe = () => { for (let i=0;i<MAXS;i++){ S.pat[i] = false; S.vel[i] = 1; S.rat[i] = 1; S.prob[i] = 1; } };
+  const put = (i, vel = 1) => { if (!S.pat[i]){ S.pat[i] = true; S.notes[i] = S.notes[i] || 0; S.rat[i] = 1; S.prob[i] = 1; } S.vel[i] = vel; };
+  if (type === 'groove'){
+    if ((hasMusic && ['mel','pad'].includes(r)) || r === 'ohat') wipe();
+  } else if (type === 'break'){
+    if (['kick','ohat','snare'].includes(r)) wipe();
+    if (r === 'bass') for (let i=0;i<L;i++) if (S.pat[i]) S.vel[i] = hasMusic ? 0.55 : 0.8;
+    if (r === 'hat'){ const off = [...Array(L).keys()].filter(i => S.pat[i] && i % 4 === 2);
+      if (off.length) { for (let i=0;i<L;i++) if (S.pat[i] && i % 4 !== 2) S.pat[i] = false; }
+      else { let n = 0; for (let i=0;i<L;i++) if (S.pat[i] && (n++ % 2)) S.pat[i] = false; } }
+    if (r === 'perc'){ let n = 0; for (let i=0;i<L;i++) if (S.pat[i] && (n++ % 2)) S.pat[i] = false; }
+    if (r === 'kick') put(0, 0.9);
+  } else if (type === 'intro'){
+    if (['mel','pad','snare','ohat','bass'].includes(r)) wipe();
+  } else if (type === 'build'){
+    // нарастание: без мелодии, хэты 16-ми, снейр учащается к концу, кик — четверти
+    if (['mel','pad','ohat'].includes(r)) wipe();
+    if (r === 'hat' && !isOpen(t.v)) for (let i=0;i<L;i++) put(i, 0.45 + 0.5*i/L);
+    if (r === 'snare'){ wipe(); const h = L/2; for (let i=0;i<L;i++) if ((i < h && i % 4 === 0) || (i >= h && i < L-4 && i % 2 === 0) || i >= L-4) put(i, 0.35 + 0.65*i/L); }
+    if (r === 'kick'){ for (let i=0;i<L;i++) if (S.pat[i] && i % 4 !== 0) S.pat[i] = false; for (let i=0;i<L;i+=4) put(i, 1); }
+  }
+  return S;
+}
+function buildArrangement(src){
+  const L = STEPS, now = performance.now();
+  const R = t => t.role || roleOfGen(t.v);
+  const rest = [0,1,2,3].filter(k => k !== src), [gK, bK, iK] = rest;
+  const hasMusic = tracks.some(x => ['mel','pad'].includes(R(x)) && x.scn[src].pat.slice(0, L).some(Boolean));
+  tracks.forEach(t => {
+    const PK = cloneScene(t.scn[src]);
+    t.scn[gK] = deriveScene(t, PK, 'groove', hasMusic); t.scn[bK] = deriveScene(t, PK, 'break', hasMusic); t.scn[iK] = deriveScene(t, PK, 'intro', hasMusic);
+    t.born = {}; for (let i=0;i<L;i++) if (PK.pat[i]) t.born[i] = now;
+  });
+  arrRoles = { peak:src, groove:gK, brk:bK, intro:iK };
+  sceneTypes[src] = 'peak'; sceneTypes[gK] = 'groove'; sceneTypes[bK] = 'break'; sceneTypes[iK] = 'intro';
+  const u = L >= 32 ? 1 : 2;   // повтор = 2 такта при 32 шагах
+  arr = [{ s:iK, b:4*u }, { s:gK, b:4*u }, { s:src, b:8*u }, { s:bK, b:4*u }, { s:src, b:8*u }, { s:gK, b:4*u }, { s:iK, b:2*u }];
+  selBlk = 0; songBar = -1;
+}
+// сделать одну сцену из другой — остальные сцены и песня не меняются
+function makeScene(target, src, type){
+  const L = STEPS, now = performance.now();
+  const hasMusic = tracks.some(x => ['mel','pad'].includes(x.role || roleOfGen(x.v)) && x.scn[src].pat.slice(0, L).some(Boolean));
+  tracks.forEach(t => { t.scn[target] = type === 'var' || type === 'copy' ? cloneScene(t.scn[src]) : deriveScene(t, t.scn[src], type, hasMusic); });
+  sceneTypes[target] = type === 'copy' ? sceneTypes[src] : type === 'var' ? 'peak2' : type; if (!sceneTypes[src] && type !== 'copy') sceneTypes[src] = 'peak';
+  const cur = scene;
+  if (type === 'var'){ scene = target; tracks.forEach(bindScene); variate(0, true, pickR(['groove','melody','drive'])); variate(0, true, 'melody'); }
+  scene = cur; tracks.forEach(bindScene);
+  if (scene === target) tracks.forEach(t => { t.born = {}; for (let i=0;i<L;i++) if (t.pat[i]) t.born[i] = now; });
+}
+// расставить уже готовые сцены в песню по плотности (сами паттерны не меняются)
+function arrangeExisting(){
+  const full = [0,1,2,3].filter(k => !sceneEmpty(k));
+  if (!full.length) return false;
+  // роли: известные (построенные здесь) + неизвестные по плотности
+  const type = {}; full.forEach(k => { if (sceneTypes[k]) type[k] = sceneTypes[k]; });
+  const same = (a, b) => tracks.every(t => ['pat','notes'].every(x => t.scn[a][x].slice(0, STEPS).join() === t.scn[b][x].slice(0, STEPS).join()));
+  full.forEach(k => { if (!type[k]){ const twin = full.find(j => j < k && same(j, k)); if (twin !== undefined && type[twin]) type[k] = type[twin]; } });
+  let unknown = full.filter(k => !type[k]).sort((a, b) => sceneEnergy(b) - sceneEnergy(a));
+  unknown = unknown.filter((k, i) => !unknown.slice(0, i).some(j => same(j, k)));   // копии не занимают отдельную роль
+  const taken = r => Object.values(type).includes(r);
+  // по плотности: самая плотная — пик, самая редкая — брейк, между ними — грув, интро
+  const order = unknown.length >= 4 ? ['peak','groove','intro','break'] : unknown.length === 3 ? ['peak','groove','break'] : unknown.length === 2 ? ['peak','break'] : ['peak'];
+  unknown.forEach((k, i) => { const r = order.find(x => !taken(x)) || 'groove'; type[k] = r; });
+  full.forEach(k => { if (!type[k]){ const twin = full.find(j => j !== k && same(j, k) && type[j]); type[k] = twin !== undefined ? type[twin] : 'groove'; } });
+  const of = r => full.find(k => type[k] === r);
+  const u = STEPS >= 32 ? 1 : 2;
+  const LEN = { intro:4, groove:4, build:2, peak:8, peak2:8, break:4 };
+  const plan = ['intro','groove','build','peak','break','build','peak2','peak','groove','intro'];
+  const out = [];
+  plan.forEach((r, k) => {
+    let s = of(r);
+    if (s === undefined){ if (r !== 'peak') return; s = full[0]; }   // нет интро/грува/брейка — просто пропускаем эту часть
+    if (r === 'peak' && k > 3 && of('peak2') !== undefined) return;            // второй пик — вариацией
+    const b = (k === plan.length - 1 ? 2 : LEN[r]) * u;
+    if (out.length && out[out.length-1].s === s) out[out.length-1].b = Math.min(16, out[out.length-1].b + b); else out.push({ s, b });
+  });
+  arr = out; selBlk = 0; songBar = -1; return true;
+}
+const buildArrangementFromA = () => buildArrangement(0);
+// жанр по уже стоящим звукам: в чьих наборах больше совпадений
+function guessGenre(){
+  const ids = tracks.map(t => t.v), score = {};
+  for (const [k, G] of Object.entries(GENRE_POOLS)){
+    let sc = 0;
+    for (const r of BP_ROLES) for (const l of (G[r] || [])) for (const v of l[0]) if (ids.includes(v)) sc += 1;
+    score[k] = sc + Math.random() * 0.5;   // при равенстве — случайно
+  }
+  return Object.entries(score).sort((x, y) => y[1] - x[1])[0][0];
+}
+// FX-звуки и вокал — редкие партии
+const SPARSE = {
+  fx:   ['x...............', '..............x.', '........x.......', '.......x.......x'],
+  vocal:['x...............', 'x.......x.......', 'x.....x.........', '....x.......x...'],
+};
+// параметры по умолчанию не трогали? тогда можно применить сведение
+const untouched = t => { const d = defParams(t.v); return ['vol','rev','dly','duck'].every(k => Math.abs((t.params[k] || 0) - (d[k] || 0)) < 1e-6); };
+
+// пустой проект: собрать трек целиком (звуки + 4 сцены); если звуки уже стоят — партии для них
+function generateTrack(){
+  pushUndo(true);
+  const fresh = !tracks.length;
+  const key = fresh ? (GENRE_POOLS[recipeNow()] ? recipeNow() : pickR(Object.keys(GENRE_POOLS))) : (GENRE_POOLS[recipeNow()] ? recipeNow() : guessGenre());
+  const G = GENRE_POOLS[key], V = composeV(key);
+  P.genKey = key;
+  if (fresh || P.blank) genGlobals(key);
+  if (fresh){
+    for (const r of BP_ROLES) if (V[r]){
+      const t = addGenTrack(pickR(V[r][0])); if (!t) continue;
+      t.role = r; Object.assign(t.params, MIX[r] || {}); applyParams(t);
+    }
+  }
+  STEPS = 32; stepLog = [];                         // фраза в 2 такта: сбивки только в конце фразы
+  const cur = scene; scene = 0; tracks.forEach(bindScene);
+  const usedPat = {};                               // чтобы два звука одной роли не играли одно и то же
+  const leadDone = { mel:false };
+  for (const t of tracks){
+    const r = t.role || roleOfGen(t.v), vocal = (LIBM[t.v] || {}).cat === 'Vocals', mel = MELODIC.includes(t.v);
+    let pat, notes = null, vels = null;
+    if (t.v === 'crash' || t.v === 'impact' || t.v === 'sweepdown'){ pat = 'x...............'; }   // удар на «раз»
+    else if (r === 'fx' || (LIBM[t.v] || {}).cat === 'FX'){ pat = pickR(SPARSE.fx); }
+    else if (vocal){ pat = pickR(SPARSE.vocal); }
+    else {
+      // слой этой роли: сперва тот, что выбрал composeV, для второго звука той же роли — другой вариант из набора
+      const pool = (G[r] || (r === 'pad' ? G.mel : null) || []).slice();
+      const fit = pool.filter(l => l[0].includes(t.v));                 // вариант, написанный именно для этого звука
+      let lay = !usedPat[r] && V[r] ? V[r] : null;
+      if (fit.length && (!lay || !lay[0].includes(t.v))) lay = pickR(fit);
+      const others = pool.filter(l => !(usedPat[r] || []).includes(l[1]));
+      if (!lay || (usedPat[r] || []).includes(lay[1])) lay = others.length ? pickR(others) : null;
+      const hits = x => x.split('x').length - 1, overlap = (x, y) => [...x].filter((c, i) => c === 'x' && y[i] === 'x').length;
+      // ведущая мелодия — с рисунком поплотнее
+      if (r === 'mel' && !leadDone.mel && lay && hits(lay[1]) < 3){ const busy = pool.filter(l => hits(l[1]) >= 3); if (busy.length) lay = pickR(busy); }
+      // второй хэт/перкуссия — рисунок, который меньше всего совпадает с первым
+      if ((r === 'hat' || r === 'perc') && usedPat[r] && usedPat[r].length){
+        const cand = pool.map(l => l[1]).concat(r === 'hat' ? ['..x...x...x...x.', '......x.......x.', '.x.x.x.x.x.x.x.x'] : ['...x.....x....x.', '.......x.......x']);
+        const best = cand.map(x => [x, usedPat[r].reduce((a, u) => a + overlap(x, u), 0) - hits(x) * 0.1]).sort((x, y) => x[1] - y[1])[0][0];
+        lay = [[], best, null];
+      }
+      if (r === 'mel' && leadDone.mel && !(lay && lay[1].split('x').length - 1 <= 3)){
+        lay = [[], pickR(['x.......x.......', '...x.......x....', 'x...............', '..x.......x.....']), null];   // вторая мелодия — редкий подклад
+      }
+      if (lay){ pat = lay[1]; notes = lay[2] || null; vels = lay[3] || null; }
+      if (r === 'mel') leadDone.mel = true;
+    }
+    if (pat){
+      writeLayer(t, pat, mel ? (notes || composeNotes(pat, r === 'bass' ? 'bass' : 'mel', t.v, STEPS / 16)) : null, vels, STEPS);
+      (usedPat[r] = usedPat[r] || []).push(pat);
+    } else fillRole(t, r === 'pad' ? 'mel' : r === 'fx' ? 'perc' : r, RECIPES[key] || RECIPES.techno);
+    if (!fresh && untouched(t)){ Object.assign(t.params, MIX[r] || {}); applyParams(t); }   // сведение — только если параметры не трогали
+  }
+  polishScene(STEPS); sceneTypes = ['peak', '', '', ''];
+  for (const t of tracks) for (let k=1;k<SCENES;k++) t.scn[k] = newScene();   // трек = сцена A (пик); аранжировка — в Song → Build from A
+  scene = 0; tracks.forEach(bindScene); vState = null;
+  updatePerform && updatePerform();
+  renderLib(); updateUI(); renderBlocks();
+  if (ac) tracks.forEach(t => t.flash = ac.currentTime);
+  toast((fresh ? 'generated · ' : 'built from your sounds · ') + key + ' · ' + bpm + ' bpm · song → build'); haptic('heavy');
+}
+const shuffleArr = a => a.slice().sort(() => Math.random() - 0.5);
+// роль для генератора (открытый хэт отдельно)
+const roleGen = v => { const r = roleOf(v); return r === 'hat' && isOpen(v) ? 'ohat' : r === 'fx' ? 'perc' : r; };
+
+// стиль «add»: добавить недостающий звук с подходящим рисунком
+// какие звуки библиотеки подходят под тип (запасной вариант, если в жанровом наборе всё уже стоит)
+const ADD_TYPES = [['kick','Kick'], ['snare','Snare / Clap'], ['hat','Hat'], ['ohat','Open hat'], ['perc','Perc'], ['bass','Bass'], ['mel','Lead'], ['pad','Pad'], ['fx','FX']];
+const LIB_BY_ROLE = r => LIB.map(x => x.id).filter(v => {
+  const c = (LIBM[v] || {}).cat;
+  if (r === 'fx') return c === 'FX';
+  if (r === 'pad') return c === 'Pads' || /choir|strings/.test(v);
+  if (r === 'mel') return ['Leads & Arps','Chords & Stabs','Keys'].includes(c);
+  return roleOfGen(v) === r;
+});
+// добавить звук: role — конкретный тип из меню, без role — «на удачу» (недостающий в миксе)
+function varyAddSound(role){
+  if (tracks.length >= MAX_SOUNDS){ toast('field is full · ' + MAX_SOUNDS + ' sounds'); return false; }
+  const key = GENRE_POOLS[recipeNow()] ? recipeNow() : (P.genKey && GENRE_POOLS[P.genKey] ? P.genKey : pickR(Object.keys(GENRE_POOLS)));
+  const G = GENRE_POOLS[key], has = v => tracks.some(t => t.v === v);
+  const haveRole = r => tracks.some(t => roleOfGen(t.v) === r);
+  const order = role ? [role] : shuffleArr(['perc','mel','ohat','hat','pad']).concat(['kick','snare','bass']).filter(r => !(['kick','snare','bass'].includes(r) && haveRole(r)));
+  for (const r of order){
+    // сначала — слои жанрового набора (звук + рисунок), потом любой звук этого типа из библиотеки
+    const layers = (r === 'fx' ? [] : (G[r] || [])).map(l => [l[0].filter(v => !has(v)), l]).filter(([vs]) => vs.length);   // G.fx — это фон, не звуки
+    let v, lay = null;
+    if (layers.length){ const [vs, l] = pickR(layers); v = pickR(vs); lay = l; }
+    else { const pool = LIB_BY_ROLE(r).filter(x => !has(x)); if (!pool.length) continue; v = pickR(pool); }
+    const t = addGenTrack(v); if (!t) return false;
+    t.role = r === 'fx' ? 'perc' : r;
+    if (r === 'fx') writeLayer(t, v === 'crash' || v === 'impact' ? 'x...............' : pickR(SPARSE.fx), null, null, STEPS);
+    else if (lay) writeLayer(t, lay[1], MELODIC.includes(v) ? (lay[2] || composeNotes(lay[1], r === 'bass' ? 'bass' : 'mel', v, STEPS / 16)) : null, lay[3] || null, STEPS);
+    else fillRole(t, r === 'pad' ? 'mel' : r, RECIPES[key] || RECIPES.techno);
+    if (r === 'ohat'){                                        // открытый хэт глушит закрытый на своих долях
+      for (const h of tracks.filter(x => x !== t && roleOfGen(x.v) === 'hat' && !isOpen(x.v))){
+        const left = [...Array(STEPS).keys()].filter(i => h.pat[i] && !t.pat[i]).length;
+        if (left >= 2) for (let i=0;i<STEPS;i++) if (t.pat[i] && h.pat[i]) h.pat[i] = false;
+      }
+    }
+    Object.assign(t.params, MIX[r === 'fx' ? 'perc' : r] || {}); applyParams(t);
+    if (ac){ t.flash = ac.currentTime; hit(t, ac.currentTime + 0.01); }
+    renderLib(); updateUI();
+    toast('vary · added ' + label(t.v) + ' · tap again for another'); return true;
+  }
+  toast(role ? 'no more ' + (ADD_TYPES.find(x => x[0] === role) || [0, role])[1].toLowerCase() + ' sounds to add' : 'nothing to add'); return false;
+}
+
+const KICK_BROKEN = ['x......x..x.....', 'x.....x...x..x..', 'x..x......x.....', 'x.......x.x.....'];   // ломаный кик (электро)
+const VARY_STYLES = ['groove','melody','fill','strip','drive','break','add'];
+const VARY_NAMES = { groove:'new groove', strip:'stripped', fill:'fill at the end', melody:'new melody', drive:'more drive', break:'breakdown', add:'+ add a sound ›', original:'original', 'only-bass':'bass line', 'only-drums':'drums', 'only-hats':'hats & perc', 'only-melody':'melody' };
+
+// force — конкретный стиль из меню (или 'original'), иначе выбирается сам
+function variate(n, quiet = false, force = null){
+  if (!quiet && force !== 'original' && (!tracks.length || (sceneEmpty(0) && sceneEmpty(1) && sceneEmpty(2) && sceneEmpty(3)))){ generateTrack(); return; }
+  if (!tracks.length) return;
+  if (!quiet && force && force.startsWith('add')){ pushUndo(); if (!varyAddSound(force.split(':')[1])) undoStack.pop(); vState = null; haptic('medium'); return; }
+  if (!quiet) pushUndo();
+  const now = performance.now();
+  // исходная сцена: если с прошлого Vary ничего не меняли руками — снова берём ту же основу
+  const partial = !!(force && force.startsWith('only-'));   // «только бас/ударные/…» — меняем текущее, без отката к основе
+  if (!quiet && !partial){
+    if (vState && vState.scene === scene && vState.sig === sceneSig()){
+      tracks.forEach(t => { const k = vState.ids.indexOf(t.id); if (k >= 0){ t.scn[scene] = cloneScene(vState.base[k]); bindScene(t); } });
+    } else vState = { scene, ids:tracks.map(t => t.id), base:tracks.map(t => cloneScene(t.scn[scene])) };
+  }
+  const only = !quiet && sel ? sel : null;
+  const L = STEPS, by = r => tracks.filter(t => roleOf(t.v) === r && !(only && t !== only));
+  const has = r => by(r).length > 0, onIdx = t => { const o = []; for (let i=0;i<L;i++) if (t.pat[i]) o.push(i); return o; };
+  const noteAt = (t, i) => { for (let k=i;k>=0;k--) if (t.pat[k]) return t.notes[k]; const o = onIdx(t); return o.length ? t.notes[o[0]] : 0; };
+  const add = (t, i, vel = 1, rat = 1) => { if (!t.pat[i]){ t.notes[i] = noteAt(t, i); t.pat[i] = true; t.born[i] = now; } t.vel[i] = vel; t.prob[i] = 1; t.rat[i] = rat; };
+  const del = (t, i) => { if (t.pat[i]){ t.pat[i] = false; t.vel[i] = 1; t.rat[i] = 1; dying.push({ i, tr:t, t:now }); } };
+  const setRow = (t, fn, vel) => { for (let i=0;i<L;i++){ const on = fn(i); if (on && !t.pat[i]) add(t, i, vel ? vel(i) : 1); else if (!on && t.pat[i]) del(t, i); else if (on && vel) t.vel[i] = vel(i); } };
+  const shuffle = a => a.slice().sort(() => Math.random() - 0.5);
+  const hatVel = i => i % 4 === 2 ? 1 : i % 2 ? 0.55 : 0.75;            // акцент на офбите, тише 16-е
+  const touched = new Set();
+  const electro = /Electro/.test(P.genre || '');
+
+  // ---- выбор стиля ----
+  let style = force;
+  if (!style){
+    const styles = [];
+    if (has('hat') || has('perc') || has('bass') || has('snare')) styles.push('groove', 'groove');
+    if (tracks.filter(t => roleOf(t.v) !== 'kick' && onIdx(t).length).length >= 3 && !only) styles.push('strip');
+    if (has('snare') || has('hat') || has('perc') || has('kick')) styles.push('fill');
+    if (has('mel') || has('bass')) styles.push('melody', 'melody');
+    if (has('hat') || has('perc')) styles.push('drive');
+    if ((has('kick') || has('bass')) && !only) styles.push('break');
+    if (!quiet && !only && tracks.length < 8) styles.push('add');
+    let pool = quiet ? styles.filter(x => x === 'groove' || x === 'melody') : styles.filter(x => x !== lastStyle);
+    if (!pool.length) pool = styles;
+    style = pool.length ? pickR(pool) : 'melody';
+  }
+  if (!quiet) lastStyle = style;
+  if (style === 'add'){ undoStack.pop(); pushUndo(); if (!varyAddSound()) undoStack.pop(); vState = null; haptic('medium'); return; }
+
+  if (style.startsWith('only-')){
+    // переделать только одну группу: новый рисунок из жанрового набора + новые ноты
+    const key = GENRE_POOLS[recipeNow()] ? recipeNow() : (P.genKey && GENRE_POOLS[P.genKey] ? P.genKey : 'techno'), G = GENRE_POOLS[key];
+    const grp = style.slice(5), want = { bass:['bass'], drums:['kick','snare','hat','ohat','perc'], hats:['hat','ohat','perc'], melody:['mel','pad'] }[grp] || [];
+    for (const t of tracks){
+      const r = roleOfGen(t.v); if (!want.includes(r) || (varyOnly && t !== varyOnly)) continue;
+      const opts = (G[r] || (r === 'ohat' ? [[[], OHAT_TPL[0]]] : null) || [[[], r === 'perc' ? '...x.....x....x.' : 'x.......x.......']]).map(l => l[1]);
+      const cur = t.pat.slice(0,16).map(x => x ? 'x' : '.').join('');
+      const vocal = (LIBM[t.v] || {}).cat === 'Vocals', hits = x => x.split('x').length - 1;
+      if (vocal){ opts.length = 0; opts.push('x...............', 'x.......x.......', 'x.....x.........', '....x.......x...'); }   // вокал — редко
+      else if (r === 'mel'){ const busy = opts.filter(x => hits(x) >= 3); if (busy.length) opts.splice(0, opts.length, ...busy); }
+      if (varyOnly && r === 'kick') opts.push('x...x...x...x..x', 'x...x...x..xx...', 'x...x...x...x.x.', 'x...x..xx...x...');   // кик: варианты с подхватом
+      if (varyOnly && r === 'ohat') opts.push(...OHAT_TPL, '......x.......x.', '..x.......x...x.');
+      if (varyOnly && r === 'hat') opts.push(...HAT_TPL);
+      if (varyOnly && r === 'snare') opts.push(BB, '....x.......x..x', '....x..x....x...', '....x.......xx..', '.......x....x...');
+      let pat = pickR(opts.filter(x => x !== cur).concat(r === 'perc' ? [euclid(pickR([3,5,7]),16,Math.random()*16|0).map(x => x ? 'x' : '.').join('')] : []));
+      if (!pat) pat = cur;
+      if (!varyOnly && r === 'kick' && !/x\.\.\.x\.\.\.x\.\.\.x/.test(pat) && !/Electro/.test(P.genre || '') && key !== 'electro') pat = cur;   // прямой кик не ломаем вне электро
+      if (!varyOnly && (r === 'snare') && Math.random() < 0.5) pat = cur;                                                                         // бэкбит меняем реже
+      const mel = MELODIC.includes(t.v), vel = r === 'hat' ? [1,.6,.8,.6] : null;
+      writeLayer(t, pat, mel ? composeNotes(pat, r === 'bass' ? 'bass' : 'mel', t.v, STEPS / 16) : null, vel, STEPS);
+      touched.add(t);
+    }
+    if (!touched.size){ toast('no ' + grp + ' in this scene'); }
+  } else if (style === 'original'){
+    // основа уже восстановлена выше — ничего не меняем
+  } else if (style === 'groove'){
+    // меняем 1–2 слоя, остальное остаётся узнаваемым
+    const layers = shuffle([...by('hat'), ...by('perc'), ...by('bass'), ...by('snare'), ...(electro ? by('kick') : [])]);
+    for (const t of layers.slice(0, only ? 1 : 1 + (Math.random() < 0.6 ? 1 : 0))){
+      const r = roleOf(t.v); touched.add(t);
+      if (r === 'hat'){ const cur = t.pat.slice(0,16).map(x => x ? 'x' : '.').join(''); const tp = pickR((isOpen(t.v) ? OHAT_TPL : HAT_TPL).filter(x => x !== cur)); setRow(t, i => tplOn(tp, i), isOpen(t.v) ? null : hatVel); }
+      else if (r === 'perc'){ const k = pickR([3,5,5,7]), e = euclid(k, 16, Math.random()*16|0); setRow(t, i => e[i % 16], i => i % 4 === 0 ? 1 : 0.7); }
+      else if (r === 'bass'){ const tp = pickR(BASS_TPL); setRow(t, i => tplOn(tp, i), i => i % 4 === 2 ? 1 : 0.8); }
+      else if (r === 'snare'){ for (const i of [L/2 - 1, L - 6, L - 3]) if (!t.pat[i] && Math.random() < 0.6) add(t, i, 0.35); }   // призрачные удары
+      else if (r === 'kick'){ const tp = pickR(KICK_BROKEN); setRow(t, i => tplOn(tp, i)); }
+    }
+  } else if (style === 'strip'){
+    // убрать 1–2 слоя целиком и проредить остальные — связи удаляются
+    const layers = shuffle(tracks.filter(t => roleOf(t.v) !== 'kick' && onIdx(t).length));
+    const cut = layers.slice(0, Math.min(2, Math.max(1, layers.length - 2)));
+    for (const t of cut){ for (let i=0;i<L;i++) del(t, i); touched.add(t); }
+    for (const t of layers) if (!cut.includes(t)){ for (const i of onIdx(t)) if (i % 4 !== 0 && Math.random() < 0.3) del(t, i); touched.add(t); }
+  } else if (style === 'fill'){
+    const end = L - 4, kinds = [];
+    if (has('snare')) kinds.push('roll', 'roll');
+    if (has('perc')) kinds.push('toms');
+    if (has('kick')) kinds.push('stutter');
+    if (tracks.length >= 3 && !only) kinds.push('gap');
+    const kind = kinds.length ? pickR(kinds) : 'roll';
+    if (kind === 'roll'){ for (const t of by('snare')){ [end, end+1, end+2, end+3].forEach((i, k) => add(t, i, 0.45 + k*0.18, k === 3 ? 2 : 1)); touched.add(t); }
+      for (const t of by('hat')) if (!isOpen(t.v)){ add(t, L-1, 0.9, 2); touched.add(t); } }
+    else if (kind === 'toms'){ const t = by('perc')[0]; [end, end+1, end+2, end+3].forEach((i, k) => { add(t, i, 0.6 + k*0.13); }); touched.add(t); }
+    else if (kind === 'stutter'){ for (const t of by('kick')){ add(t, end+2, 0.8); add(t, end+3, 0.9); touched.add(t); } }
+    else if (kind === 'gap'){ for (const t of tracks) if (roleOf(t.v) !== 'kick'){ for (let i=end+2;i<L;i++) del(t, i); touched.add(t); } }   // обрыв перед новым тактом
+  } else if (style === 'melody'){
+    for (const t of [...by('mel'), ...by('bass')]){
+      const bass = roleOf(t.v) === 'bass';
+      if (!onIdx(t).length) setRow(t, i => tplOn(bass ? BASS_TPL[0] : 'x.....x...x.....', i));
+      // фраза «вопрос–ответ»: мотив из 4 нот, во второй половине конец мотива меняется и разрешается в тонику
+      const pool = bass ? [0, 0, 7, 12, 10, 3, -2] : SCALE.slice(0, 6);
+      const m = [0, pickR(pool), pickR(pool), pickR(pool)];
+      const ans = [m[0], m[1], pickR(pool), pickR([0, 7, 12])];
+      const on = onIdx(t);
+      on.forEach((i, k) => {
+        const half = i >= L/2, ph = half ? ans : m;
+        let nn = ph[k % 4];
+        if (bass && i % 4 === 0) nn = 0;                                    // бас: тоника на сильных долях
+        if (/acid/.test(t.v) && Math.random() < 0.2) nn += 12;              // acid: октавные прыжки
+        t.notes[i] = nn; t.vel[i] = /acid/.test(t.v) ? (Math.random() < 0.35 ? 1 : 0.7) : t.vel[i];
+      });
+      touched.add(t);
+    }
+  } else if (style === 'drive'){
+    for (const t of by('hat')){ const tp = isOpen(t.v) ? pickR(OHAT_TPL) : pickR(['xxxxxxxxxxxxxxxx', 'x.xxx.xxx.xxx.xx', 'x.x.x.x.x.x.x.x.']); setRow(t, i => tplOn(tp, i), isOpen(t.v) ? null : hatVel); touched.add(t); }
+    for (const t of by('perc')){ const e = euclid(7, 16, Math.random()*16|0); setRow(t, i => e[i % 16] || t.pat[i], () => 0.8); touched.add(t); }
+    for (const t of by('bass')) if (Math.random() < 0.5){ setRow(t, i => tplOn(BASS_TPL[1], i)); touched.add(t); }
+  } else if (style === 'break'){
+    for (const t of by('kick')){ setRow(t, i => i === 0); touched.add(t); }
+    for (const t of by('bass')){ setRow(t, i => i === 0 || i === L/2); touched.add(t); }
+    for (const t of by('snare')){ for (const i of onIdx(t)) if (i < L - 4) del(t, i); touched.add(t); }
+  }
+
+  if (!quiet){ if (partial) vState = null; else vState.sig = sceneSig(); }
+  if (quiet) return;
+  if (sel){ buildSteps(sel); buildNotes(sel); }
+  if (ac) touched.forEach(t => t.flash = ac.currentTime);
+  toast('vary · ' + VARY_NAMES[style] + (only ? ' · ' + label(only.v) : '') + (force ? '' : ' · hold for styles'));
+  haptic('medium');
+}
+
+// ---- меню стилей Vary (долгое нажатие / правый клик) ----
+function openVaryMenu(){
+  let m = $('varyMenu');
+  if (!m){ m = document.createElement('div'); m.id = 'varyMenu'; document.body.appendChild(m); }
+  m.innerHTML = '<div class="vmh">Vary scene ' + 'ABCD'[scene] + (sel ? ' · ' + label(sel.v) : '') + '</div>' +
+    (!tracks.length || (sceneEmpty(0) && sceneEmpty(1) && sceneEmpty(2) && sceneEmpty(3)) ? '<button data-st="groove">✦ generate a track</button>' :
+    VARY_STYLES.map(st => '<button data-st="' + st + '"' + (st === 'add' && (sel || tracks.length >= MAX_SOUNDS) ? ' disabled' : '') + '>' + VARY_NAMES[st] + '</button>').join('')) +
+    (tracks.length && !(sceneEmpty(0) && sceneEmpty(1) && sceneEmpty(2) && sceneEmpty(3)) && !sel ?
+      '<div class="vmh sub">Only</div>' + [['only-bass','bass'],['only-drums','kick'],['only-hats','hat'],['only-melody','mel']].map(([st, r]) => {
+        const ok = tracks.some(t => st === 'only-drums' ? ['kick','snare','hat','ohat','perc'].includes(roleOfGen(t.v)) : st === 'only-hats' ? ['hat','ohat','perc'].includes(roleOfGen(t.v)) : st === 'only-melody' ? ['mel','pad'].includes(roleOfGen(t.v)) : roleOfGen(t.v) === r);
+        return '<button data-st="' + st + '"' + (ok ? '' : ' disabled') + '>' + VARY_NAMES[st] + '</button>'; }).join('') : '') +
+    '<button data-st="original" class="orig"' + (vState && vState.scene === scene ? '' : ' disabled') + '>↺ original</button>';
+  m.querySelectorAll('button').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (b.dataset.st === 'add'){ openAddMenu(); return; }
+    closeVaryMenu(); variate(0, false, b.dataset.st);
+  });
+  const r = $('varBtn').getBoundingClientRect();
+  m.classList.add('open');
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.top = Math.max(8, r.top - h - 8) + 'px';
+  haptic('medium'); updateBack();
+}
+// подменю «что добавить»
+function openAddMenu(){
+  const m = $('varyMenu'); if (!m) return;
+  const full = tracks.length >= MAX_SOUNDS;
+  m.innerHTML = '<div class="vmh"><button class="back" data-a="back">‹</button>Add a sound · ' + tracks.length + '/' + MAX_SOUNDS + '</div>' +
+    ADD_TYPES.map(([r, n]) => '<button data-st="add:' + r + '"' + (full ? ' disabled' : '') + '>' + n + '</button>').join('') +
+    '<button data-st="add" class="orig"' + (full ? ' disabled' : '') + '>✦ surprise me</button>';
+  m.querySelector('[data-a="back"]').onclick = e => { e.stopPropagation(); openVaryMenu(); };
+  m.querySelectorAll('button[data-st]').forEach(b => b.onclick = e => { e.stopPropagation(); closeVaryMenu(); variate(0, false, b.dataset.st); });
+  const r = $('varBtn').getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.top = Math.max(8, r.top - h - 8) + 'px';
+  haptic('select');
+}
+function closeVaryMenu(){ const m = $('varyMenu'); if (m) m.classList.remove('open'); updateBack(); }
+addEventListener('pointerdown', e => { const m = $('varyMenu'); if (m && m.classList.contains('open') && !m.contains(e.target) && e.target.closest('#varBtn') !== $('varBtn')) closeVaryMenu(); }, true);
 
 // ============================================================
 //  GEOMETRY
@@ -486,8 +1113,6 @@ function drawFrame(){
     else { g.strokeStyle = focus ? 'rgba(255,255,255,.85)' : muted ? 'rgba(255,255,255,.04)' : bg ? 'rgba(255,255,255,.035)' : 'rgba(255,255,255,.15)'; g.globalAlpha = velA; }
     if (tr.prob[i] < 1) g.setLineDash([3,4]);                        // пунктир = срабатывает не всегда
     tracePath(i, tr, 0, born); g.stroke(); g.setLineDash([]); g.globalAlpha = 1; g.lineWidth = 1;
-    if (tr.rat[i] > 1 && !bg){ g.fillStyle = muted ? 'rgba(255,255,255,.3)' : acc;   // точки у основания = дробь
-      for (let k=0;k<tr.rat[i];k++){ const q = pathPt(i, tr, 0.07 + k*0.05); g.fillRect(q.x-1.5, q.y-1.5, 3, 3); } }
     // комета: выходит за шаг до удара, приходит точно в момент звука
     if (pos >= 0 && !muted && !bg){
       const d = (i - (pos % STEPS) + STEPS) % STEPS;
@@ -604,9 +1229,16 @@ function drawFrame(){
     g.textAlign = Math.cos(a) < -0.3 ? 'right' : Math.cos(a) > 0.3 ? 'left' : 'center';
     if (mob){ g.textAlign = 'center'; lx = p.x; oy = 0; ly = Math.sin(a) < -0.15 ? p.y - 32 : p.y + 26; }
     g.globalAlpha = sc;
-    g.font = '700 11px JetBrains Mono, monospace'; g.fillStyle = muted ? 'rgba(255,255,255,.35)' : hl ? acc : '#fff';
+    g.fillStyle = muted ? 'rgba(255,255,255,.35)' : hl ? acc : '#fff';
     g.shadowColor = 'rgba(0,0,0,.95)'; g.shadowBlur = 8;
-    g.fillText(label(tr.v), lx, ly+oy);
+    let txt = label(tr.v); g.font = '700 11px JetBrains Mono, monospace';
+    if (mob){   // телефон: подпись не шире расстояния до соседа и до края экрана
+      const rr = Math.hypot(p.x - C.x, p.y - C.y), chord = tracks.length > 1 ? 2*rr*Math.sin(Math.PI/tracks.length) : W;
+      const maxW = Math.max(40, Math.min(chord - 8, 2*Math.min(p.x, W - p.x) - 6));
+      for (const fs of [11, 10, 9, 8]){ g.font = '700 ' + fs + 'px JetBrains Mono, monospace'; if (g.measureText(txt).width <= maxW) break; }
+      while (txt.length > 3 && g.measureText(txt).width > maxW) txt = txt.slice(0, -2) + '…';
+    }
+    g.fillText(txt, lx, ly+oy);
     g.font = '9px JetBrains Mono, monospace';
     let n = 0; for (let i=0;i<STEPS;i++) if (tr.pat[i]) n++;
     g.fillStyle = (tr.mute || solo===tr) ? acc : solo ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.4)';
@@ -836,6 +1468,15 @@ document.querySelectorAll('#stTabs button').forEach(b => b.onclick = () => {
   if (sel) buildSteps(sel);
 });
 $('sAll').onclick = ()=>{ for (let i=0;i<STEPS;i++) if (!sel.pat[i]){ sel.pat[i] = true; sel.vel[i] = 1; sel.prob[i] = 1; sel.rat[i] = 1; sel.born[i] = performance.now(); } };
+// Vary для одного звука: новый рисунок в духе жанра (и новые ноты у мелодических)
+let varyOnly = null;
+$('sVary').onclick = () => {
+  if (!sel) return;
+  const r = roleOfGen(sel.v), grp = r === 'bass' ? 'bass' : ['mel','pad'].includes(r) ? 'melody' : ['hat','ohat','perc'].includes(r) ? 'hats' : 'drums';
+  varyOnly = sel;
+  try { variate(0, false, 'only-' + grp); } finally { varyOnly = null; }
+  toast('vary · ' + label(sel.v) + ' · tap again for another · undo reverts');
+};
 $('sNone').onclick = ()=>{ pushUndo(); for (let i=0;i<STEPS;i++) if (sel.pat[i]) removeLink(i, sel); };
 
 // ---------- редактор нот ----------
@@ -991,7 +1632,15 @@ $('padsClose').onclick = () => setPadsOpen(false);
 function setPanelTab(t){ document.body.dataset.pt = t; document.querySelectorAll('#pTabs button').forEach(b => b.classList.toggle('on', b.dataset.pt === t)); $('panel').scrollTop = 0; if (W) resize(); }
 document.querySelectorAll('#pTabs button').forEach(b => b.onclick = () => setPanelTab(b.dataset.pt));
 setPanelTab('steps');
-$('varBtn').onclick = ()=>variate();
+// Vary: тап — умная вариация, долгое нажатие (или правый клик) — меню стилей
+(() => {
+  const b = $('varBtn'); let tm = null, long = false;
+  b.addEventListener('pointerdown', () => { long = false; clearTimeout(tm); tm = setTimeout(() => { long = true; openVaryMenu(); }, 450); });
+  const cancel = () => clearTimeout(tm);
+  b.addEventListener('pointerup', cancel); b.addEventListener('pointerleave', cancel); b.addEventListener('pointercancel', cancel);
+  b.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(tm); long = true; openVaryMenu(); });
+  b.onclick = () => { if (long){ long = false; return; } closeVaryMenu(); variate(); };
+})();
 $('undoBtn').onclick = undo;
 
 const PAD_ON = {};
@@ -1037,6 +1686,7 @@ const fmtTime = sec => Math.floor(sec/60) + ':' + String(Math.round(sec%60)).pad
 
 function setSongOn(on, quiet){
   songOn = on; songBar = -1; songEnded = false; queuedScene = -1;
+  if (!on && ac) perfReset();
   $('songOn').classList.toggle('on', on); $('songOn').textContent = on ? '■ Song mode on' : '▶ Song mode';
   $('songBtn').classList.toggle('on', on);
   if (!quiet){ toast(on ? 'song mode · scenes follow the arrangement' : 'song mode off'); haptic('medium'); }
@@ -1050,23 +1700,25 @@ function setSongOpen(on){
 }
 function renderBlocks(){
   const box = $('blocks'); if (!box) return;
+  if (typeof updateSongGen === 'function') updateSongGen();
   selBlk = Math.max(0, Math.min(arr.length - 1, selBlk));
   box.innerHTML = '';
   arr.forEach((b, k) => {
     const el = document.createElement('div'); el.className = 'blk'; el.dataset.s = b.s;
     el.style.width = (IS_MOBILE ? 46 + Math.min(16, b.b)*4 : 58 + Math.min(16, b.b)*5) + 'px';   // ширина ~ длине блока
     if (k === selBlk) el.classList.add('sel');
-    el.innerHTML = '<div class="sc">' + 'ABCD'[b.s] + '<small>' + b.b + (b.b === 1 ? ' bar' : ' bars') + '</small></div><div class="bar"></div>';
+    const nb = b.b * barsPer(), role = sceneTypes[b.s] || '';
+    el.innerHTML = '<div class="sc">' + 'ABCD'[b.s] + '<small>' + nb + (nb === 1 ? ' bar' : ' bars') + '</small>' + (role ? '<i>' + (ROLE_NAME[role] || role) + '</i>' : '') + '</div><div class="bar"></div>';
     el.onclick = () => { selBlk = k; renderBlocks(); haptic('select'); };   // тап — выбрать блок
     box.appendChild(el);
   });
   // панель выбранного блока
   const b = arr[selBlk];
   document.querySelectorAll('#edScene button').forEach(x => x.classList.toggle('on', b && +x.dataset.v === b.s));
-  document.querySelectorAll('#edBars button').forEach(x => x.classList.toggle('on', b && +x.dataset.v === b.b));
+  document.querySelectorAll('#edBars button').forEach(x => { const v = +x.dataset.v, loops = v / barsPer(); x.classList.toggle('on', !!b && loops === b.b); x.disabled = loops < 1 || loops > 16 || loops % 1 !== 0; });
   $('edLeft').disabled = selBlk <= 0; $('edRight').disabled = selBlk >= arr.length - 1; $('edDel').disabled = arr.length <= 1;
   const sec = arrTotal()*STEPS*stepDur();
-  $('songLen').textContent = arrTotal() + ' bars · ' + fmtTime(sec);
+  $('songLen').textContent = arrTotal() * barsPer() + ' bars · ' + fmtTime(sec);
   $('songLoop').classList.toggle('on', songLoop);
   updateSongProgress();
 }
@@ -1101,15 +1753,51 @@ $('edDel').onclick = () => {
 $('edLeft').onclick = () => { if (selBlk > 0){ [arr[selBlk-1], arr[selBlk]] = [arr[selBlk], arr[selBlk-1]]; selBlk--; renderBlocks(); scrollToSel(); } };
 $('edRight').onclick = () => { if (selBlk < arr.length - 1){ [arr[selBlk+1], arr[selBlk]] = [arr[selBlk], arr[selBlk+1]]; selBlk++; renderBlocks(); scrollToSel(); } };
 document.querySelectorAll('#edScene button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].s = +x.dataset.v; renderBlocks(); haptic('select'); } });
-document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].b = +x.dataset.v; renderBlocks(); haptic('select'); } });
-document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { arr = tplArr(b.dataset.tpl); selBlk = 0; songBar = -1; renderBlocks(); toast('template · ' + b.textContent); });
-$('scCopy2').onclick = () => $('scCopy').click();
-// вкладки листа Song на телефоне: Arrange / Export
-document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x === b));
-  $('song').dataset.tab = b.dataset.st; haptic('select');
+document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { const loops = +x.dataset.v / barsPer(); if (arr[selBlk] && loops >= 1 && loops % 1 === 0){ arr[selBlk].b = loops; renderBlocks(); haptic('select'); } });
+document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { pushUndo(true); arr = [{ s:scene, b:1 }]; selBlk = 0; songBar = -1; renderBlocks(); toast('timeline reset · scene ' + 'ABCD'[scene] + ' loops'); });
+// ---------- вкладка Build: главная сцена → песня ----------
+const ROLE_NAME = { intro:'intro', groove:'groove', build:'build-up', peak:'drop', peak2:'drop 2', break:'break' };
+let mainSc = 0;
+function buildPlanFor(m){ const [g, b, i] = [0,1,2,3].filter(k => k !== m); return [['intro', i], ['groove', g], ['drop', m], ['break', b], ['drop', m], ['groove', g], ['outro', i]]; }
+function updateBuild(){
+  if (sceneEmpty(mainSc)){ const f = [0,1,2,3].find(k => !sceneEmpty(k)); if (f !== undefined) mainSc = f; }
+  const L = 'ABCD', anyFull = [0,1,2,3].some(k => !sceneEmpty(k));
+  document.querySelectorAll('#bMain button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mainSc); b.disabled = sceneEmpty(k); });
+  $('bPlan').innerHTML = buildPlanFor(mainSc).map(([r, k]) => '<span class="' + (r === 'drop' ? 'pk' : '') + '"><b>' + L[k] + '</b>' + r + '</span>').join('<i>›</i>');
+  const others = [0,1,2,3].filter(k => k !== mainSc && !sceneEmpty(k));
+  $('bWarn').textContent = !anyFull ? 'make a pattern first' : others.length ? 'rewrites scene' + (others.length > 1 ? 's ' : ' ') + others.map(k => L[k]).join(', ') + ' · undo reverts' : 'scenes ' + [0,1,2,3].filter(k => k !== mainSc).map(k => L[k]).join(', ') + ' are empty — they will be filled';
+  $('bWarn').classList.toggle('hot', others.length > 0);
+  $('bBuild').disabled = !anyFull;
+  $('arrOnly').style.display = [0,1,2,3].filter(k => !sceneEmpty(k)).length >= 2 ? '' : 'none';
+  if (mkT === mainSc) mkT = [0,1,2,3].find(k => k !== mainSc);
+  document.querySelectorAll('#mkT button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mkT); b.disabled = k === mainSc; });
+}
+document.querySelectorAll('#bMain button').forEach(b => b.onclick = () => { mainSc = +b.dataset.s; updateBuild(); haptic('select'); });
+$('bBuild').onclick = () => {
+  if (sceneEmpty(mainSc)){ toast('make a pattern first'); return; }
+  pushUndo(true); buildArrangement(mainSc);
+  tracks.forEach(bindScene); renderBlocks(); updatePerform(); showSongTab('arr'); haptic('heavy');
+  toast('song built · drop = ' + 'ABCD'[mainSc] + ' · press song mode to play');
+};
+let mkT = 1;
+document.querySelectorAll('#mkT button').forEach(b => b.onclick = () => { mkT = +b.dataset.s; updateBuild(); haptic('select'); });
+document.querySelectorAll('#mkType button').forEach(b => b.onclick = () => {
+  const L = 'ABCD';
+  if (sceneEmpty(mainSc)){ toast('main part is empty'); return; }
+  pushUndo(true); makeScene(mkT, mainSc, b.dataset.t); vState = null;
+  renderBlocks(); updatePerform(); updateBuild(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium');
+  toast('scene ' + L[mkT] + ' = ' + b.textContent.toLowerCase() + ' of ' + L[mainSc] + ' · undo reverts');
 });
+$('arrOnly').onclick = () => { pushUndo(true); if (!arrangeExisting()){ undoStack.pop(); toast('all scenes are empty'); return; } renderBlocks(); showSongTab('arr'); haptic('medium'); toast('arranged your scenes · patterns unchanged'); };
+function updateSongGen(){ if ($('bMain')) updateBuild(); }
+// вкладки листа Song на телефоне: Arrange / Export
+function showSongTab(t){
+  document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x.dataset.st === t));
+  $('song').dataset.tab = t; if (t === 'build'){ if (!sceneEmpty(scene)) mainSc = scene; updateBuild(); }
+}
+document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => { showSongTab(b.dataset.st); haptic('select'); });
 $('song').dataset.tab = 'arr';
+const barsPer = () => STEPS / 16;   // сколько тактов в одном повторе сцены
 
 // ============================================================
 //  ЭКСПОРТ: офлайн-рендер аранжировки → WAV / MP3 → скачать или отправить в чат бота
@@ -1228,13 +1916,15 @@ function decScene(o){
   return s;
 }
 function serialize(){
-  return { v:2, preset:P.name, bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
+  return { v:2, preset:P.name, acc:P.acc, types:sceneTypes.slice(), bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
     tracks: tracks.map(tr => ({ v:tr.v, m:tr.mute ? 1 : 0, sc: tr.scSrc ? tracks.indexOf(tr.scSrc) : -1,
       p: Object.fromEntries(Object.entries(tr.params).map(([k,x]) => [k, r3(x)])), s: tr.scn.map(encScene) })) };
 }
 function deserialize(d){
   if (!d || !Array.isArray(d.tracks)) throw new Error('bad project');
   applyPreset(Math.max(0, PRESETS.findIndex(p => p.name === d.preset)));
+  if (typeof d.acc === 'string' && /^#[0-9a-f]{6}$/i.test(d.acc)) setAcc(d.acc);   // свой цвет трека
+  sceneTypes = Array.isArray(d.types) ? [0,1,2,3].map(k => typeof d.types[k] === 'string' ? d.types[k] : '') : ['', '', '', ''];
   bpm = Math.max(60, Math.min(200, +d.bpm || P.bpm)); swing = +d.swing || 0; STEPS = d.steps === 32 ? 32 : 16;
   scene = Math.max(0, Math.min(SCENES-1, d.scene|0)); queuedScene = -1; undoStack = [];
   arr = Array.isArray(d.arr) && d.arr.length ? d.arr.slice(0, 32).map(([s, b]) => ({ s:Math.max(0, Math.min(3, s|0)), b:BAR_OPTS.includes(b) ? b : 4 })) : tplArr('club');
@@ -1493,9 +2183,66 @@ $('bpmSlider').oninput = e => { bpm = +e.target.value; showBpmSlider(); $('bpm')
 $('bpmSlider').addEventListener('keydown', e => e.stopPropagation());
 document.addEventListener('pointerdown', e => { if (bpmOpen() && !e.target.closest('#bpmPop') && !e.target.closest('#bpm')) closeBpm(); }, true);
 addEventListener('resize', () => { if (bpmOpen()) closeBpm(); });
-const clearScene = ()=>{ pushUndo(); for (const tr of tracks) for (let i=0;i<STEPS;i++) if (tr.pat[i]) removeLink(i, tr); toast('scene '+'ABCD'[scene]+' cleared · undo to restore'); };
-document.querySelectorAll('.clearBtn').forEach(b => b.onclick = clearScene);
-const PAD_KEYS = { z:'lpf', x:'hpf', c:'kill', v:'wash', b:'roll4', n:'roll8', m:'build' };
+// ---------- Clear: меню очистки ----------
+// полный снимок (звуки + все сцены) — чтобы Undo вернул и удалённые звуки
+function pushUndoFull(){
+  undoStack.push({ full:true, types:sceneTypes.slice(), scene, list:tracks.slice(), ids:tracks.map(t => t.id), all:tracks.map(t => t.scn.map(cloneScene)), sc:tracks.map(t => t.scSrc) });
+  if (undoStack.length > 30) undoStack.shift();
+}
+function dropTrack(tr){
+  if (sel === tr) closePanel(); if (solo === tr) setSolo(null);
+  dropChain(tr); tracks.forEach(x => { if (x.scSrc === tr) x.scSrc = null; });
+  const p = sPt(tr); rings.push({ x:p.x, y:p.y, t0:performance.now(), dur:500, r0:10, r1:60, w:2 });
+  tracks.splice(tracks.indexOf(tr), 1);
+}
+const usedAnywhere = tr => tr.scn.some(sc => sc.pat.some((x, i) => x && i < STEPS));
+function clearAction(kind){
+  if (kind === 'scene'){
+    pushUndo(); for (const tr of tracks) for (let i=0;i<STEPS;i++) if (tr.pat[i]) removeLink(i, tr);
+    toast('scene ' + 'ABCD'[scene] + ' cleared · undo to restore');
+  } else if (kind === 'all'){
+    pushUndoFull(); const now = performance.now();
+    for (const tr of tracks){ for (let i=0;i<STEPS;i++) if (tr.pat[i]) dying.push({ i, tr, t:now }); tr.scn = Array.from({length:SCENES}, newScene); bindScene(tr); }
+    toast('all scenes cleared · sounds stay · undo to restore');
+  } else if (kind === 'unused'){
+    const gone = tracks.filter(t => !usedAnywhere(t));
+    if (!gone.length){ toast('every sound has links'); return; }
+    pushUndoFull(); gone.forEach(dropTrack);
+    toast('removed ' + gone.length + ' unused sound' + (gone.length > 1 ? 's' : '') + ' · undo to restore');
+  } else if (kind === 'everything'){
+    pushUndoFull(); tracks.slice().forEach(dropTrack);
+    vState = null; toast('field cleared · vary generates a track · undo to restore');
+  }
+  if (sel){ buildSteps(sel); buildNotes(sel); }
+  vState = null; renderLib(); updateUI(); haptic('heavy');
+}
+let clearAnchor = null, everythingArm = 0;
+function openClearMenu(btn){
+  let m = $('clearMenu');
+  if (!m){ m = document.createElement('div'); m.id = 'clearMenu'; m.className = 'popMenu'; document.body.appendChild(m); }
+  const unused = tracks.filter(t => !usedAnywhere(t)).length;
+  m.innerHTML = '<div class="vmh">Clear</div>' +
+    '<button data-k="scene">Links · scene ' + 'ABCD'[scene] + '</button>' +
+    '<button data-k="all">Links · all scenes</button>' +
+    '<button data-k="unused"' + (unused ? '' : ' disabled') + '>Remove unused sounds' + (unused ? ' (' + unused + ')' : '') + '</button>' +
+    '<button data-k="everything" class="danger"' + (tracks.length ? '' : ' disabled') + '>Remove everything</button>';
+  m.querySelectorAll('button').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (b.dataset.k === 'everything' && performance.now() - everythingArm > 2500){   // самое разрушительное — второй тап
+      everythingArm = performance.now(); b.textContent = 'Tap again to remove all'; b.classList.add('arm'); haptic('light'); return;
+    }
+    everythingArm = 0; closeClearMenu(); clearAction(b.dataset.k);
+  });
+  clearAnchor = btn; m.classList.add('open');
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.top = (r.top - h - 8 > 8 ? r.top - h - 8 : r.bottom + 8) + 'px';
+  haptic('light'); updateBack();
+}
+function closeClearMenu(){ const m = $('clearMenu'); if (m) m.classList.remove('open'); everythingArm = 0; updateBack(); }
+addEventListener('pointerdown', e => { const m = $('clearMenu'); if (m && m.classList.contains('open') && !m.contains(e.target) && !(clearAnchor && clearAnchor.contains(e.target))) closeClearMenu(); }, true);
+document.querySelectorAll('.clearBtn').forEach(b => b.onclick = () => { const m = $('clearMenu'); m && m.classList.contains('open') ? closeClearMenu() : openClearMenu(b); });
+const PAD_KEYS = { z:'lpf', x:'hpf', c:'kill', v:'wash', b:'roll4', n:'roll8' };
 addEventListener('keydown', e=>{
   if (!ac || e.repeat) return;
   if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -1524,7 +2271,7 @@ function haptic(kind){
 }
 function updateBack(){
   if (!inTG || !tg.BackButton) return;
-  const any = sel || bpmOpen() || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
+  const any = sel || bpmOpen() || document.querySelector('#varyMenu.open, #clearMenu.open') || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
   any ? tg.BackButton.show() : tg.BackButton.hide();
 }
 function applySafeArea(){
@@ -1540,7 +2287,10 @@ if (inTG){
     if (tg.isVersionAtLeast('6.1')){ tg.setHeaderColor('#050505'); tg.setBackgroundColor('#050505'); }
     if (tg.isVersionAtLeast('7.10') && tg.setBottomBarColor) tg.setBottomBarColor('#050505');
     tg.BackButton.onClick(() => {
-      if (bpmOpen()) closeBpm();
+      const vm = $('varyMenu'), cm = $('clearMenu');
+      if (vm && vm.classList.contains('open')) closeVaryMenu();
+      else if (cm && cm.classList.contains('open')) closeClearMenu();
+      else if (bpmOpen()) closeBpm();
       else if ($('lib').classList.contains('open')) closeLib();
       else if ($('pre').classList.contains('open')) closeDrawer();
       else if (sel) closePanel();

@@ -5,9 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#050505">
 <title>LOCKED ROOM</title>
+<script>
+// Мобильная версия — основная. На широком экране компьютера приложение открывается в рамке телефона
+// (внутри iframe сама страница узкая → работает мобильная вёрстка). Полная раскладка: ?desktop=1.
+// В Telegram, на телефоне и внутри рамки — обычный запуск.
+(function(){
+  var q = location.search, tgApp = /tgWebApp/.test(location.hash) || /Telegram/i.test(navigator.userAgent);
+  if (window.top !== window.self || /[?&](desktop|frame)=1/.test(q) || tgApp || window.innerWidth <= 700) return;
+  var src = location.pathname + '?frame=1' + location.hash;
+  document.write('<style>html,body{margin:0;height:100%;background:#000;font-family:JetBrains Mono,monospace}' +
+    '#phone{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(430px,100vw);height:min(932px,calc(100vh - 56px));border:1px solid #222;border-radius:28px;overflow:hidden;box-shadow:0 30px 120px rgba(0,0,0,.9),0 0 0 8px #0b0b0b}' +
+    '#phone iframe{border:0;width:100%;height:100%;display:block;background:#050505}' +
+    '#dl{position:fixed;left:0;right:0;bottom:10px;text-align:center;font-size:10px;letter-spacing:.2em;text-transform:uppercase}' +
+    '#dl a{color:#555;text-decoration:none}#dl a:hover{color:#aaa}</style>' +
+    '<div id="phone"><iframe src="' + src + '" allow="autoplay; clipboard-write" title="LOCKED ROOM"></iframe></div>' +
+    '<div id="dl"><a href="?desktop=1' + location.hash + '">open desktop layout</a></div>' +
+    '<plaintext style="display:none">');
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=43">
+<link rel="stylesheet" href="css/app.css?v=94">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -23,6 +41,7 @@
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-song" viewBox="0 0 24 24"><rect x="2" y="7" width="5" height="10"/><rect x="9.5" y="7" width="5" height="10"/><rect x="17" y="7" width="5" height="10"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
 </svg>
 
@@ -43,7 +62,6 @@
     <span class="sep"></span>
     <button id="fxBtn"><svg class="ic"><use href="#i-wave"/></svg><span class="dk"> FX · </span><span id="fxName">Tunnel</span></button>
     <button id="libBtn"><svg class="ic"><use href="#i-plus"/></svg><span class="dk"> Sound</span></button>
-    <button id="clear" class="clearBtn warn dk">Clear</button>
   </div>
 </div>
 
@@ -56,38 +74,56 @@
     </ol>
     <button id="coachOk" class="acc">Got it</button>
   </div>
-  <div id="song">
+  <div id="song" data-tab="arr">
     <div class="grab mo"></div>
     <div class="shead">
       <div class="st1"><b>SONG</b><span id="songLen">—</span></div>
       <button id="songClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="stg">
-      <button id="songOn" class="acc">Song mode</button><button id="songLoop" class="tg">Loop</button>
+      <button id="songOn" class="acc" title="scenes follow the timeline">Song mode</button><button id="songLoop" class="tg">Loop</button>
     </div>
-    <div class="stabs mo"><button data-st="arr" class="on">Arrange</button><button data-st="exp">Export</button></div>
+    <div class="stabs"><button data-st="arr" class="on">Timeline</button><button data-st="build">Build</button><button data-st="exp">Export</button></div>
+
+    <!-- 1. таймлайн: блоки и редактор выбранного -->
     <div class="spane" data-p="arr">
       <div class="tl"><div class="blocks" id="blocks"></div><button id="blkAdd" title="add block">+</button></div>
       <div class="blkEd" id="blkEd">
         <div class="er"><span class="lbl">Scene</span><div class="bseg" id="edScene"><button data-v="0">A</button><button data-v="1">B</button><button data-v="2">C</button><button data-v="3">D</button></div></div>
-        <div class="er"><span class="lbl">Bars</span><div class="bseg" id="edBars"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button></div></div>
+        <div class="er"><span class="lbl">Bars</span><div class="bseg" id="edBars"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button><button data-v="32">32</button></div></div>
         <div class="er acts"><button id="edLeft" title="move left">←</button><button id="edRight" title="move right">→</button><button id="edDup" title="duplicate"><svg class="ic"><use href="#i-copy"/></svg><span>Copy</span></button><button id="edDel" class="warn" title="delete"><svg class="ic"><use href="#i-x"/></svg><span>Delete</span></button></div>
       </div>
-      <div class="srow tpl">
-        <span class="lbl">Template</span>
-        <button data-tpl="club">Club</button><button data-tpl="short">Short</button><button data-tpl="loop">Loop A</button>
-        <span class="sp"></span>
-        <button id="scCopy2" class="dk">⧉ Copy scene</button>
-      </div>
+      <button data-tpl="loop" class="ghost">Reset timeline to one block</button>
+      <div class="ehint">Tap a block to edit it · <b>Song mode</b> plays the blocks in order</div>
     </div>
+
+    <!-- 2. сборка песни: одна главная сцена → вся песня -->
+    <div class="spane" data-p="build">
+      <div class="mainSel">
+        <span class="lbl">Main part</span>
+        <div class="bseg" id="bMain"><button data-s="0">A</button><button data-s="1">B</button><button data-s="2">C</button><button data-s="3">D</button></div>
+      </div>
+      <div class="ehint">Your main part is the <b>drop</b>. The song is built around it:</div>
+      <div class="plan" id="bPlan"></div>
+      <button id="bBuild" class="acc big">✦ Build song</button>
+      <div class="warnline" id="bWarn"></div>
+      <button id="arrOnly" class="ghost">Keep my scenes · only arrange</button>
+      <details class="more" id="bMore">
+        <summary>Edit one scene</summary>
+        <div class="ehint">Rebuild one scene from the main part · other scenes stay</div>
+        <div class="mkrow"><span class="lbl">Scene</span><div class="bseg" id="mkT"><button data-s="0">A</button><button data-s="1">B</button><button data-s="2">C</button><button data-s="3">D</button></div></div>
+        <div class="mkType" id="mkType"><button data-t="intro">Intro</button><button data-t="groove">Groove</button><button data-t="build">Build-up</button><button data-t="break">Break</button><button data-t="var">Drop 2</button><button data-t="copy">Copy</button></div>
+      </details>
+    </div>
+
+    <!-- 3. экспорт -->
     <div class="spane" data-p="exp">
       <div class="srow exp">
-        <span class="lbl">Export</span>
         <div class="fmt"><button data-fmt="mp3" class="on">MP3</button><button data-fmt="wav">WAV</button></div>
         <button id="renderBtn" class="acc"><svg class="ic"><use href="#i-save"/></svg> <span id="renderLbl">Render &amp; save</span></button>
         <span class="msg" id="renderMsg"></span>
       </div>
-      <div class="ehint mo">Renders the whole arrangement and sends the file to the bot chat.</div>
+      <div class="ehint">Renders the whole timeline · in Telegram the file is sent to the bot chat</div>
     </div>
   </div>
   <div id="perform">
@@ -100,9 +136,10 @@
       <button class="lenBtn dk">16 steps</button>
       <div class="swing dk"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
       <button id="songBtn" class="tb"><svg class="ic"><use href="#i-song"/></svg><small>Song</small></button>
+      <button id="padsBtn" class="tb mo"><svg class="ic"><use href="#i-fx"/></svg><small>FX</small></button>
       <button id="varBtn" class="tb acc"><svg class="ic"><use href="#i-vary"/></svg><small>Vary</small></button>
       <button id="undoBtn" class="tb"><svg class="ic"><use href="#i-undo"/></svg><small>Undo</small></button>
-      <button id="padsBtn" class="tb mo"><svg class="ic"><use href="#i-fx"/></svg><small>FX</small></button>
+      <button class="tb clearBtn warn" title="clear links or sounds"><svg class="ic"><use href="#i-trash"/></svg><small>Clear</small></button>
     </div>
     <div class="sheetHead mo"><span>Live FX · hold a pad</span><button id="padsClose"><svg class="ic"><use href="#i-x"/></svg></button></div>
     <div class="prow pads">
@@ -112,9 +149,8 @@
       <button class="pad" data-fx="wash">Wash</button>
       <button class="pad" data-fx="roll4">Roll ¼</button>
       <button class="pad" data-fx="roll8">Roll ⅛</button>
-      <button class="pad" data-fx="build">Build ↑</button>
-      <button class="pad mo clearBtn warn">Clear</button>
     </div>
+    <div class="sheetHead sub mo"><span>Pattern · current scene</span></div>
     <div class="prow extra mo">
       <button class="lenBtn">16 steps</button>
       <div class="swing"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
@@ -137,7 +173,7 @@
         <span class="dk">Steps</span>
         <div class="tabs" id="stTabs"><button data-m="link" class="on">Link</button><button data-m="vel">Velocity</button><button data-m="prob">Chance</button><button data-m="rat">Ratchet</button></div>
         <span class="sp" id="stHint">· tap = link / unlink</span>
-        <button id="sAll">All</button><button id="sNone">None</button>
+        <button id="sVary" class="acc" title="new pattern for this sound"><svg class="ic"><use href="#i-vary"/></svg> Vary</button><button id="sAll">All</button><button id="sNone">None</button>
       </div>
       <div class="steps" id="steps"></div>
     </div>
@@ -173,8 +209,8 @@
   <div class="go" id="gateGo">[ tap to enter ]</div>
 </div>
 
-<script src="js/data.js?v=43"></script>
-<script src="js/audio.js?v=43"></script>
-<script src="js/app.js?v=43"></script>
+<script src="js/data.js?v=94"></script>
+<script src="js/audio.js?v=94"></script>
+<script src="js/app.js?v=94"></script>
 </body>
 </html>
