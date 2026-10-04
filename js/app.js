@@ -280,7 +280,7 @@ const FX_MODES = ['tunnel','rings','flow','warp','off'];
 let fxMode = 'tunnel', fxUser = false, kicks = [], hist = [], histTick = 0, flowP = [];
 function defaultFx(pr){
   return pr.fx || ({ 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
-    || ({ 'Acid':'flow', 'Detroit / Techno':'rings', 'Minimal / Dub':'warp', 'EBM / Electro':'tunnel' })[pr.genre] || 'tunnel';
+    || ({ 'Acid':'flow', 'Techno':'rings', 'Minimal / Dub':'warp', 'Electro / EBM':'tunnel' })[pr.genre] || 'tunnel';
 }
 function setFx(m){
   fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1);
@@ -715,6 +715,8 @@ function openPanel(tr){
     inp.oninput = () => { tr.params[K.k] = +inp.value; applyParams(tr); show(); };
     inp.onchange = () => { if (!playing) hit(tr, ac.currentTime+0.01); };
     inp.ondblclick = () => { tr.params[K.k] = defParams(tr.v)[K.k]; inp.value = tr.params[K.k]; applyParams(tr); show(); };
+    touchKnob(el, inp, K, v => { tr.params[K.k] = v; applyParams(tr); show(); }, () => { if (!playing) hit(tr, ac.currentTime+0.01); },
+      () => { tr.params[K.k] = defParams(tr.v)[K.k]; inp.value = tr.params[K.k]; applyParams(tr); show(); });
     box.appendChild(el);
   }
   // источник сайдчейна
@@ -733,6 +735,35 @@ function openPanel(tr){
   $('nText').value = ''; $('nMsg').textContent = '';
   buildNotes(tr);
   resize(); updateBack();
+}
+// ползунок на телефоне: вертикальный свайп — это прокрутка панели и значение не трогает;
+// значение меняется только горизонтальным движением и плавно от текущего (без прыжка к пальцу); двойной тап — сброс
+function touchKnob(el, inp, K, set, done, reset){
+  let st = null, lastTap = 0;
+  el.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    st = { id:e.pointerId, x:e.clientX, y:e.clientY, v:+inp.value, w:inp.getBoundingClientRect().width || 200, drag:false };
+  });
+  el.addEventListener('pointermove', e => {
+    if (!st || e.pointerId !== st.id) return;
+    const dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.drag){
+      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)){ st = null; return; }   // это прокрутка
+      if (Math.abs(dx) < 8) return;
+      st.drag = true; st.x = e.clientX; el.classList.add('drag'); try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    let v = st.v + (e.clientX - st.x) / st.w * (K.max - K.min);
+    v = Math.max(K.min, Math.min(K.max, Math.round(v / K.step) * K.step));
+    if (v !== +inp.value){ inp.value = v; set(+inp.value); if (K.step >= 1) haptic('select'); }
+  });
+  const end = e => {
+    if (!st || e.pointerId !== st.id) return;
+    if (st.drag){ el.classList.remove('drag'); done(); }
+    else if (e.type === 'pointerup'){ const now = performance.now(); if (now - lastTap < 320){ reset(); haptic('light'); lastTap = 0; } else lastTap = now; }
+    st = null;
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', e => { if (st) el.classList.remove('drag'); st = null; });
 }
 function setSolo(tr){ solo = tr; tracks.forEach(applyParams); $('pSolo').classList.toggle('on', !!tr); }
 function closePanel(){ if (!sel) return; sel = null; noteCells = []; stepCells = []; setSolo(null); $('panel').classList.remove('show'); document.body.classList.remove('panel-open'); resize(); updateBack(); }
@@ -875,7 +906,13 @@ $('nFlat').onclick = ()=>{ pushUndo(); sel.notes.fill(0); noteCells.forEach(c=>c
 //  БИБЛИОТЕКА
 // ============================================================
 let libMode = { type:'add' };
-function openLib(mode){ libMode = mode; renderLib(); $('lib').classList.add('open'); updateBack(); }
+// какие категории библиотеки раскрыты (запоминается в браузере)
+let libOpen = new Set();
+try { libOpen = new Set(JSON.parse(localStorage.getItem('lr_libopen') || '[]')); } catch (e) {}
+function saveLibOpen(){ try { localStorage.setItem('lr_libopen', JSON.stringify([...libOpen])); } catch (e) {} }
+function openLib(mode){ libMode = mode;
+  if (mode.type === 'swap' && mode.tr && LIBM[mode.tr.v]) libOpen.add(LIBM[mode.tr.v].cat);   // замена: сразу раскрыть категорию текущего звука
+  renderLib(); $('lib').classList.add('open'); updateBack(); }
 function closeLib(){ $('lib').classList.remove('open'); updateBack(); }
 function preview(v){ if (!ac) return; hit({ v, params:defParams(v), notes:null, pat:[] }, ac.currentTime+0.01); }
 function renderLib(){
@@ -884,10 +921,22 @@ function renderLib(){
   $('libTitle').textContent = swap ? 'SWAP SOUND' : 'LIBRARY';
   $('libSub').textContent = swap ? 'replace '+label(libMode.tr.v)+' · links stay' : 'click a sound to listen';
   const full = tracks.length >= MAX_SOUNDS;
-  const box = $('libList'); box.innerHTML = '';
-  let cat = '';
-  for (const s of LIB){
-    if (s.cat !== cat){ cat = s.cat; const h = document.createElement('div'); h.className = 'cat'; h.textContent = cat; box.appendChild(h); }
+  const box = $('libList'), keep = box.scrollTop; box.innerHTML = '';
+  const list = LIB;
+  let cat = '', body = null;
+  for (const s of list){
+    if (s.cat !== cat){
+      cat = s.cat; const c = cat;
+      const inCat = list.filter(x => x.cat === c), onField = inCat.filter(x => tracks.some(tr => tr.v === x.id)).length;
+      const card = document.createElement('div'); card.className = 'gcard' + (libOpen.has(c) ? ' open' : '') + (onField ? ' now' : '');
+      card.style.setProperty('--gc', 'var(--acc)');
+      const h = document.createElement('button'); h.className = 'gh';
+      h.innerHTML = '<span class="gt"><b>' + c + '</b><small>' + inCat.length + ' sounds' + (onField ? ' · <i>' + onField + ' on field</i>' : '') + '</small></span><span class="gch"></span>';
+      h.onclick = () => { card.classList.toggle('open'); card.classList.contains('open') ? libOpen.add(c) : libOpen.delete(c); saveLibOpen(); haptic('select'); };
+      const gb = document.createElement('div'); gb.className = 'gb';
+      body = document.createElement('div'); gb.appendChild(body);
+      card.appendChild(h); card.appendChild(gb); box.appendChild(card);
+    }
     const used = tracks.filter(tr=>tr.v===s.id).length;
     const row = document.createElement('div'); row.className = 'item';
     row.innerHTML = '<button class="play">▶</button><span class="nm">'+s.name+(used?'<small>● on field</small>':'')+'</span>';
@@ -896,8 +945,9 @@ function renderLib(){
     b.onclick = e => { e.stopPropagation(); swap ? swapSound(libMode.tr, s.id) : addSound(s.id); };
     row.appendChild(b);
     row.onclick = () => preview(s.id);
-    box.appendChild(row);
+    body.appendChild(row);
   }
+  box.scrollTop = keep;
   $('libFoot').textContent = 'vertices '+tracks.length+' / '+MAX_SOUNDS + (full && !swap ? ' · field is full' : '');
 }
 function addSound(v){
@@ -913,6 +963,7 @@ function swapSound(tr, v){
 }
 $('libBtn').onclick = ()=>{ $('lib').classList.contains('open') && libMode.type==='add' ? closeLib() : openLib({ type:'add' }); };
 $('libClose').onclick = closeLib;
+
 
 // ============================================================
 //  ЖИВАЯ ПАНЕЛЬ: сцены, длина, свинг, вариации, мастер-эффекты
@@ -1003,7 +1054,7 @@ function renderBlocks(){
   box.innerHTML = '';
   arr.forEach((b, k) => {
     const el = document.createElement('div'); el.className = 'blk'; el.dataset.s = b.s;
-    el.style.width = (58 + Math.min(16, b.b)*5) + 'px';
+    el.style.width = (IS_MOBILE ? 46 + Math.min(16, b.b)*4 : 58 + Math.min(16, b.b)*5) + 'px';   // ширина ~ длине блока
     if (k === selBlk) el.classList.add('sel');
     el.innerHTML = '<div class="sc">' + 'ABCD'[b.s] + '<small>' + b.b + (b.b === 1 ? ' bar' : ' bars') + '</small></div><div class="bar"></div>';
     el.onclick = () => { selBlk = k; renderBlocks(); haptic('select'); };   // тап — выбрать блок
@@ -1053,6 +1104,12 @@ document.querySelectorAll('#edScene button').forEach(x => x.onclick = () => { if
 document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].b = +x.dataset.v; renderBlocks(); haptic('select'); } });
 document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { arr = tplArr(b.dataset.tpl); selBlk = 0; songBar = -1; renderBlocks(); toast('template · ' + b.textContent); });
 $('scCopy2').onclick = () => $('scCopy').click();
+// вкладки листа Song на телефоне: Arrange / Export
+document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('song').dataset.tab = b.dataset.st; haptic('select');
+});
+$('song').dataset.tab = 'arr';
 
 // ============================================================
 //  ЭКСПОРТ: офлайн-рендер аранжировки → WAV / MP3 → скачать или отправить в чат бота
@@ -1176,7 +1233,7 @@ function serialize(){
       p: Object.fromEntries(Object.entries(tr.params).map(([k,x]) => [k, r3(x)])), s: tr.scn.map(encScene) })) };
 }
 function deserialize(d){
-  if (!d || !Array.isArray(d.tracks) || !d.tracks.length) throw new Error('bad project');
+  if (!d || !Array.isArray(d.tracks)) throw new Error('bad project');
   applyPreset(Math.max(0, PRESETS.findIndex(p => p.name === d.preset)));
   bpm = Math.max(60, Math.min(200, +d.bpm || P.bpm)); swing = +d.swing || 0; STEPS = d.steps === 32 ? 32 : 16;
   scene = Math.max(0, Math.min(SCENES-1, d.scene|0)); queuedScene = -1; undoStack = [];
@@ -1312,53 +1369,82 @@ addEventListener('pagehide', onHide);
 //  ПАНЕЛЬ «TRACKS»: мои треки + пресеты
 // ============================================================
 let delArm = null, showCode = false;
+let drawerListScroll = 0;
 function renderDrawer(){
   const box = $('pre'); box.innerHTML = '';
   const H = (cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; box.appendChild(d); return d; };
   H('dhead', '<b>TRACKS</b><button id="drClose"><svg class="ic"><use href="#i-x"/></svg></button>').querySelector('button').onclick = closeDrawer;
-  H('pg', 'My tracks' + (useCloud ? ' · telegram cloud' : ''));
-  const act = H('pact', '<input id="pjName" placeholder="track name" maxlength="40"><button id="pjSave" class="acc">Save</button>');
+  // ---- плашка «мои треки»: всё, с чем работает пользователь ----
+  const card = document.createElement('div'); card.className = 'pbox'; box.appendChild(card);
+  const C = (cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; card.appendChild(d); return d; };
+  const blankIdx = PRESETS.findIndex(p => p.blank);
+  const top = C('pbh', '<b>My tracks</b><small>' + (useCloud ? 'telegram cloud' : 'this device') + '</small><button id="pjNew" class="acc">+ New</button>');
+  top.querySelector('#pjNew').onclick = () => { if (blankIdx >= 0){ loadPreset(blankIdx); curProj = null; updateUI(); closeDrawer(); toast('new track · add sounds with +'); } };
+  const act = C('pact', '<input id="pjName" placeholder="track name" maxlength="40"><button id="pjSave" class="acc">Save</button>');
   act.querySelector('#pjName').value = curProj ? curProj.name : '';
   act.querySelector('#pjName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') saveProject(e.target.value); });
   act.querySelector('#pjSave').onclick = () => saveProject($('pjName').value);
+  const share = C('pact share', '<button id="pjCopy">Copy code</button><button id="pjPaste">Paste code</button>' + (location.protocol.startsWith('http') ? '<button id="pjLink">Copy link</button>' : ''));
+  share.querySelector('#pjCopy').onclick = async () => { const c = await encodeProject(); if (await copyText(c)) toast('code copied'); else { showCode = c; renderDrawer(); } };
+  share.querySelector('#pjPaste').onclick = () => { showCode = ''; renderDrawer(); };
+  const lk = share.querySelector('#pjLink');
+  if (lk) lk.onclick = async () => { const c = await encodeProject(), url = location.origin + location.pathname + '#p=' + c; if (await copyText(url)) toast('link copied'); else { showCode = url; renderDrawer(); } };
+  if (showCode !== false){
+    const ta = C('pact', '<textarea id="pjCode" spellcheck="false" placeholder="paste a LOCKED ROOM code here"></textarea><button id="pjImport" class="acc">Import</button><button id="pjHide">Close</button>');
+    const t = ta.querySelector('textarea'); t.value = showCode || ''; t.addEventListener('keydown', e => e.stopPropagation());
+    if (showCode) { t.focus(); t.select(); }
+    ta.querySelector('#pjImport').onclick = async () => { try { deserialize(await decodeProject(t.value)); curProj = null; showCode = false; renderDrawer(); updateUI(); toast('imported'); closeDrawer(); } catch (e) { toast('bad code'); } };
+    ta.querySelector('#pjHide').onclick = () => { showCode = false; renderDrawer(); };
+  }
+  // список треков — в своём окне с прокруткой, чтобы кнопки выше не уезжали
+  const list = document.createElement('div'); list.className = 'plist'; card.appendChild(list);
   if (lastSession && lastSession.d){
     const r = document.createElement('div'); r.className = 'pr';
     const nm = lastSession.cur ? lastSession.cur.name : lastSession.d.preset;
     const when = lastSession.ts ? new Date(lastSession.ts) : null;
     r.innerHTML = '<div class="t">↺ Last session<small>' + escapeHtml(nm || '') + (when ? ' · ' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '') + '</small></div>';
     r.onclick = () => { restoreLastSession(); closeDrawer(); };
-    box.appendChild(r);
+    list.appendChild(r);
   }
-  if (!projIndex.length) H('pempty', 'no saved tracks yet');
+  if (!projIndex.length) list.insertAdjacentHTML('beforeend', '<div class="pempty">no saved tracks yet</div>');
   for (const p of projIndex){
     const r = document.createElement('div'); r.className = 'pr' + (curProj && curProj.id === p.id ? ' cur' : '');
     const d = new Date(p.ts);
     r.innerHTML = '<div class="t">'+escapeHtml(p.name)+'<small>'+d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})+'</small></div><button class="x'+(delArm===p.id?' arm':'')+'">'+(delArm===p.id?'delete?':'×')+'</button>';
     r.onclick = () => { delArm = null; openProject(p); closeDrawer(); };
     r.querySelector('.x').onclick = e => { e.stopPropagation(); if (delArm === p.id){ delArm = null; deleteProject(p); } else { delArm = p.id; renderDrawer(); } };
-    box.appendChild(r);
+    list.appendChild(r);
   }
-  const share = H('pact', '<button id="pjCopy">Copy code</button><button id="pjPaste">Paste code</button>' + (location.protocol.startsWith('http') ? '<button id="pjLink">Copy link</button>' : ''));
-  share.querySelector('#pjCopy').onclick = async () => { const c = await encodeProject(); if (await copyText(c)) toast('code copied'); else { showCode = c; renderDrawer(); } };
-  share.querySelector('#pjPaste').onclick = () => { showCode = ''; renderDrawer(); };
-  const lk = share.querySelector('#pjLink');
-  if (lk) lk.onclick = async () => { const c = await encodeProject(), url = location.origin + location.pathname + '#p=' + c; if (await copyText(url)) toast('link copied'); else { showCode = url; renderDrawer(); } };
-  if (showCode !== false){
-    const ta = H('pact', '<textarea id="pjCode" spellcheck="false" placeholder="paste a LOCKED ROOM code here"></textarea><button id="pjImport" class="acc">Import</button><button id="pjHide">Close</button>');
-    const t = ta.querySelector('textarea'); t.value = showCode || ''; t.addEventListener('keydown', e => e.stopPropagation());
-    if (showCode) { t.focus(); t.select(); }
-    ta.querySelector('#pjImport').onclick = async () => { try { deserialize(await decodeProject(t.value)); curProj = null; showCode = false; renderDrawer(); updateUI(); toast('imported'); closeDrawer(); } catch (e) { toast('bad code'); } };
-    ta.querySelector('#pjHide').onclick = () => { showCode = false; renderDrawer(); };
+  list.scrollTop = drawerListScroll; list.onscroll = () => { drawerListScroll = list.scrollTop; };
+  // ---- пресеты по жанрам (пустой — через «+ New») ----
+  H('psec', 'Presets');
+  const curGenre = !curProj && PRESETS[presetIdx] ? PRESETS[presetIdx].genre : '';
+  if (genOpen === null) genOpen = new Set(curGenre ? [curGenre] : []);   // первый раз — раскрыт жанр текущего пресета
+  for (const g of GENRE_ORDER){
+    const items = PRESETS.map((pr, i) => [pr, i]).filter(([pr]) => pr.genre === g && !pr.blank);
+    if (!items.length) continue;
+    const bpms = items.map(([pr]) => pr.bpm), lo = Math.min(...bpms), hi = Math.max(...bpms);
+    const card = document.createElement('div'); card.className = 'gcard' + (genOpen.has(g) ? ' open' : '') + (g === curGenre ? ' now' : '');
+    card.style.setProperty('--gc', items[0][0].acc);
+    const head = document.createElement('button'); head.className = 'gh';
+    head.innerHTML = '<span class="gt"><b>' + g + '</b><small>' + items.length + ' presets · ' + (lo === hi ? lo : lo + '–' + hi) + ' bpm' + (g === curGenre ? ' · <i>now playing</i>' : '') + '</small></span>' +
+      '<span class="gch"></span>';
+    head.onclick = () => { card.classList.toggle('open'); card.classList.contains('open') ? genOpen.add(g) : genOpen.delete(g); saveGenOpen(); haptic('select'); };
+    const body = document.createElement('div'); body.className = 'gb';
+    const inner = document.createElement('div'); body.appendChild(inner);
+    for (const [pr, i] of items){
+      const r = document.createElement('div'); r.className = 'pr' + (!curProj && i === presetIdx ? ' cur' : '');
+      r.innerHTML = '<span class="sw" style="background:' + pr.acc + '"></span><div class="t">' + pr.name + '<small>' + (pr.ref === 'locked room' ? 'original' : pr.ref) + '</small></div><div class="b">' + pr.bpm + '</div>';
+      r.onclick = () => { loadPreset(i); closeDrawer(); };
+      inner.appendChild(r);
+    }
+    card.appendChild(head); card.appendChild(body); box.appendChild(card);
   }
-  let gen = '';
-  PRESETS.forEach((pr, i) => {
-    if (pr.genre !== gen){ gen = pr.genre; H('pg', gen); }
-    const r = document.createElement('div'); r.className = 'pr' + (!curProj && i===presetIdx ? ' cur' : '');
-    r.innerHTML = '<div class="t">'+pr.name+'<small>'+pr.ref+'</small></div><div class="b">'+pr.bpm+'</div>';
-    r.onclick = () => { loadPreset(i); closeDrawer(); };
-    box.appendChild(r);
-  });
 }
+// какие жанры раскрыты в Tracks (запоминается в браузере)
+let genOpen = null;
+try { const v = localStorage.getItem('lr_genopen'); if (v) genOpen = new Set(JSON.parse(v)); } catch (e) {}
+function saveGenOpen(){ try { localStorage.setItem('lr_genopen', JSON.stringify([...genOpen])); } catch (e) {} }
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 function openDrawer(){ delArm = null; renderDrawer(); $('pre').classList.add('open'); updateBack(); }
 function closeDrawer(){ $('pre').classList.remove('open'); showCode = false; updateBack(); }
@@ -1380,11 +1466,11 @@ function fitTitle(){
 addEventListener('resize', fitTitle);
 function updateUI(){
   if ($('pre').classList.contains('open')) renderDrawer();
-  $('titleCap').textContent = curProj ? 'MY TRACK' : (P.genre === 'Originals' ? 'PRESET' : P.genre);
+  $('titleCap').textContent = curProj ? 'MY TRACK' : (P.blank ? 'NEW TRACK' : P.genre);
   $('titleName').textContent = curProj ? curProj.name : P.name;
   fitTitle();
   $('presetName').innerHTML = curProj ? 'TRACK / <b>' + escapeHtml(curProj.name) + '</b> · ' + P.name
-    : 'PRESET / <b>' + P.name + '</b>' + (P.ref && P.genre !== 'Originals' ? ' · ' + P.ref : '');
+    : 'PRESET / <b>' + P.name + '</b>' + (P.ref && P.ref !== 'locked room' ? ' · ' + P.ref : '');
   $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; if (bpmOpen()) showBpmSlider();
   showSwing(); updatePerform();
 }

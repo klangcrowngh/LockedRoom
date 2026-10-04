@@ -83,7 +83,7 @@ const START_TEXT = [
   '2. Tap the <b>center</b> of the circle — play / pause.',
   '3. Tap a <b>sound</b> on the outer ring, then tap <b>time dots</b> in the middle — the sound plays on those steps. Tap again to remove.',
   '4. In the sound panel: <b>Steps</b> (velocity, chance, ratchet), <b>Sound</b> (pitch, drive, reverb, delay, sidechain…), <b>Notes</b> for melodic sounds.',
-  '5. <b>+</b> — add a sound from the library (67 sounds).',
+  '5. <b>+</b> — add a sound from the library (125 sounds).',
   '6. Scenes <b>A B C D</b> — four patterns; <b>Vary</b> creates a variation, <b>Undo</b> reverts.',
   '7. <b>FX</b> — hold the pads for live effects: filter, kill low, wash, roll, build.',
   '8. <b>Song</b> — the arrangement: scenes switch by themselves. <b>Render & save</b> sends the track here as MP3 or WAV.',

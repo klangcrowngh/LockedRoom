@@ -102,7 +102,19 @@ body.panel-open #song{display:none !important}
 .bseg button:last-child{border-right:none}
 .bseg button.on{background:var(--acc);color:var(--bg)}
 .blkEd .acts{gap:6px;margin-left:auto}
-.blkEd .acts button{padding:7px 10px}
+.blkEd .acts button{padding:7px 10px;display:flex;align-items:center;gap:6px}
+.blkEd .acts .ic{width:12px;height:12px}
+.stg{display:flex;gap:6px}
+.tg{display:flex;align-items:center;gap:8px}
+.tg:before{content:'';width:8px;height:8px;border:1px solid var(--dim)}
+.tg.on,.tg.on:hover{border-color:var(--acc);color:var(--acc);background:transparent}
+.tg.on:before{background:var(--acc);border-color:var(--acc)}
+.tl{display:flex;gap:4px;align-items:stretch}
+.tl .blocks{flex:1;min-width:0}
+#blkAdd{flex:0 0 44px;height:54px;padding:0;font-size:20px;border-style:dashed}
+.stabs{display:none}
+.spane{display:flex;flex-direction:column;gap:10px}
+.ehint{color:var(--dim);text-transform:none;letter-spacing:.04em;font-size:11px}
 .blk[data-s="0"] .sc{background:rgba(255,255,255,.02)}
 .srow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .srow .sp{flex:1}
@@ -174,7 +186,7 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
 /* ---------- выезжающие панели ---------- */
 #pre{position:fixed;left:0;top:var(--topH,64px);bottom:0;width:300px;max-width:100%;z-index:7;background:rgba(5,5,5,.94);backdrop-filter:blur(6px);border-right:1px solid var(--line);overflow:auto;transform:translateX(-102%);transition:transform .25s cubic-bezier(.2,.8,.2,1);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding-bottom:calc(20px + var(--sab))}
 #pre.open{transform:none}
-.dhead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(5,5,5,.97);z-index:1}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#050505;z-index:5}
 .dhead b{font-size:13px;letter-spacing:.3em}
 .dhead button{width:40px;height:36px;padding:0;display:flex;align-items:center;justify-content:center}
 #pre::-webkit-scrollbar{width:4px}#pre::-webkit-scrollbar-thumb{background:#2a2a2a}
@@ -194,6 +206,41 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
 .pact textarea{height:70px;width:100%;flex-basis:100%;font-size:9px;word-break:break-all;user-select:text;-webkit-user-select:text}
 .pact input:focus,.pact textarea:focus{border-color:var(--acc)}
 .pempty{padding:4px 20px 8px;color:#444;text-transform:none;letter-spacing:.04em}
+/* плашка «мои треки» */
+.pbox{margin:14px 12px 6px;border:1px solid #2a2a2a;background:#0c0c0c;padding-bottom:6px}
+.pbox .pbh{display:flex;align-items:center;gap:8px;padding:12px 12px 8px}
+.pbox .pbh b{color:var(--fg);letter-spacing:.16em}
+.pbox .pbh small{flex:1;color:var(--dim);font-size:9px;letter-spacing:.08em}
+.pbox .pbh button{padding:6px 10px}
+.pbox .pact{padding:6px 12px}
+.pbox .pact.share{padding-bottom:10px}
+.pbox .plist{border-top:1px solid #1d1d1d;max-height:min(260px,34vh);overflow:auto;overscroll-behavior:contain;padding-top:4px}
+.pbox .plist::-webkit-scrollbar{width:3px}.pbox .plist::-webkit-scrollbar-thumb{background:#333}
+.pbox .pact.share button{flex:1}
+.pbox .pr{padding:8px 12px 8px 10px}
+.pbox .pempty{padding:6px 12px 8px}
+.psec{padding:20px 20px 4px;color:var(--fg);letter-spacing:.16em;font-weight:700}
+/* жанры пресетов — раскрывающиеся плашки */
+.gcard{margin:8px 12px;border:1px solid #222;background:#0a0a0a;position:relative;transition:border-color .2s}
+.gcard:before{content:'';position:absolute;left:-1px;top:-1px;bottom:-1px;width:2px;background:var(--gc);opacity:.35;transition:opacity .2s}
+.gcard.open,.gcard.now{border-color:#333}
+.gcard.open:before,.gcard.now:before{opacity:1}
+.gh{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:10px;padding:13px 12px 13px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gh:hover{background:#0f0f0f}
+.gh .gt{flex:1;min-width:0}
+.gh .gt b{display:block;font-size:11px;letter-spacing:.18em;color:var(--fg)}
+.gh .gt small{display:block;margin-top:5px;font-size:9px;letter-spacing:.08em;color:var(--dim)}
+.gh .gt small i{font-style:normal;color:var(--gc)}
+.gh .gch{width:7px;height:7px;border-right:1.5px solid var(--dim);border-bottom:1.5px solid var(--dim);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s;margin:0 2px 0 4px}
+.gcard.open .gch{transform:rotate(225deg) translate(-2px,-2px);border-color:var(--fg)}
+.gb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .22s ease}
+.gb>div{overflow:hidden}
+.gcard.open .gb{grid-template-rows:1fr}
+.gcard.open .gb>div{border-top:1px solid #1a1a1a}
+.gcard .pr{padding:9px 12px 9px 12px;gap:10px}
+.gcard .pr .sw{width:3px;align-self:stretch;background:var(--gc);opacity:.6;flex:none}
+.gcard .pr.cur{border-left-color:transparent;background:#111}
+.gcard .pr.cur .sw{opacity:1;width:4px}
 
 #lib{position:fixed;top:0;right:0;bottom:0;width:320px;max-width:100%;z-index:8;background:rgba(5,5,5,.94);backdrop-filter:blur(6px);border-left:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .25s cubic-bezier(.2,.8,.2,1);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding-top:var(--sat);padding-bottom:var(--sab)}
 #lib.open{transform:none}
@@ -202,8 +249,9 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
 #lib .lhead small{display:block;color:var(--dim);margin-top:6px;font-size:9px}
 #libList{flex:1;overflow:auto;padding:6px 0 20px}
 #libList::-webkit-scrollbar{width:4px}#libList::-webkit-scrollbar-thumb{background:#2a2a2a}
-.cat{padding:16px 20px 6px;color:var(--dim);display:flex;align-items:center;gap:10px}
-.cat:after{content:'';flex:1;height:1px;background:var(--line)}
+#lib .gcard{margin:8px 14px}
+#lib .gcard .item{padding:8px 12px 8px 8px}
+
 .item{display:flex;align-items:center;gap:8px;padding:7px 20px;cursor:pointer}
 .item:hover{background:#0d0d0d}
 .item .nm{flex:1}
@@ -316,20 +364,35 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   body.panel-open #coach,body.pads-open #coach{display:none !important}
 
   /* лист аранжировки */
-  body.song-open #song{background:rgba(5,5,5,.97);border:1px solid var(--line);padding:0 10px 10px;margin:0 -10px}
+  body.song-open #song{background:rgba(5,5,5,.97);border:1px solid var(--line);padding:0 12px 12px;margin:0 -10px;gap:10px;width:auto;max-width:none}
   body.song-open #song .grab{display:block !important}
-  #song .shead{flex-wrap:wrap}
-  #song .st1{flex-basis:100%;order:0;justify-content:space-between}
-  #songOn,#songLoop{flex:1;height:40px}
-  #song .closeX{width:44px;height:40px}
-  .blk .sc{height:52px;font-size:20px;padding:0 12px}
-  .blkEd{flex-direction:column;align-items:stretch;gap:8px}
-  .blkEd .er{width:100%}
-  .blkEd .er .lbl{min-width:46px}
+  #song .shead{padding-top:2px}
+  #song .st1{justify-content:space-between;align-items:center}
+  #song .closeX{width:40px;height:36px}
+  .stg button{flex:1;height:42px;justify-content:center}
+  #songOn{flex:1.4}
+  /* вкладки */
+  .stabs{display:flex;border-bottom:1px solid var(--line)}
+  .stabs button{flex:1;border:none;border-bottom:2px solid transparent;height:36px;color:var(--dim);margin-bottom:-1px}
+  .stabs button.on{color:var(--fg);border-bottom-color:var(--acc);background:transparent}
+  .spane{display:flex;flex-direction:column;gap:10px}
+  #song[data-tab="arr"] .spane[data-p="exp"],#song[data-tab="exp"] .spane[data-p="arr"]{display:none}
+  /* таймлайн */
+  .blk .sc{height:54px;font-size:19px;padding:0 6px}
+  #blkAdd{height:auto;flex-basis:46px}
+  /* редактор блока: компактно, крупные кнопки */
+  .blkEd{flex-direction:column;align-items:stretch;gap:6px;padding:8px 0 0;border-bottom:none}
+  .blkEd .er{width:100%;gap:10px}
+  .blkEd .er .lbl{min-width:40px}
   .bseg{flex:1}
-  .bseg button{flex:1;height:44px;font-size:14px;padding:0}
-  .blkEd .acts{margin-left:0}
-  .blkEd .acts button{flex:1;height:44px;padding:0}
+  .bseg button{flex:1;height:40px;font-size:14px;padding:0}
+  .blkEd .acts{margin-left:0;gap:6px}
+  .blkEd .acts button{flex:1;height:40px;padding:0;justify-content:center}
+  .blkEd .acts #edLeft,.blkEd .acts #edRight{flex:0 0 52px;font-size:16px}
+  .srow.tpl .lbl,.srow.tpl .sp{display:none}
+  .srow.tpl{overflow:visible}
+  .srow.tpl button{flex:1 1 0}
+  .ehint{padding:2px 2px 0}
   .srow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .srow::-webkit-scrollbar{display:none}
   .srow>*{flex:0 0 auto}
@@ -382,6 +445,16 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   input[type=range]::-webkit-slider-thumb{width:20px;height:22px;margin-top:-10px}
   input[type=range]::-moz-range-thumb{width:20px;height:22px}
   .knob select{padding:9px 8px}
+  /* ползунки: палец не двигает их при прокрутке — значение меняет только горизонтальный жест */
+  .knob{touch-action:pan-y}
+  .knob input[type=range]{pointer-events:none}
+  .knob.drag .row b{color:var(--acc)}
+  .knob.drag input[type=range]::-webkit-slider-thumb{background:var(--acc)}
   .item{padding:11px 20px}.item button.add{padding:8px 12px}
+  #lib .gcard .item{padding:11px 12px 11px 8px}
   .pr{padding:12px 20px 12px 18px}
+  .pbox .pr{padding:12px 12px 12px 10px}
+  .gh{padding:15px 12px 15px 14px}
+  .gcard .pr{padding:12px}
+  .pbox .pbh button{padding:9px 12px}
 }

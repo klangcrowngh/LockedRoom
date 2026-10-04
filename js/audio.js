@@ -336,6 +336,254 @@ const SYNTH = {
   crackle(t){ const n=noise(t,0.35), f=filt('bandpass',2200,0.6), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.25;
     g.gain.setValueAtTime(0,t); let x=t; for (let k=0;k<14;k++){ x += (0.008+Math.random()*0.02)*DK; g.gain.setValueAtTime(Math.random()*0.9,x); g.gain.setValueAtTime(0,x+0.002); }
     n.connect(f); f.connect(g); g.connect(l); l.connect(out(0.1,0,0.4)); },
+
+  // ================= драм-машины 707 / 909 =================
+  kick909(t){ const o=osc(), g=ac.createGain(), s=shaper(2.5), l=ac.createGain(); l.gain.value=0.78;
+    o.frequency.setValueAtTime(280,t); o.frequency.exponentialRampToValueAtTime(64,t+0.028); o.frequency.exponentialRampToValueAtTime(50,t+0.4);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.0015); g.gain.setValueAtTime(1,t+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t+0.45*DK);
+    o.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.5)); o.start(t); o.stop(t+0.5*DK);
+    const n=noise(t,0.02), f=filt('lowpass',5500), ng=ac.createGain(); decay(ng,t,0.45,0.007,0.0005); n.connect(f); f.connect(ng); ng.connect(out(0,0,0.1)); },
+  kick707(t){ const o=osc(), g=ac.createGain(), s=shaper(3.5), l=ac.createGain(); l.gain.value=1.4;
+    o.frequency.setValueAtTime(210,t); o.frequency.exponentialRampToValueAtTime(70,t+0.018); o.frequency.exponentialRampToValueAtTime(58,t+0.2);
+    decay(g,t,1,0.22,0.0015); o.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.3)); o.start(t); o.stop(t+0.28*DK);
+    const n=noise(t,0.015), f=filt('bandpass',3200,1.2), ng=ac.createGain(); decay(ng,t,0.6,0.006,0.0005); n.connect(f); f.connect(ng); ng.connect(out(0,0,0.1)); },
+  snare707(t){ const s=shaper(2), l=ac.createGain(); l.gain.value=0.6; s.connect(l); l.connect(out(0.15,0,0.25));
+    for (const fr of [238,476]){ const o=osc(); o.type='triangle'; o.frequency.setValueAtTime(fr*1.08,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.02);
+      const og=ac.createGain(); decay(og,t,0.45,0.05); o.connect(og); og.connect(s); o.start(t); o.stop(t+0.1*DK); }
+    const n=noise(t,0.18), hp=filt('highpass',2200), bp=filt('peaking',5000,1); bp.gain.value=5; const ng=ac.createGain(); decay(ng,t,0.85,0.11);
+    n.connect(hp); hp.connect(bp); bp.connect(ng); ng.connect(s); },
+  clap909(t){ const s=noise(t,0.45), f=filt('bandpass',1150,1.1), hp=filt('highpass',600), g=ac.createGain();
+    g.gain.setValueAtTime(0,t); for (let i=0;i<4;i++){ g.gain.setValueAtTime(0.8,t+i*0.0095); g.gain.exponentialRampToValueAtTime(0.06,t+i*0.0095+0.008); }
+    g.gain.setValueAtTime(0.7,t+0.038); g.gain.exponentialRampToValueAtTime(0.001,t+0.038+0.24*DK);
+    s.connect(f); f.connect(hp); hp.connect(g); g.connect(out(0.25,0,0.4)); },
+  hat909(t){ metallic(t, 0.04, 0.16, 0.02, 1.9, 11000);
+    const n=noise(t,0.05), hp=filt('highpass',9000), g=ac.createGain(); decay(g,t,0.16,0.03,0.0005); n.connect(hp); hp.connect(g); g.connect(out(0.02)); },
+  ohat909(t){ metallic(t, 0.28, 0.13, 0.08, 1.9, 11000);
+    const n=noise(t,0.35), hp=filt('highpass',8000), g=ac.createGain(); decay(g,t,0.12,0.24,0.001); n.connect(hp); hp.connect(g); g.connect(out(0.08,0,0.4)); },
+  tom909(t){ const o=osc(), g=ac.createGain(), s=shaper(1.5), l=ac.createGain(); l.gain.value=0.5;
+    o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(110,t+0.18);
+    decay(g,t,1,0.28); o.connect(g); g.connect(s); s.connect(l); l.connect(out(0.18,0,0.35)); o.start(t); o.stop(t+0.35*DK);
+    const n=noise(t,0.05), f=filt('bandpass',900,1.5), ng=ac.createGain(); decay(ng,t,0.25,0.03); n.connect(f); f.connect(ng); ng.connect(out(0.1,0,0.1)); },
+  rim707(t){ const f=filt('bandpass',1900,4), g=ac.createGain(), s=shaper(4), l=ac.createGain(); l.gain.value=0.6; decay(g,t,1,0.025,0.0005);
+    f.connect(s); s.connect(g); g.connect(l); l.connect(out(0.12));
+    for (const fr of [500,1720]){ const o=osc(); o.type='square'; o.frequency.value=fr; o.connect(f); o.start(t); o.stop(t+0.05*DK); } },
+
+  // ================= тёмный электро: грязь, металл, жужжащий бас =================
+  distkick(t){ const o=osc(), g=ac.createGain(), s=shaper(28), pk=filt('peaking',170,1.2), lp=filt('lowpass',4200), l=ac.createGain(); l.gain.value=0.4;
+    pk.gain.value=5;
+    o.frequency.setValueAtTime(360,t); o.frequency.exponentialRampToValueAtTime(72,t+0.022); o.frequency.exponentialRampToValueAtTime(50,t+0.28);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.0015); g.gain.setValueAtTime(1,t+0.11); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3*DK);
+    o.connect(g); g.connect(s); s.connect(pk); pk.connect(lp); lp.connect(l); l.connect(out(0.04,0,0.4)); o.start(t); o.stop(t+0.34*DK);
+    const n=noise(t,0.03), f=filt('bandpass',2400,0.9), ng=ac.createGain(); decay(ng,t,0.5,0.018,0.0005); n.connect(f); f.connect(ng); ng.connect(out(0,0,0.1)); },
+  darksnare(t){ const s=shaper(16), lp=filt('lowpass',6500), l=ac.createGain(); l.gain.value=0.3; s.connect(lp); lp.connect(l); l.connect(out(0.5,0,0.6));
+    const o=osc(); o.type='triangle'; o.frequency.setValueAtTime(205,t); o.frequency.exponentialRampToValueAtTime(150,t+0.06);
+    const og=ac.createGain(); decay(og,t,0.8,0.1); o.connect(og); og.connect(s); o.start(t); o.stop(t+0.16*DK);
+    const n=noise(t,0.3), bp=filt('bandpass',1700,0.7), ng=ac.createGain();
+    ng.gain.setValueAtTime(0.0001,t); ng.gain.exponentialRampToValueAtTime(1,t+0.002); ng.gain.setValueAtTime(0.6,t+0.12*DK); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.2*DK);   // «гейт»
+    n.connect(bp); bp.connect(ng); ng.connect(s); },
+  steel(t){ const bp=filt('bandpass',2300,1.4), s=shaper(12), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.65;
+    decay(g,t,1,0.16,0.001); bp.connect(s); s.connect(g); g.connect(l); l.connect(out(0.35,0.12,0.4));
+    for (const fr of [331,547,793,1129]){ const o=osc(); o.type='square'; o.frequency.value=fr; o.connect(bp); o.start(t); o.stop(t+0.2*DK); }
+    const n=noise(t,0.2), hp=filt('highpass',1500), ng=ac.createGain(); ng.gain.value=0.6; n.connect(hp); hp.connect(ng); ng.connect(bp); },
+  buzz(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('lowpass',400,5), s=shaper(20), hp=filt('highpass',45), lp=filt('lowpass',5500), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.17;
+    f.frequency.setValueAtTime(3200,t); f.frequency.exponentialRampToValueAtTime(380,t+0.13);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.003); g.gain.setValueAtTime(1,t+0.12); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2*DK);
+    f.connect(s); s.connect(hp); hp.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0,0,0.3));
+    for (const [ty,m,dt] of [['sawtooth',1,-8],['sawtooth',1,8],['square',0.5,0]]){ const o=osc(); o.type=ty; o.frequency.value=fr*m; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.24*DK); } },
+  mono(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('lowpass',300,7), s=shaper(4), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.45;
+    f.frequency.setValueAtTime(2400,t); f.frequency.exponentialRampToValueAtTime(220,t+0.09);
+    decay(g,t,1,0.15,0.002); f.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.25));
+    const a=osc(); a.type='square'; a.frequency.value=fr; a.connect(f);
+    const b=osc(); b.frequency.value=fr/2; const bg=ac.createGain(); bg.gain.value=0.8; b.connect(bg); bg.connect(f);
+    a.start(t); b.start(t); a.stop(t+0.2*DK); b.stop(t+0.2*DK); },
+  darksaw(t,n){ const fr=mtof(P.root+36+noteOf(n)), f=filt('lowpass',3200,1.5), s=shaper(7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.4;
+    f.frequency.setValueAtTime(4200,t); f.frequency.exponentialRampToValueAtTime(1100,t+0.25);
+    decay(g,t,1,0.28,0.003); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0.25,0.15,0.4));
+    for (const [m,dt] of [[1,-14],[1,0],[1,14],[0.5,0]]){ const o=osc(); o.type='sawtooth'; o.frequency.value=fr*m; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.35*DK); } },
+  diststab(t,n){ const f=filt('lowpass',2600,2), s=shaper(10), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
+    f.frequency.setValueAtTime(3600,t); f.frequency.exponentialRampToValueAtTime(600,t+0.18);
+    decay(g,t,1,0.22,0.002); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0.4,0.1,0.35));
+    for (const sm of [0,3,7,12]) for (const dt of [-10,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.28*DK); } },
+  chant(t,n){ const fr=mtof(P.root+24+noteOf(n)), f1=filt('bandpass',450,5), f2=filt('bandpass',780,6), f3=filt('bandpass',2500,8), s=shaper(3), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.22;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.025); g.gain.setValueAtTime(1,t+0.16*DK); g.gain.exponentialRampToValueAtTime(0.0001,t+0.26*DK);
+    f1.connect(s); f2.connect(s); f3.connect(s); s.connect(g); g.connect(l); l.connect(out(0.35,0.12,0.4));
+    for (const dt of [-10,0,10]){ const o=osc(); o.type='sawtooth'; o.detune.value+=dt; o.frequency.setValueAtTime(fr*0.97,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.04);
+      o.connect(f1); o.connect(f2); o.connect(f3); o.start(t); o.stop(t+0.3*DK); } },
+  indhit(t){ const n=noise(t,0.3), bp=filt('bandpass',900,1.5), s=shaper(25), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.8;
+    decay(g,t,1,0.2,0.001); bp.connect(s); s.connect(g); g.connect(l); l.connect(out(0.45,0.2,0.4));
+    const c=osc(); c.type='square'; c.frequency.value=173; const rm=ac.createGain(); rm.gain.value=0; c.connect(rm.gain); n.connect(rm); rm.connect(bp);   // кольцевая модуляция
+    const m=osc(); m.type='square'; m.frequency.setValueAtTime(420,t); m.frequency.exponentialRampToValueAtTime(140,t+0.15); const mg=ac.createGain(); mg.gain.value=0.5; m.connect(mg); mg.connect(bp);
+    c.start(t); m.start(t); c.stop(t+0.3*DK); m.stop(t+0.3*DK); },
+
+  // ================= больше киков, снейров, клэпов, хэтов и басов =================
+  kick606(t){ const o=osc(), g=ac.createGain(), s=shaper(2), l=ac.createGain(); l.gain.value=2.4;
+    o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(62,t+0.03); o.frequency.exponentialRampToValueAtTime(55,t+0.15);
+    decay(g,t,1,0.16,0.0015); o.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.2)); o.start(t); o.stop(t+0.2*DK); },
+  punchkick(t){ const o=osc(), g=ac.createGain(), s=shaper(6), pk=filt('peaking',110,1); pk.gain.value=6; const l=ac.createGain(); l.gain.value=0.6;
+    o.frequency.setValueAtTime(240,t); o.frequency.exponentialRampToValueAtTime(65,t+0.03); o.frequency.exponentialRampToValueAtTime(54,t+0.2);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.0015); g.gain.setValueAtTime(1,t+0.07); g.gain.exponentialRampToValueAtTime(0.0001,t+0.24*DK);
+    o.connect(g); g.connect(s); s.connect(pk); pk.connect(l); l.connect(out(0,0,0.3)); o.start(t); o.stop(t+0.28*DK);
+    const n=noise(t,0.02), f=filt('bandpass',4000,0.8), ng=ac.createGain(); decay(ng,t,0.5,0.01,0.0005); n.connect(f); f.connect(ng); ng.connect(out(0,0,0.1)); },
+  rumblekick(t){ const o=osc(), g=ac.createGain(), s=shaper(3), l=ac.createGain(); l.gain.value=0.7;
+    o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(55,t+0.03); o.frequency.exponentialRampToValueAtTime(46,t+0.3);
+    decay(g,t,1,0.3,0.0015); o.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.35)); o.start(t); o.stop(t+0.35*DK);
+    // грохочущий хвост: кик через тёмный ревер-подобный отзвук
+    const r=osc(), rg=ac.createGain(), rs=shaper(8), rl=filt('lowpass',140,1.5), rgl=ac.createGain(); rgl.gain.value=0.35;
+    r.frequency.setValueAtTime(52,t); r.frequency.exponentialRampToValueAtTime(40,t+0.6);
+    rg.gain.setValueAtTime(0.0001,t); rg.gain.setValueAtTime(0.0001,t+0.08); rg.gain.exponentialRampToValueAtTime(1,t+0.14); rg.gain.exponentialRampToValueAtTime(0.0001,t+0.6*DK);
+    r.connect(rs); rs.connect(rl); rl.connect(rg); rg.connect(rgl); rgl.connect(out(0,0,0.7)); r.start(t); r.stop(t+0.65*DK); },
+  clickkick(t){ const o=osc(), g=ac.createGain(), l=ac.createGain(); l.gain.value=3.2;
+    o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(48,t+0.05);
+    decay(g,t,1,0.2,0.001); o.connect(g); g.connect(l); l.connect(out(0,0,0.25)); o.start(t); o.stop(t+0.25*DK);
+    const c=osc(); c.type='square'; c.frequency.value=2200; const cg=ac.createGain(); decay(cg,t,0.35,0.004,0.0003); c.connect(cg); cg.connect(out(0,0,0.05)); c.start(t); c.stop(t+0.015); },
+  snare808(t){ const s=shaper(1.5), l=ac.createGain(); l.gain.value=0.55; s.connect(l); l.connect(out(0.15,0,0.3));
+    for (const [fr,a] of [[180,0.6],[330,0.35]]){ const o=osc(); o.frequency.setValueAtTime(fr*1.1,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.02);
+      const og=ac.createGain(); decay(og,t,a,0.11); o.connect(og); og.connect(s); o.start(t); o.stop(t+0.15*DK); }
+    const n=noise(t,0.2), hp=filt('highpass',3000), ng=ac.createGain(); decay(ng,t,0.5,0.13); n.connect(hp); hp.connect(ng); ng.connect(s); },
+  lofisnare(t){ const s=shaper(5), lp=filt('lowpass',3200), l=ac.createGain(); l.gain.value=0.45; s.connect(lp); lp.connect(l); l.connect(out(0.12,0,0.3));
+    const o=osc(); o.type='triangle'; o.frequency.setValueAtTime(240,t); o.frequency.exponentialRampToValueAtTime(170,t+0.05); const og=ac.createGain(); decay(og,t,0.6,0.08); o.connect(og); og.connect(s); o.start(t); o.stop(t+0.12*DK);
+    const n=noise(t,0.2), bp=filt('bandpass',1900,0.8), ng=ac.createGain(); decay(ng,t,0.8,0.14); n.connect(bp); bp.connect(ng); ng.connect(s); },
+  crispsnare(t){ const s=shaper(3), l=ac.createGain(); l.gain.value=0.45; s.connect(l); l.connect(out(0.25,0,0.35));
+    const o=osc(); o.type='triangle'; o.frequency.setValueAtTime(300,t); o.frequency.exponentialRampToValueAtTime(200,t+0.03); const og=ac.createGain(); decay(og,t,0.5,0.05); o.connect(og); og.connect(s); o.start(t); o.stop(t+0.08*DK);
+    const n=noise(t,0.25), hp=filt('highpass',4000), pk=filt('peaking',7500,1); pk.gain.value=6; const ng=ac.createGain(); decay(ng,t,1,0.16,0.0008);
+    n.connect(hp); hp.connect(pk); pk.connect(ng); ng.connect(s); },
+  clap808(t){ const s=noise(t,0.6), f=filt('bandpass',1000,1), g=ac.createGain();
+    g.gain.setValueAtTime(0,t); for (let i=0;i<3;i++){ g.gain.setValueAtTime(0.75,t+i*0.013); g.gain.exponentialRampToValueAtTime(0.05,t+i*0.013+0.011); }
+    g.gain.setValueAtTime(0.65,t+0.04); g.gain.exponentialRampToValueAtTime(0.001,t+0.04+0.38*DK);
+    s.connect(f); f.connect(g); g.connect(out(0.2,0,0.5)); },
+  tightclap(t){ const s=noise(t,0.2), f=filt('bandpass',1600,1.4), g=ac.createGain();
+    g.gain.setValueAtTime(0,t); for (let i=0;i<3;i++){ g.gain.setValueAtTime(0.9,t+i*0.007); g.gain.exponentialRampToValueAtTime(0.06,t+i*0.007+0.006); }
+    g.gain.setValueAtTime(0.8,t+0.021); g.gain.exponentialRampToValueAtTime(0.001,t+0.021+0.09*DK);
+    s.connect(f); f.connect(g); g.connect(out(0.12,0,0.2)); },
+  roomclap(t){ const s=noise(t,0.9), f=filt('bandpass',1250,0.9), g=ac.createGain();
+    g.gain.setValueAtTime(0,t); for (let i=0;i<5;i++){ g.gain.setValueAtTime(0.7,t+i*0.011); g.gain.exponentialRampToValueAtTime(0.05,t+i*0.011+0.009); }
+    g.gain.setValueAtTime(0.55,t+0.055); g.gain.exponentialRampToValueAtTime(0.001,t+0.055+0.7*DK);
+    s.connect(f); f.connect(g); g.connect(out(0.75,0.1,1)); },
+  hat606(t){ metallic(t, 0.03, 0.2, 0.02, 1.25, 9000); },
+  hat707(t){ metallic(t, 0.05, 0.14, 0.02, 2.1, 12000);
+    const n=noise(t,0.07), bp=filt('bandpass',10000,1.2), g=ac.createGain(); decay(g,t,0.12,0.045,0.0005); n.connect(bp); bp.connect(g); g.connect(out(0.02)); },
+  pedalhat(t){ metallic(t, 0.09, 0.15, 0.04, 1.6, 9500); },
+  crisphat(t){ const n=noise(t,0.05), hp=filt('highpass',11000), pk=filt('peaking',13000,1); pk.gain.value=6; const g=ac.createGain();
+    decay(g,t,0.35,0.025,0.0004); n.connect(hp); hp.connect(pk); pk.connect(g); g.connect(out(0.03)); },
+  ohat808(t){ metallic(t, 0.5, 0.15, 0.12, 1, 10000); },
+  offbass(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('lowpass',600,3), g=ac.createGain(), l=ac.createGain(); l.gain.value=1.3;
+    f.frequency.setValueAtTime(1400,t); f.frequency.exponentialRampToValueAtTime(260,t+0.08);
+    decay(g,t,1,0.12,0.003); f.connect(g); g.connect(l); l.connect(out(0,0,0.2));
+    for (const [ty,dt] of [['sawtooth',-4],['triangle',4]]){ const o=osc(); o.type=ty; o.frequency.value=fr; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.16*DK); } },
+  dubbass(t,n){ const fr=mtof(P.root+12+noteOf(n)), o=osc(), f=filt('lowpass',220,1), s=shaper(1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.75;
+    o.type='triangle'; o.frequency.value=fr;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.02); g.gain.setValueAtTime(1,t+0.22); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5*DK);
+    o.connect(f); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0,0,0.55)); o.start(t); o.stop(t+0.55*DK); },
+  sawbass(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('lowpass',900,2), s=shaper(5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.9;
+    f.frequency.setValueAtTime(2200,t); f.frequency.exponentialRampToValueAtTime(500,t+0.2);
+    decay(g,t,1,0.22,0.003); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0,0,0.3));
+    const o=osc(); o.type='sawtooth'; o.frequency.value=fr; o.connect(f); o.start(t); o.stop(t+0.28*DK);
+    const sb=osc(); sb.frequency.value=fr/2; const sg=ac.createGain(); sg.gain.value=0.6; sb.connect(sg); sg.connect(f); sb.start(t); sb.stop(t+0.28*DK); },
+  growl(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('bandpass',500,4), s=shaper(12), lp=filt('lowpass',3500), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
+    const lfo=osc(); lfo.detune.value=0; lfo.frequency.value=1/stepDur(); const lg=ac.createGain(); lg.gain.value=380; lfo.connect(lg); lg.connect(f.frequency);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.01); g.gain.setValueAtTime(1,t+0.2); g.gain.exponentialRampToValueAtTime(0.0001,t+0.35*DK);
+    f.connect(s); s.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0,0,0.4)); lfo.start(t); lfo.stop(t+0.4*DK);
+    for (const [ty,dt] of [['sawtooth',-10],['sawtooth',10]]){ const o=osc(); o.type=ty; o.frequency.value=fr; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.4*DK); }
+    const sub=osc(); sub.frequency.value=fr; const sbg=ac.createGain(); decay(sbg,t,0.5,0.3,0.01); sub.connect(sbg); sbg.connect(l); sub.start(t); sub.stop(t+0.4*DK); },
+  bass808(t,n){ const fr=mtof(P.root+12+noteOf(n)), o=osc(), g=ac.createGain(), s=shaper(2.5), l=ac.createGain(); l.gain.value=0.7;
+    o.frequency.setValueAtTime(fr*2.2,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.04);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.002); g.gain.setValueAtTime(1,t+0.1); g.gain.exponentialRampToValueAtTime(0.0001,t+0.75*DK);
+    o.connect(g); g.connect(s); s.connect(l); l.connect(out(0,0,0.8)); o.start(t); o.stop(t+0.8*DK); },
+
+  // ================= мелодия: клавиши, пэды, синты, аккорды =================
+  piano(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',5200,0.7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.22;
+    g.gain.value=1; lp.connect(g); g.connect(l); l.connect(out(0.25,0,1.9));
+    for (let k=1;k<=8;k++){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*k*Math.sqrt(1+0.0004*k*k);   // лёгкая негармоничность струны
+      decay(og,t,1/Math.pow(k,1.3),1.7/Math.pow(k,0.6),0.002); o.connect(og); og.connect(lp); o.start(t); o.stop(t+1.8*DK); }
+    const ns=noise(t,0.03), bp=filt('bandpass',2400,1), ng=ac.createGain(); decay(ng,t,0.08,0.015,0.0005); ns.connect(bp); bp.connect(ng); ng.connect(lp); },
+  housepiano(t,n){ const lp=filt('lowpass',4500,0.7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
+    decay(g,t,1,0.7,0.002); lp.connect(g); g.connect(l); l.connect(out(0.3,0.1,0.8));
+    for (const sm of [0,3,7,12]){ const fr=mtof(P.root+36+sm+noteOf(n));
+      for (const [k,a] of [[1,1],[2,0.5],[3,0.3],[4,0.18]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*k; og.gain.value=a; decay(og,t,a,0.7/k,0.002); o.connect(og); og.connect(lp); o.start(t); o.stop(t+0.8*DK); } } },
+  rhodes(t,n){ const fr=mtof(P.root+36+noteOf(n)), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.18;
+    decay(g,t,1,1.2,0.003); g.connect(l); l.connect(out(0.2,0.1,1.3));
+    const c=osc(), m=osc(), mg=ac.createGain(); c.frequency.value=fr; m.frequency.value=fr; m.detune.value=c.detune.value;
+    mg.gain.setValueAtTime(fr*1.2,t); mg.gain.exponentialRampToValueAtTime(fr*0.05,t+0.6); m.connect(mg); mg.connect(c.frequency); c.connect(g);
+    const tn=osc(), tg=ac.createGain(); tn.frequency.value=fr*14; decay(tg,t,0.12,0.06,0.001); tn.connect(tg); tg.connect(g);   // «звон» язычка
+    const tr=osc(); tr.detune.value=0; tr.frequency.value=4.5; const trg=ac.createGain(); trg.gain.value=0.15; tr.connect(trg); trg.connect(g.gain);
+    for (const o of [c,m,tn,tr]){ o.start(t); o.stop(t+1.3*DK); } },
+  wurli(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',1800,1.2), s=shaper(2), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
+    decay(g,t,1,0.7,0.003); lp.connect(s); s.connect(g); g.connect(l); l.connect(out(0.2,0.1,0.8));
+    const a=osc(); a.type='triangle'; a.frequency.value=fr; const b=osc(); b.type='sawtooth'; b.frequency.value=fr; const bg=ac.createGain(); bg.gain.value=0.35;
+    a.connect(lp); b.connect(bg); bg.connect(lp); a.start(t); b.start(t); a.stop(t+0.8*DK); b.stop(t+0.8*DK); },
+  clav(t,n){ const fr=mtof(P.root+36+noteOf(n)), bp=filt('bandpass',1400,1.5), hp=filt('highpass',300), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.85;
+    decay(g,t,1,0.22,0.001); bp.connect(hp); hp.connect(g); g.connect(l); l.connect(out(0.12,0.1,0.3));
+    const o=osc(); o.type='square'; o.frequency.value=fr; const o2=osc(); o2.type='sawtooth'; o2.frequency.value=fr*2;
+    o.connect(bp); o2.connect(bp); o.start(t); o2.start(t); o.stop(t+0.3*DK); o2.stop(t+0.3*DK); },
+  marimba(t,n){ const fr=mtof(P.root+36+noteOf(n)), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.35; g.gain.value=1; g.connect(l); l.connect(out(0.25,0.1,0.6));
+    for (const [m,a,d] of [[1,1,0.45],[3.93,0.25,0.12],[9.2,0.08,0.04]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*m; decay(og,t,a,d,0.001); o.connect(og); og.connect(g); o.start(t); o.stop(t+0.5*DK); } },
+  kalimba(t,n){ const fr=mtof(P.root+48+noteOf(n)), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3; g.gain.value=1; g.connect(l); l.connect(out(0.3,0.2,0.9));
+    for (const [m,a,d] of [[1,1,0.8],[6.27,0.2,0.08],[2.01,0.1,0.3]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*m; decay(og,t,a,d,0.001); o.connect(og); og.connect(g); o.start(t); o.stop(t+0.9*DK); } },
+  warmpad(t,n){ const lp=filt('lowpass',900,0.7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.04;
+    lp.frequency.setValueAtTime(700,t); lp.frequency.linearRampToValueAtTime(1500,t+1.4);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.6); g.gain.setTargetAtTime(0.0001,t+0.9,0.9*DK);
+    lp.connect(g); g.connect(l); l.connect(out(0.5,0.1,3.4));
+    for (const sm of [0,7,12,15]) for (const [ty,dt] of [['sawtooth',-7],['triangle',7]]){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+3.2*DK); } },
+  glasspad(t,n){ const hp=filt('highpass',300), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.04;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.35); g.gain.setTargetAtTime(0.0001,t+0.7,0.8*DK);
+    hp.connect(g); g.connect(l); l.connect(out(0.55,0.2,3));
+    for (const sm of [0,7,15]){ const fr=mtof(P.root+48+sm+noteOf(n));
+      for (const [m,a,dt] of [[1,1,-4],[1,1,4],[2,0.3,0],[3.01,0.12,0]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*m; o.detune.value+=dt; og.gain.value=a; o.connect(og); og.connect(hp); o.start(t); o.stop(t+2.8*DK); } } },
+  junopad(t,n){ const lp=filt('lowpass',1200,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.03;
+    lp.frequency.setValueAtTime(600,t); lp.frequency.exponentialRampToValueAtTime(2200,t+0.5); lp.frequency.exponentialRampToValueAtTime(1100,t+1.6);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.25); g.gain.setTargetAtTime(0.0001,t+0.6,0.7*DK);
+    lp.connect(g); g.connect(l); l.connect(out(0.45,0.15,2.6));
+    const ch=osc(); ch.detune.value=0; ch.frequency.value=0.6; const chg=ac.createGain(); chg.gain.value=9; ch.connect(chg); ch.start(t); ch.stop(t+2.5*DK);   // «хорус»
+    for (const sm of [0,3,7]) for (const dt of [-11,11]){ const o=osc(); o.type='square'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; chg.connect(o.detune); o.connect(lp); o.start(t); o.stop(t+2.5*DK); } },
+  airpad(t,n){ const g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.9); g.gain.setTargetAtTime(0.0001,t+1.2,1.0*DK);
+    g.connect(l); l.connect(out(0.65,0.15,4));
+    for (const sm of [0,7,12,19]){ const o=osc(); o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const og=ac.createGain(); og.gain.value=0.5; o.connect(og); og.connect(g); o.start(t); o.stop(t+3.8*DK); }
+    const ns=ac.createBufferSource(); ns.buffer=NB; ns.loop=true; const bp=filt('bandpass',mtof(P.root+60+noteOf(n)),6), ng=ac.createGain(); ng.gain.value=0.5;
+    ns.connect(bp); bp.connect(ng); ng.connect(g); ns.start(t); ns.stop(t+3.8*DK); },
+  sawlead(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',3400,1.2), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.006); g.gain.setValueAtTime(0.8,t+0.18*DK); g.gain.exponentialRampToValueAtTime(0.0001,t+0.42*DK);
+    lp.connect(g); g.connect(l); l.connect(out(0.2,0.2,0.5));
+    for (const dt of [-7,7]){ const o=osc(); o.type='sawtooth'; o.frequency.setValueAtTime(fr*0.985,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.03); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.45*DK); } },
+  sqlead(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',2600,1), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.008); g.gain.setValueAtTime(0.8,t+0.25*DK); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5*DK);
+    lp.connect(g); g.connect(l); l.connect(out(0.2,0.2,0.6));
+    const o=osc(); o.type='square'; o.frequency.value=fr;
+    const v=osc(); v.detune.value=0; v.frequency.value=5.5; const vg=ac.createGain(); vg.gain.setValueAtTime(0,t); vg.gain.linearRampToValueAtTime(18,t+0.3); v.connect(vg); vg.connect(o.detune);   // вибрато с задержкой
+    o.connect(lp); o.start(t); v.start(t); o.stop(t+0.55*DK); v.stop(t+0.55*DK); },
+  synclead(t,n){ const fr=mtof(P.root+36+noteOf(n)), bp=filt('bandpass',3000,5), s=shaper(3), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.6;
+    bp.frequency.setValueAtTime(fr*8,t); bp.frequency.exponentialRampToValueAtTime(fr*2,t+0.25);
+    decay(g,t,1,0.35,0.004); bp.connect(s); s.connect(g); g.connect(l); l.connect(out(0.2,0.25,0.5));
+    const o=osc(); o.type='sawtooth'; o.frequency.value=fr; o.connect(bp);
+    const b=osc(); b.type='sawtooth'; b.frequency.value=fr; const bg=ac.createGain(); bg.gain.value=0.25; b.connect(bg); bg.connect(g);
+    o.start(t); b.start(t); o.stop(t+0.4*DK); b.stop(t+0.4*DK); },
+  sinelead(t,n){ const fr=mtof(P.root+48+noteOf(n)), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+0.6*DK);
+    g.connect(l); l.connect(out(0.3,0.25,0.7));
+    const o=osc(); o.frequency.value=fr; const o2=osc(); o2.type='triangle'; o2.frequency.value=fr*2; const g2=ac.createGain(); g2.gain.value=0.15;
+    const v=osc(); v.detune.value=0; v.frequency.value=5; const vg=ac.createGain(); vg.gain.value=10; v.connect(vg); vg.connect(o.detune);
+    o.connect(g); o2.connect(g2); g2.connect(g); for (const x of [o,o2,v]){ x.start(t); x.stop(t+0.65*DK); } },
+  pwm(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',2200,1), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.1;
+    decay(g,t,1,0.5,0.008); lp.connect(g); g.connect(l); l.connect(out(0.25,0.15,0.6));
+    for (const dt of [-14,0,14]){ const o=osc(); o.type='square'; o.frequency.value=fr; o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.55*DK); } },
+  polysynth(t,n){ const lp=filt('lowpass',3000,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
+    lp.frequency.setValueAtTime(4200,t); lp.frequency.exponentialRampToValueAtTime(1000,t+0.3);
+    decay(g,t,1,0.4,0.004); lp.connect(g); g.connect(l); l.connect(out(0.3,0.15,0.5));
+    for (const sm of [0,3,7]) for (const dt of [-9,9]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.45*DK); } },
+  tpluck(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',5000,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.15;
+    lp.frequency.setValueAtTime(6500,t); lp.frequency.exponentialRampToValueAtTime(600,t+0.22);
+    decay(g,t,1,0.28,0.002); lp.connect(g); g.connect(l); l.connect(out(0.3,0.35,0.4));
+    for (const dt of [-25,-12,0,12,25]){ const o=osc(); o.type='sawtooth'; o.frequency.value=fr; o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.32*DK); } },
+  ravestab(t,n){ const hp=filt('highpass',250), lp=filt('lowpass',4200,1), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.05;
+    decay(g,t,1,0.3,0.002); hp.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0.4,0.15,0.4));
+    for (const sm of [0,3,7,10,14]) for (const ty of ['square','sawtooth']){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(hp); o.start(t); o.stop(t+0.35*DK); } },
+  dubchord(t,n){ const lp=filt('lowpass',1000,2), hp=filt('highpass',200), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.27;
+    decay(g,t,1,0.16,0.003); lp.connect(hp); hp.connect(g); g.connect(l); l.connect(out(0.35,0.45,0.25));
+    for (const sm of [0,3,7,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(lp); o.start(t); o.stop(t+0.22*DK); } },
+  deepchord(t,n){ const lp=filt('lowpass',1300,0.8), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.1;
+    decay(g,t,1,0.55,0.006); lp.connect(g); g.connect(l); l.connect(out(0.45,0.2,0.7));
+    for (const sm of [0,3,7,10,14]){ const o=osc(); o.type='triangle'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const o2=osc(); o2.type='sawtooth'; o2.frequency.value=o.frequency.value; o2.detune.value+=6;
+      const g2=ac.createGain(); g2.gain.value=0.3; o.connect(lp); o2.connect(g2); g2.connect(lp); o.start(t); o2.start(t); o.stop(t+0.65*DK); o2.stop(t+0.65*DK); } },
 };
 
 // ============================================================
