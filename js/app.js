@@ -434,39 +434,98 @@ let arrRoles = null;   // { peak:k, groove:k, brk:k, intro:k } — что за �
 // какая сцена чем стала (intro / groove / build / peak / peak2 / break) — для «Arrange only»
 let sceneTypes = ['', '', '', ''];
 // одна сцена из другой: intro / groove / break / build / var (вариация пика)
-function deriveScene(t, base, type, hasMusic){
+// варианты частей песни: у каждой части несколько «рецептов», выбираются заново при каждой сборке
+const SCENE_VARIANTS = {
+  intro:  ['drums + bass', 'atmos', 'teaser'],
+  groove: ['drums + bass', 'with pad', 'no lead'],
+  break:  ['melodic', 'half-time', 'stripped'],
+  build:  ['drums only', 'with hook'],
+};
+const pickVariant = (type, ctx) => {
+  const list = SCENE_VARIANTS[type]; if (!list) return 0;
+  // без мелодии/пэда «атмосферные» варианты не имеют смысла — берём ударные + бас
+  if (!ctx.hasMusic && (type === 'intro' || type === 'break' || type === 'groove')) return type === 'break' ? 1 : 0;
+  return Math.random() * list.length | 0;
+};
+// одна часть песни из основы (дропа). v — номер варианта (SCENE_VARIANTS)
+function deriveScene(t, base, type, hasMusic, v = 0){
   const L = STEPS, r = t.role || roleOfGen(t.v), S = cloneScene(base);
+  const on = () => [...Array(L).keys()].filter(i => S.pat[i]);
   const wipe = () => { for (let i=0;i<MAXS;i++){ S.pat[i] = false; S.vel[i] = 1; S.rat[i] = 1; S.prob[i] = 1; } };
   const put = (i, vel = 1) => { if (!S.pat[i]){ S.pat[i] = true; S.notes[i] = S.notes[i] || 0; S.rat[i] = 1; S.prob[i] = 1; } S.vel[i] = vel; };
-  if (type === 'groove'){
-    if ((hasMusic && ['mel','pad'].includes(r)) || r === 'ohat') wipe();
+  const keep = fn => { for (const i of on()) if (!fn(i)) S.pat[i] = false; };          // оставить только удары, где fn(i)
+  const soft = f => { for (const i of on()) S.vel[i] = Math.min(S.vel[i], 1) * f; };
+  const thin = n => { let k = 0; for (const i of on()) if ((k++ % n) !== 0) S.pat[i] = false; };
+  const offbeats = () => { const off = on().filter(i => i % 4 === 2); if (off.length) keep(i => i % 4 === 2); else thin(2); };
+  const bar = i => i % 16;
+  const melodic = r === 'mel' || r === 'pad';
+
+  if (type === 'intro'){
+    if (v === 0){            // ударные + бас: всё ритмичное, без мелодии; бас чуть тише
+      if (melodic || r === 'ohat') wipe();
+      if (r === 'bass') soft(0.75);
+      if (r === 'snare') soft(0.8);
+    } else if (v === 1){     // атмосфера: кик, офбит-хэты, пэд, намёк на мелодию в начале такта
+      if (['snare','ohat','bass'].includes(r)) wipe();
+      if (r === 'hat') offbeats();
+      if (r === 'perc') thin(2);
+      if (r === 'mel'){ keep(i => bar(i) < 6); soft(0.75); }
+      if (r === 'pad') soft(0.85);
+    } else {                 // тизер: полные ударные, хук только в конце фразы
+      if (['bass','ohat','pad'].includes(r)) wipe();
+      if (r === 'mel'){ keep(i => i >= L - Math.max(8, L/2)); soft(0.8); }
+    }
+    if (!on().length && r === 'kick') for (let i=0;i<L;i+=4) put(i, 1);
+  } else if (type === 'groove'){
+    if (v === 0){            // ударные + бас
+      if (melodic || r === 'ohat') wipe();
+    } else if (v === 1){     // + пэд, мелодия прорежена
+      if (r === 'ohat') wipe();
+      if (r === 'mel'){ thin(2); soft(0.8); }
+    } else {                 // всё, кроме ведущей мелодии
+      if (r === 'mel') wipe();
+      if (r === 'perc') thin(2);
+    }
   } else if (type === 'break'){
-    if (['kick','ohat','snare'].includes(r)) wipe();
-    if (r === 'bass') for (let i=0;i<L;i++) if (S.pat[i]) S.vel[i] = hasMusic ? 0.55 : 0.8;
-    if (r === 'hat'){ const off = [...Array(L).keys()].filter(i => S.pat[i] && i % 4 === 2);
-      if (off.length) { for (let i=0;i<L;i++) if (S.pat[i] && i % 4 !== 2) S.pat[i] = false; }
-      else { let n = 0; for (let i=0;i<L;i++) if (S.pat[i] && (n++ % 2)) S.pat[i] = false; } }
-    if (r === 'perc'){ let n = 0; for (let i=0;i<L;i++) if (S.pat[i] && (n++ % 2)) S.pat[i] = false; }
-    if (r === 'kick') put(0, 0.9);
-  } else if (type === 'intro'){
-    if (['mel','pad','snare','ohat','bass'].includes(r)) wipe();
+    if (v === 0){            // мелодичный: без кика и снейра, бас тихо, хэты на офбитах
+      if (['kick','ohat','snare'].includes(r)) wipe();
+      if (r === 'bass') soft(hasMusic ? 0.55 : 0.8);
+      if (r === 'hat') offbeats();
+      if (r === 'perc') thin(2);
+      if (r === 'kick') put(0, 0.9);
+    } else if (v === 1){     // халф-тайм: кик на «раз», снейр на «три», бас на сильных долях
+      if (r === 'kick'){ wipe(); for (let i=0;i<L;i+=16) put(i, 1); }
+      if (r === 'snare'){ wipe(); for (let i=8;i<L;i+=16) put(i, 0.9); }
+      if (r === 'ohat') wipe();
+      if (r === 'hat') { offbeats(); thin(2); }
+      if (r === 'bass'){ keep(i => bar(i) < 4 || (bar(i) >= 8 && bar(i) < 10)); if (!on().length) put(0, 0.8); }
+      if (r === 'perc') thin(2);
+    } else {                 // оголённый: только мелодия и пэды (+ тихая перкуссия)
+      if (!melodic && r !== 'perc') wipe();
+      if (r === 'perc'){ thin(3); soft(0.6); }
+      if (r === 'mel') soft(0.9);
+    }
   } else if (type === 'build'){
-    // нарастание: без мелодии, хэты 16-ми, снейр учащается к концу, кик — четверти
-    if (['mel','pad','ohat'].includes(r)) wipe();
+    // нарастание: хэты 16-ми, снейр учащается к концу, кик — четверти
+    if (['pad','ohat'].includes(r) || (r === 'mel' && v === 0) || r === 'bass') wipe();
+    if (r === 'mel' && v === 1){ keep(i => bar(i) < 8); soft(0.85); }
     if (r === 'hat' && !isOpen(t.v)) for (let i=0;i<L;i++) put(i, 0.45 + 0.5*i/L);
     if (r === 'snare'){ wipe(); const h = L/2; for (let i=0;i<L;i++) if ((i < h && i % 4 === 0) || (i >= h && i < L-4 && i % 2 === 0) || i >= L-4) put(i, 0.35 + 0.65*i/L); }
-    if (r === 'kick'){ for (let i=0;i<L;i++) if (S.pat[i] && i % 4 !== 0) S.pat[i] = false; for (let i=0;i<L;i+=4) put(i, 1); }
+    if (r === 'kick'){ keep(i => i % 4 === 0); for (let i=0;i<L;i+=4) put(i, 1); }
   }
   return S;
 }
+let lastVariants = {};
 function buildArrangement(src){
   const L = STEPS, now = performance.now();
   const R = t => t.role || roleOfGen(t.v);
   const rest = [0,1,2,3].filter(k => k !== src), [gK, bK, iK] = rest;
   const hasMusic = tracks.some(x => ['mel','pad'].includes(R(x)) && x.scn[src].pat.slice(0, L).some(Boolean));
+  const vG = pickVariant('groove', { hasMusic }), vB = pickVariant('break', { hasMusic }), vI = pickVariant('intro', { hasMusic });
+  lastVariants = { intro:SCENE_VARIANTS.intro[vI], groove:SCENE_VARIANTS.groove[vG], break:SCENE_VARIANTS.break[vB] };
   tracks.forEach(t => {
     const PK = cloneScene(t.scn[src]);
-    t.scn[gK] = deriveScene(t, PK, 'groove', hasMusic); t.scn[bK] = deriveScene(t, PK, 'break', hasMusic); t.scn[iK] = deriveScene(t, PK, 'intro', hasMusic);
+    t.scn[gK] = deriveScene(t, PK, 'groove', hasMusic, vG); t.scn[bK] = deriveScene(t, PK, 'break', hasMusic, vB); t.scn[iK] = deriveScene(t, PK, 'intro', hasMusic, vI);
     t.born = {}; for (let i=0;i<L;i++) if (PK.pat[i]) t.born[i] = now;
   });
   arrRoles = { peak:src, groove:gK, brk:bK, intro:iK };
@@ -479,7 +538,8 @@ function buildArrangement(src){
 function makeScene(target, src, type){
   const L = STEPS, now = performance.now();
   const hasMusic = tracks.some(x => ['mel','pad'].includes(x.role || roleOfGen(x.v)) && x.scn[src].pat.slice(0, L).some(Boolean));
-  tracks.forEach(t => { t.scn[target] = type === 'var' || type === 'copy' ? cloneScene(t.scn[src]) : deriveScene(t, t.scn[src], type, hasMusic); });
+  const v = pickVariant(type, { hasMusic }); lastVariants = { [type]: (SCENE_VARIANTS[type] || [])[v] };
+  tracks.forEach(t => { t.scn[target] = type === 'var' || type === 'copy' ? cloneScene(t.scn[src]) : deriveScene(t, t.scn[src], type, hasMusic, v); });
   sceneTypes[target] = type === 'copy' ? sceneTypes[src] : type === 'var' ? 'peak2' : type; if (!sceneTypes[src] && type !== 'copy') sceneTypes[src] = 'peak';
   const cur = scene;
   if (type === 'var'){ scene = target; tracks.forEach(bindScene); variate(0, true, pickR(['groove','melody','drive'])); variate(0, true, 'melody'); }
@@ -1777,7 +1837,7 @@ $('bBuild').onclick = () => {
   if (sceneEmpty(mainSc)){ toast('make a pattern first'); return; }
   pushUndo(true); buildArrangement(mainSc);
   tracks.forEach(bindScene); renderBlocks(); updatePerform(); showSongTab('arr'); haptic('heavy');
-  toast('song built · drop = ' + 'ABCD'[mainSc] + ' · press song mode to play');
+  toast('song built · intro: ' + lastVariants.intro + ' · groove: ' + lastVariants.groove + ' · break: ' + lastVariants.break + ' · build again for other versions');
 };
 let mkT = 1;
 document.querySelectorAll('#mkT button').forEach(b => b.onclick = () => { mkT = +b.dataset.s; updateBuild(); haptic('select'); });
@@ -1786,7 +1846,7 @@ document.querySelectorAll('#mkType button').forEach(b => b.onclick = () => {
   if (sceneEmpty(mainSc)){ toast('main part is empty'); return; }
   pushUndo(true); makeScene(mkT, mainSc, b.dataset.t); vState = null;
   renderBlocks(); updatePerform(); updateBuild(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium');
-  toast('scene ' + L[mkT] + ' = ' + b.textContent.toLowerCase() + ' of ' + L[mainSc] + ' · undo reverts');
+  const vn = lastVariants[b.dataset.t]; toast('scene ' + L[mkT] + ' = ' + b.textContent.toLowerCase() + (vn ? ' (' + vn + ')' : '') + ' · tap again for another');
 });
 $('arrOnly').onclick = () => { pushUndo(true); if (!arrangeExisting()){ undoStack.pop(); toast('all scenes are empty'); return; } renderBlocks(); showSongTab('arr'); haptic('medium'); toast('arranged your scenes · patterns unchanged'); };
 function updateSongGen(){ if ($('bMain')) updateBuild(); }
