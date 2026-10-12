@@ -610,15 +610,15 @@ body.panel-open #gen{display:none !important}
 .gsle{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:-4px}
 
 /* ---------- одна высота для всех выдвижных панелей: экран не прыгает при смене вкладок и панелей ---------- */
-:root{--sheetH:max(280px,min(60vh,540px,calc(100vh - 340px)))}   /* экрану с кругом всегда остаётся место */
+:root{--sheetH:max(260px,min(56vh,540px,calc(100vh - 290px - var(--mainRowH,64px))))}   /* экрану с кругом всегда остаётся место */
 body.song-open #song{height:var(--sheetH);max-height:none;display:flex;flex-direction:column;overflow:hidden}
 #song .spane{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 body.gen-open #gen{height:var(--sheetH);max-height:none}
 @media (max-width:700px){
   body.gen-open #gen{height:var(--sheetH);max-height:none}
-  #panel{height:calc(var(--sheetH) + 64px)}   /* строка сцен скрыта, пока открыта панель звука — её место отдаём панели */
+  #panel{height:calc(var(--sheetH) + var(--mainRowH,64px))}   /* строка сцен скрыта, пока открыта панель звука — её место отдаём панели */
   /* эффекты: пэды растягиваются на всю высоту (вместе со строкой сцен — как у остальных панелей) */
-  body.pads-open #perform{height:calc(var(--sheetH) + var(--mainRowH,60px));justify-content:flex-start}
+  body.pads-open #perform{height:calc(var(--sheetH) + var(--mainRowH,64px) - 4px);justify-content:flex-start}
   body.pads-open .prow.pads{flex:1 1 auto;grid-auto-rows:1fr}
   body.pads-open .prow.pads .pad{height:100%;min-height:62px}
 }

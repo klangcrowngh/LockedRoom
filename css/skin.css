@@ -126,3 +126,21 @@ body.skin-ko #gate.ready .go{animation:keyGlow 1.6s ease-in-out infinite .6s}
 /* полосы прокрутки не показываем — прокрутка пальцем/колесом остаётся */
 body.skin-ko *{scrollbar-width:none;-ms-overflow-style:none}
 body.skin-ko *::-webkit-scrollbar{display:none;width:0;height:0}
+/* ---------- нижняя панель (телефон): ряд сцен + ряд действий, GEN — самая крупная клавиша ---------- */
+@media (max-width:700px){
+  body.skin-ko .prow.main{flex-wrap:wrap;row-gap:7px;column-gap:6px;border-top:none;padding-top:8px}
+  body.skin-ko .prow.main .scenes{flex:1 1 100%;order:0}
+  body.skin-ko .prow.main .seg{gap:6px}
+  body.skin-ko .prow.main .seg .scn{height:46px;font-size:16px}
+  body.skin-ko .prow.main .tb{order:1;height:54px;min-width:54px;flex:0 0 auto;gap:5px}
+  body.skin-ko .prow.main .tb .ic{width:20px;height:20px}
+  body.skin-ko .prow.main .tb small{font-size:9px;letter-spacing:.14em}
+  body.skin-ko #genBtn{flex:1 1 auto;flex-direction:row;gap:10px;border-radius:10px;
+    background:linear-gradient(#ff7a3d,#f04f17);box-shadow:0 0 0 1px #c2420f,0 3px 0 #a8380c,0 4px 14px rgba(255,90,31,.45)}
+  body.skin-ko #genBtn .ic{width:26px;height:26px;stroke-width:1.9}
+  body.skin-ko #genBtn small{font-size:14px;font-weight:700;letter-spacing:.3em}
+  body.skin-ko #genBtn.on{background:linear-gradient(#e2470f,#c93c0b);box-shadow:0 0 0 1px #9e330a,0 1px 0 #8a2d09,inset 0 2px 6px rgba(0,0,0,.25)}
+}
+@media (min-width:701px){
+  body.skin-ko #genBtn{min-width:92px;font-size:12px;background:linear-gradient(#ff7a3d,#f04f17);box-shadow:0 0 0 1px #c2420f,0 3px 0 #a8380c,0 4px 14px rgba(255,90,31,.45)}
+}

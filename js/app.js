@@ -895,6 +895,8 @@ function resize(){
   cv.width = W*DPR; cv.height = H*DPR;
   const top = $('top').offsetHeight, bot = $('bottom').offsetHeight;
   document.documentElement.style.setProperty('--topH', top+'px'); document.documentElement.style.setProperty('--botH', bot+'px');
+  // высота строки сцен/действий — на её место встают панель звука и эффекты, чтобы высота низа не прыгала
+  const mr = document.querySelector('.prow.main'); if (mr && mr.offsetHeight && !document.body.classList.contains('pads-open')) document.documentElement.style.setProperty('--mainRowH', (mr.offsetHeight + 8) + 'px');
   C = {x:W/2, y: top + (H-top-bot)/2};
   RAD = W < 700 ? Math.max(80, Math.min(W*0.5-34, (H-top-bot)*0.5-38)) : Math.max(80, Math.min(W*0.5-56, (H-top-bot)*0.5-40));
   // кольцо времени: на телефоне крупнее, чтобы по точкам было легко попадать пальцем
