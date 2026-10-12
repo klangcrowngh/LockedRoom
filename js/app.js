@@ -802,8 +802,10 @@ function variate(n, quiet = false, force = null){
     if (has('kick')) kinds.push('stutter');
     if (tracks.length >= 3 && !only) kinds.push('gap');
     const kind = kinds.length ? pickR(kinds) : 'roll';
-    if (kind === 'roll'){ for (const t of by('snare')){ [end, end+1, end+2, end+3].forEach((i, k) => add(t, i, 0.45 + k*0.18, k === 3 ? 2 : 1)); touched.add(t); }
-      for (const t of by('hat')) if (!isOpen(t.v)){ add(t, L-1, 0.9, 2); touched.add(t); } }
+    // дроби — по настройке Rolls из GEN (Off / Rare / Many)
+    const rolls = typeof GEN !== 'undefined' ? (GEN.parts.drums.rolls ?? 1) : 1;
+    if (kind === 'roll'){ for (const t of by('snare')){ [end, end+1, end+2, end+3].forEach((i, k) => add(t, i, 0.45 + k*0.18, k === 3 && rolls > 0 ? 2 : 1)); touched.add(t); }
+      if (rolls === 2 || (rolls === 1 && Math.random() < 0.3)) for (const t of by('hat')) if (!isOpen(t.v)){ add(t, L-1, 0.9, 2); touched.add(t); } }
     else if (kind === 'toms'){ const t = by('perc')[0]; [end, end+1, end+2, end+3].forEach((i, k) => { add(t, i, 0.6 + k*0.13); }); touched.add(t); }
     else if (kind === 'stutter'){ for (const t of by('kick')){ add(t, end+2, 0.8); add(t, end+3, 0.9); touched.add(t); } }
     else if (kind === 'gap'){ for (const t of tracks) if (roleOf(t.v) !== 'kick'){ for (let i=end+2;i<L;i++) del(t, i); touched.add(t); } }   // обрыв перед новым тактом

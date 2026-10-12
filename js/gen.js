@@ -259,7 +259,7 @@ const PADLIKE = /pad|strings|choir/;
 
 // ---------- настройки GEN (запоминаются на устройстве) ----------
 const GEN_DEF = () => ({ genre:'techno', bpm:0, key:-1, scale:'auto', energy:1, mood:1, cx:1, make:'scene', tab:'track', part:'drums',
-  parts:{ drums:{ mode:'new', sound:'auto', dens:1, cx:1, swing:1, fills:1 }, bass:{ mode:'new', sound:'auto', dens:1, cx:1, oct:1 },
+  parts:{ drums:{ mode:'new', sound:'auto', dens:1, cx:1, swing:1, fills:1, rolls:1 }, bass:{ mode:'new', sound:'auto', dens:1, cx:1, oct:1 },
           lead:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', range:'auto' }, chords:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', rate:'auto' },
           fx:{ mode:'off', sound:'auto', dens:0, cx:1 } } });
 let GEN = GEN_DEF();
@@ -419,18 +419,26 @@ function genDrums(G, S, bars, cur){
       else if (r === 'perc') vel[i] = i % 4 === 0 ? 0.9 : rnd(0.62, 0.8);
       else vel[i] = 0.9;
     }
-    if (r === 'hat' && cx >= 1){
-      const on = [...Array(n).keys()].filter(i => p[i] && i % 4 !== 2);
-      const nr = cx === 2 ? rint(1, 3) : (Math.random() < 0.5 ? 1 : 0), rats = (G.hat.rat || [2]);
-      for (let k=0;k<nr && on.length;k++){ const i = on.splice(Math.random()*on.length|0, 1)[0]; rat[i] = cx === 2 ? pickR(rats) : rats[0]; }
-      if (cx === 2) for (let k=0;k<2 && on.length;k++){ const i = on.splice(Math.random()*on.length|0, 1)[0]; prob[i] = 0.7; }
+    // дробь (рэтчет) — приём, а не фон: Rare — максимум одна, только как подхват в конце фразы на слабой доле;
+    // Many — несколько (трэп-роллы). На средней сложности — без дробей.
+    const rolls = S.rolls ?? 1;
+    if (r === 'hat' && rolls > 0){
+      const many = (G.hat.rat || [2]).length > 1, rats = G.hat.rat || [2];
+      const tail = [n - 1, n - 3, n - 5].filter(i => p[i]);                                   // 16-е перед «раз»
+      const weak = [...Array(n).keys()].filter(i => p[i] && i % 2 === 1 && i % 16 >= 8);       // слабые 16-е второй половины такта
+      if (rolls === 1){ if (cx === 2 && tail.length && Math.random() < (many ? 0.8 : 0.45)) rat[tail[0]] = 2; }
+      else if (cx >= 1){ const nr = rint(1, many ? 3 : 2); for (let k=0;k<nr && weak.length;k++){ const i = weak.splice(Math.random()*weak.length|0, 1)[0]; rat[i] = many ? pickR(rats) : 2; } }
+    }
+    if (r === 'hat' && cx === 2){
+      const on = [...Array(n).keys()].filter(i => p[i] && i % 4 !== 2 && rat[i] === 1);
+      for (let k=0;k<2 && on.length;k++){ const i = on.splice(Math.random()*on.length|0, 1)[0]; prob[i] = 0.7; }
     }
     res[r] = { p, vel, rat, prob, hum: r === 'hat' || r === 'ohat' || r === 'perc' };
   }
   // сбивка в конце 2-го такта
   if (bars === 2 && S.fills){
     const kinds = S.fills > 1 ? ['roll','roll','stutter'].concat(res.perc ? ['toms'] : []) : ['drop','ghost','ghost','pickup'], kind = pickR(kinds), e = 28;
-    if (kind === 'roll'){ const s = res.snare; [e, e+1, e+2, e+3].forEach((i, k) => { s.p[i] = true; s.vel[i] = 0.42 + k * 0.17; s.rat[i] = k === 3 && cx >= 1 ? 2 : 1; }); }
+    if (kind === 'roll'){ const s = res.snare; [e, e+1, e+2, e+3].forEach((i, k) => { s.p[i] = true; s.vel[i] = 0.42 + k * 0.17; s.rat[i] = k === 3 && (S.rolls ?? 1) === 2 ? 2 : 1; }); }
     else if (kind === 'toms'){ const s = res.perc; [e, e+1, e+2, e+3].forEach((i, k) => { s.p[i] = k !== 1 || cx >= 1; s.vel[i] = 0.6 + k * 0.12; }); }
     else if (kind === 'stutter'){ const s = res.kick; s.p[30] = true; s.vel[30] = 0.8; s.p[31] = true; s.vel[31] = 0.9; }
     else if (kind === 'drop'){ for (const r of ['hat','ohat','perc']) if (res[r]) for (const i of [30, 31]) res[r].p[i] = false; }
@@ -467,7 +475,7 @@ function genBass(G, S, bars, harm, kickP, curP){
     }
     notes[i] = nn + oct;
     vel[i] = i % 4 === 0 ? 1 : i % 4 === 2 ? 0.95 : 0.8;
-    if (spec.rat && S.cx === 2 && weak && Math.random() < 0.25) rat[i] = 2;
+    if (spec.rat && S.cx === 2 && (GEN.parts.drums.rolls ?? 1) === 2 && weak && Math.random() < 0.15) rat[i] = 2;
   });
   return { p, notes, vel, rat };
 }
@@ -551,7 +559,6 @@ function genLead(G, S, bars, harm, curP, avoidP, up = 0){
   for (let i=0;i<n;i++) if (c.p[i]){
     notes[i] = degSemi(c.deg[i]) + up;
     vel[i] = kind === 'acid' ? (Math.random() < 0.35 ? 1 : 0.68) : i % 4 === 0 ? 1 : i % 2 ? 0.72 : 0.85;
-    if (kind === 'acid' && S.cx === 2 && Math.random() < 0.08) rat[i] = 2;
   }
   return { p: c.p, notes, vel, rat, hum: true };
 }
@@ -893,7 +900,7 @@ function genRender(){
     row('Make', seg('make', [['scene','Scene ' + 'ABCD'[scene]],['song','Full song']], GEN.make)) +
     '<div class="gmodes">' + PARTS.map(p => '<span class="' + GEN.parts[p].mode + '">' + PART_NAMES[p] + '<i>' + GEN.parts[p].mode + '</i></span>').join('') + '</div>';
   // вкладка Parts
-  const extra = GEN.part === 'drums' ? row('Swing', seg('p.swing', [[0,'Straight'],[1,'Genre'],[2,'Heavy']], S.swing)) + row('Fills', seg('p.fills', [[0,'Off'],[1,'Light'],[2,'Busy']], S.fills))
+  const extra = GEN.part === 'drums' ? row('Swing', seg('p.swing', [[0,'Straight'],[1,'Genre'],[2,'Heavy']], S.swing)) + row('Fills', seg('p.fills', [[0,'Off'],[1,'Light'],[2,'Busy']], S.fills)) + row('Rolls', seg('p.rolls', [[0,'Off'],[1,'Rare'],[2,'Many']], S.rolls ?? 1))
     : GEN.part === 'bass' ? row('Octave', seg('p.oct', [[0,'−1'],[1,'0'],[2,'+1']], S.oct))
     : GEN.part === 'lead' ? row('Rhythm', seg('p.rhythm', [['auto','Auto'],['straight','Straight'],['synco','Synco'],['arp','Arp']].concat(G.lead.rhythm === 'acid' ? [['acid','Acid']] : []), S.rhythm)) + row('Range', seg('p.range', [['auto','Auto'],[1,'1 oct'],[2,'2 oct'],[3,'3 oct']], S.range))
     : GEN.part === 'chords' ? row('Rhythm', seg('p.rhythm', [['auto','Auto'],['pad','Pad'],['stab','Stab'],['pump','Pump']], S.rhythm)) + row('Changes', seg('p.rate', [['auto','Auto'],[1,'1 / bar'],[2,'2 / bar']], S.rate))
@@ -910,7 +917,7 @@ function genRender(){
 let genGenresOpen = false;
 function genSet(k, v){
   if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }
-  else if (k === 'cx'){ GEN.cx = +v; for (const p of PARTS) GEN.parts[p].cx = +v; GEN.parts.drums.fills = Math.round(+v); }
+  else if (k === 'cx'){ GEN.cx = +v; for (const p of PARTS) GEN.parts[p].cx = +v; GEN.parts.drums.fills = +v < 0.5 ? 0 : Math.min(1, GEN.parts.drums.fills || 1); }   // Busy — только вручную
   else if (k === 'mood') GEN.mood = +v;
   else if (k === 'make') GEN.make = v;
   else if (k.startsWith('p.')){
@@ -954,6 +961,7 @@ function genGenre(id){
   GEN.genre = id; GEN.bpm = 0;
   for (const p of PARTS){ const m = (G.parts || {})[p]; if (m) GEN.parts[p].mode = m; else if (p === 'drums' || p === 'bass') GEN.parts[p].mode = 'new'; GEN.parts[p].sound = 'auto'; }
   GEN.parts.lead.rhythm = 'auto'; GEN.parts.chords.rhythm = 'auto';
+  GEN.parts.drums.rolls = id === 'trap' ? 2 : 1;   // трэп-роллы — часть жанра, в остальных дробь редкая
   genGenresOpen = false; genSave(); genRender(); haptic('select');
 }
 function setGenOpen(on){
