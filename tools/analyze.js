@@ -68,3 +68,51 @@ async function genreReport(n = 2, genres = GENRES.map(g => g.id)){
 }
 window.LRA = { measureSound, profileAll, renderLoop, analyzeTrack, genreReport, bands };
 export default window.LRA;
+
+// ------------------------------------------------------------
+//  ТЕМБР: «отпечаток» звука и поиск похожих
+// ------------------------------------------------------------
+function fft(re, im){ const n = re.length;
+  for (let i = 1, j = 0; i < n; i++){ let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j){ [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1){ const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len){ let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++){ const ur = re[i+k], ui = im[i+k], vr = re[i+k+len/2] * cr - im[i+k+len/2] * ci, vi = re[i+k+len/2] * ci + im[i+k+len/2] * cr;
+      re[i+k] = ur + vr; im[i+k] = ui + vi; re[i+k+len/2] = ur - vr; im[i+k+len/2] = ui - vi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } } } }
+const NBANDS = 24, BAND = [...Array(NBANDS + 1)].map((_, k) => 40 * Math.pow(16000 / 40, k / NBANDS));
+async function renderDry(v, note = 0, sec = 1.5){
+  const off = new OfflineAudioContext(1, Math.round(SR * sec), SR), live = engineSnapshot(); RENDERING = true;
+  try { ac = off; buildGraph(true); bus = off.createGain(); bus.connect(off.destination); revIn = off.createGain(); dlyIn = off.createGain();
+    hit({ v, params: defParams(v), notes: [note], pat: [true] }, 0.01, 0, 1); return (await off.startRendering()).getChannelData(0);
+  } finally { engineRestore(live); RENDERING = false; }
+}
+// отпечаток: форма спектра (24 полосы, дБ относительно среднего), «шумность», огибающая (10 отрезков по 60 мс)
+async function features(v){
+  const d = await renderDry(v), N = 1024, H = 512, w = [...Array(N)].map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const spec = new Float64Array(NBANDS), env = new Float64Array(10); let flat = 0, fw = 0, tot = 0;
+  for (let s = 0; s + N <= d.length; s += H){
+    const re = new Float64Array(N), im = new Float64Array(N); let e = 0;
+    for (let i = 0; i < N; i++){ re[i] = d[s + i] * w[i]; e += d[s + i] * d[s + i]; }
+    const seg = Math.floor(s / (SR * 0.06)); if (seg < 10) env[seg] += e;
+    if (e < 1e-7) continue; fft(re, im); tot += e;
+    let lg = 0, ar = 0, cnt = 0;
+    for (let k = 1; k < N / 2; k++){ const p = re[k] * re[k] + im[k] * im[k], f = k * SR / N; lg += Math.log(p + 1e-12); ar += p; cnt++;
+      for (let b = 0; b < NBANDS; b++) if (f >= BAND[b] && f < BAND[b + 1]){ spec[b] += p * e; break; } }
+    flat += (Math.exp(lg / cnt) / (ar / cnt + 1e-12)) * e; fw += e;
+  }
+  const sp = [...spec].map(x => 10 * Math.log10(x + 1e-20)), mx = Math.max(...sp), spn = sp.map(x => Math.max(-60, x - mx) / 10);
+  const em = Math.max(...env) || 1, en = [...env].map(x => Math.max(-6, Math.log10(x / em + 1e-6)));
+  return { v, spec: spn, env: en, flat: fw ? flat / fw : 0 };
+}
+const fdist = (a, b) => { let s = 0; for (let i = 0; i < NBANDS; i++) s += (a.spec[i] - b.spec[i]) ** 2; for (let i = 0; i < 10; i++) s += 0.6 * (a.env[i] - b.env[i]) ** 2; s += 4 * (Math.sqrt(a.flat) - Math.sqrt(b.flat)) ** 2; return Math.sqrt(s); };
+async function featuresAll(out = {}, from = 0, to = LIB.length){ const sc = P.scale; P.scale = 'minor'; for (const s of LIB.slice(from, to)) out[s.id] = await features(s.id); P.scale = sc; return out; }
+// по категориям: ближайший сосед каждого звука; двойники — расстояние меньше порога
+function similarity(F, thr = 1.2){
+  const res = {};
+  for (const cat of CAT_ORDER){
+    const ids = LIB.filter(s => s.cat === cat && F[s.id]).map(s => s.id), nn = [];
+    for (const a of ids){ let best = 1e9, who = ''; for (const b of ids) if (a !== b){ const d = fdist(F[a], F[b]); if (d < best){ best = d; who = b; } } nn.push([a, who, best]); }
+    const ds = nn.map(x => x[2]).sort((x, y) => x - y);
+    res[cat] = { n: ids.length, median: +ds[ds.length >> 1].toFixed(2), twins: nn.filter(x => x[2] < thr).map(x => x[0] + '~' + x[1] + ' ' + x[2].toFixed(2)) };
+  }
+  return res;
+}
+Object.assign(window.LRA, { features, featuresAll, similarity, fdist, renderDry });
