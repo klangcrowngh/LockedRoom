@@ -554,3 +554,49 @@ details.more[open] summary::before{content:'▾ '}
 details.more[open]{display:flex;flex-direction:column;gap:8px}
 #song .spane[data-p="arr"] button.ghost{align-self:flex-start;padding:0 14px}
 
+
+/* ---------- GEN: генератор трека ---------- */
+#gen{display:none;flex-direction:column;gap:10px;width:100%;max-width:900px;margin:0 auto}
+body.gen-open #gen{display:flex;animation:rise .18s ease-out;background:rgba(5,5,5,.97);border:1px solid var(--line);padding:4px 14px 14px;max-height:66vh}
+body.gen-open #perform .pads,body.gen-open #hint{display:none}
+body.panel-open #gen{display:none !important}
+#gen .shead{display:flex;align-items:center;gap:6px}
+#gen .st1{flex:1;display:flex;align-items:baseline;gap:12px;min-width:0}
+#gen .st1 b{font-size:12px;letter-spacing:.3em;color:var(--acc)}
+#gen .st1 span{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gen .closeX{width:44px;height:40px;padding:0;display:flex;align-items:center;justify-content:center}
+#varBtn{height:40px;display:inline-flex;align-items:center;gap:6px}
+#genBtn.on{background:var(--acc);border-color:var(--acc);color:var(--bg)}
+.gbody{overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0;scrollbar-width:thin}
+.gpane{display:none;flex-direction:column;gap:10px}
+#gen[data-tab="track"] #genTrack,#gen[data-tab="parts"] #genParts{display:flex}
+.grow{display:flex;flex-direction:column;gap:5px}
+.grow .lbl{font-size:9px;letter-spacing:.2em}
+.gseg{display:flex;border:1px solid #2a2a2a}
+.gseg button{flex:1;min-width:0;height:44px;border:none;border-right:1px solid #2a2a2a;padding:0 4px;font-weight:700;font-size:11px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gseg button:last-child{border-right:none}
+.gseg button.on{background:var(--acc);color:var(--bg)}
+.gseg.gpart button{height:48px}
+.gstep{display:flex;align-items:stretch;border:1px solid #2a2a2a;min-width:0}
+.gstep button{flex:0 0 44px;height:52px;border:none;font-size:20px;padding:0}
+.gstep b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer;border-left:1px solid #1d1d1d;border-right:1px solid #1d1d1d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.gstep b small{font-size:8px;color:var(--dim);font-weight:400;letter-spacing:.2em}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.g3 .gstep button{flex-basis:30px;font-size:16px}
+.gbig{display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;text-align:left}
+.gbig b{flex:1;font-size:13px;color:var(--acc);letter-spacing:.12em}
+.gbig i{font-style:normal;color:var(--dim)}
+.ggenres{display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.ggenres.open{display:grid}
+.ggenres button{height:44px;padding:0 8px;font-size:10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gmodes{display:flex;gap:4px;flex-wrap:wrap;padding-top:2px}
+.gmodes span{flex:1;min-width:56px;border:1px solid #1d1d1d;padding:6px 4px;text-align:center;font-size:9px;letter-spacing:.12em;color:var(--fg)}
+.gmodes span i{display:block;font-style:normal;color:var(--acc);font-size:8px;margin-top:3px}
+.gmodes span.keep i{color:var(--fg)}
+.gmodes span.off{color:var(--dim)}.gmodes span.off i{color:var(--dim)}
+#genGo{height:56px;flex:0 0 auto;font-size:12px;letter-spacing:.2em;background:var(--acc);color:var(--bg)}
+@media (max-width:700px){
+  body.gen-open #gen{padding:0 12px 12px;margin:0 -10px;width:auto;max-width:none;max-height:calc(64vh - var(--sab))}
+  body.gen-open #gen .grab{display:block !important}
+  body.gen-open .prow.main{border-top:none}
+}

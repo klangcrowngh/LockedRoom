@@ -72,6 +72,15 @@ const FILTERED = ['acid','acid303'];
 const KIT_TECHNO = ['kick','bass','clap','perc','hat','tick','acid','stab'];
 const DLY_NAMES = {1:'1/16',2:'1/8',3:'3/16',4:'1/4',5:'5/16',6:'3/8',7:'7/16',8:'1/2'};
 const SCALE = [0,3,5,7,10,12,15];   // минорная пентатоника
+// лады (7 ступеней от тоники) — по ним GEN пишет ноты, а аккордовые звуки строят аккорды
+const SCALES = {
+  minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], phrygian:[0,1,3,5,7,8,10], harmonic:[0,2,3,5,7,8,11],
+  major:[0,2,4,5,7,9,11], mixolydian:[0,2,4,5,7,9,10], lydian:[0,2,4,6,7,9,11],
+};
+// ближайшая нота лада трека (если лада нет — нота как есть)
+function snapScale(n){ if (typeof P === 'undefined' || !P || !P.scale || !SCALES[P.scale]) return n; const sc = SCALES[P.scale], o = Math.floor(n / 12), pc = n - o*12;
+  let b = sc[0], bd = 99; for (const s of sc.concat([12])) { const d = Math.abs(s - pc); if (d < bd){ bd = d; b = s; } } return o*12 + b; }
+const SCALE_NAMES = { minor:'Minor', dorian:'Dorian', phrygian:'Phrygian', harmonic:'Harm. minor', major:'Major', mixolydian:'Mixolydian', lydian:'Lydian' };
 // базовая октава каждого звука относительно тоники пресета
 const BASE = { bass:12, sub:12, ebm:12, rumble:12, reese:12, fmbass:12, acid:24, acid303:24, timpani:24,
                stab:36, pluck:36, chord:36, hoover:36, vox:36, strings:36, brass:36, bell:48, glock:48,

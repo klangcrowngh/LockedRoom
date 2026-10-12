@@ -171,6 +171,7 @@ function undo(){
     tracks = u.list.slice();
     tracks.forEach((tr, k) => { tr.scn = u.all[k].map(cloneScene); tr.scSrc = u.sc[k] && tracks.includes(u.sc[k]) ? u.sc[k] : null; tr.spawn = performance.now(); bindScene(tr); });
     if (sel){ buildSteps(sel); buildNotes(sel); }
+    if (u.gen && typeof genUndoRestore === 'function') genUndoRestore(u);
     vState = null; renderLib(); updateUI(); toast('undo'); haptic('light'); return;
   }
   // звуки, добавленные через Vary после этого шага, убираем
@@ -260,7 +261,7 @@ function fillRole(t, role, R){
   if (MELODIC.includes(t.v)){
     const bass = role === 'bass', pool = bass ? [0,0,7,12,10,3] : SCALE.slice(0, 6);
     const m = [0, pickR(pool), pickR(pool), pickR(pool)], ans = [0, m[1], pickR(pool), pickR([0,7,12])];
-    let k = 0; for (let i=0;i<L;i++) if (t.pat[i]){ let nn = (i >= L/2 ? ans : m)[k++ % 4]; if (bass && i % 4 === 0) nn = 0; if (/acid/.test(t.v) && Math.random() < 0.2) nn += 12; t.notes[i] = nn; if (/acid/.test(t.v)) t.vel[i] = Math.random() < 0.35 ? 1 : 0.7; }
+    let k = 0; for (let i=0;i<L;i++) if (t.pat[i]){ let nn = (i >= L/2 ? ans : m)[k++ % 4]; if (bass && i % 4 === 0) nn = 0; if (/acid/.test(t.v) && Math.random() < 0.2) nn += 12; t.notes[i] = snapScale(nn); if (/acid/.test(t.v)) t.vel[i] = Math.random() < 0.35 ? 1 : 0.7; }
   }
 }
 const sceneEmpty = k => !tracks.some(t => t.scn[k].pat.some((x, i) => x && i < STEPS));
@@ -368,7 +369,7 @@ function composeNotes(pat, role, v, bars = 1){
       let nn = (i >= 8 ? (b === bars - 1 ? fin : ans) : m)[k % 4];
       if (bass && i % 4 === 0) nn = 0;
       if (acid && nn <= 7 && Math.random() < 0.15) nn += 12;   // октавный прыжок, но не выше 2-й октавы
-      out.push(nn); k++;
+      out.push(snapScale(nn)); k++;
     }
   }
   return out.length ? out : [0];
@@ -818,7 +819,7 @@ function variate(n, quiet = false, force = null){
         let nn = ph[k % 4];
         if (bass && i % 4 === 0) nn = 0;                                    // бас: тоника на сильных долях
         if (/acid/.test(t.v) && Math.random() < 0.2) nn += 12;              // acid: октавные прыжки
-        t.notes[i] = nn; t.vel[i] = /acid/.test(t.v) ? (Math.random() < 0.35 ? 1 : 0.7) : t.vel[i];
+        t.notes[i] = snapScale(nn); t.vel[i] = /acid/.test(t.v) ? (Math.random() < 0.35 ? 1 : 0.7) : t.vel[i];
       });
       touched.add(t);
     }
@@ -1685,7 +1686,7 @@ function showSwing(){
   document.querySelectorAll('.swingV').forEach(b => b.textContent = Math.round(swing*100)+'%');
 }
 // телефон: выдвижная панель с эффектами
-function setPadsOpen(on){ document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
+function setPadsOpen(on){ if (on && document.body.classList.contains('gen-open')) setGenOpen(false); document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
 $('padsBtn').onclick = () => setPadsOpen(!document.body.classList.contains('pads-open'));
 $('padsClose').onclick = () => setPadsOpen(false);
 // телефон: вкладки панели звука
@@ -1756,6 +1757,7 @@ function setSongOn(on, quiet){
 function setSongOpen(on){
   document.body.classList.toggle('song-open', on);
   if (on && document.body.classList.contains('pads-open')) setPadsOpen(false);
+  if (on && document.body.classList.contains('gen-open')) setGenOpen(false);
   renderBlocks(); resize(); updateBack();
 }
 function renderBlocks(){
@@ -1976,7 +1978,7 @@ function decScene(o){
   return s;
 }
 function serialize(){
-  return { v:2, preset:P.name, acc:P.acc, types:sceneTypes.slice(), bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
+  return { v:2, preset:P.name, acc:P.acc, root:P.root, scale:P.scale || undefined, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, types:sceneTypes.slice(), bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
     tracks: tracks.map(tr => ({ v:tr.v, m:tr.mute ? 1 : 0, sc: tr.scSrc ? tracks.indexOf(tr.scSrc) : -1,
       p: Object.fromEntries(Object.entries(tr.params).map(([k,x]) => [k, r3(x)])), s: tr.scn.map(encScene) })) };
 }
@@ -1984,6 +1986,11 @@ function deserialize(d){
   if (!d || !Array.isArray(d.tracks)) throw new Error('bad project');
   applyPreset(Math.max(0, PRESETS.findIndex(p => p.name === d.preset)));
   if (typeof d.acc === 'string' && /^#[0-9a-f]{6}$/i.test(d.acc)) setAcc(d.acc);   // свой цвет трека
+  // тональность, лад и характер звука (если трек сделан генератором)
+  if (Number.isFinite(d.root)) P.root = Math.max(12, Math.min(48, d.root|0));
+  if (typeof d.scale === 'string' && SCALES[d.scale]) P.scale = d.scale;
+  if (Number.isFinite(d.drive)) P.drive = d.drive; if (Number.isFinite(d.grit)){ P.grit = d.grit; if (busSh){ busSh.curve = curve(P.grit); busComp.gain.value = 1/(1+P.grit*0.6); } }
+  if (typeof d.genKey === 'string') P.genKey = d.genKey; if (typeof d.genre === 'string') P.genre = d.genre;
   sceneTypes = Array.isArray(d.types) ? [0,1,2,3].map(k => typeof d.types[k] === 'string' ? d.types[k] : '') : ['', '', '', ''];
   bpm = Math.max(60, Math.min(200, +d.bpm || P.bpm)); swing = +d.swing || 0; STEPS = d.steps === 32 ? 32 : 16;
   scene = Math.max(0, Math.min(SCENES-1, d.scene|0)); queuedScene = -1; undoStack = [];
@@ -2216,8 +2223,8 @@ function fitTitle(){
 addEventListener('resize', fitTitle);
 function updateUI(){
   if ($('pre').classList.contains('open')) renderDrawer();
-  $('titleCap').textContent = curProj ? 'MY TRACK' : (P.blank ? 'NEW TRACK' : P.genre);
-  $('titleName').textContent = curProj ? curProj.name : P.name;
+  $('titleCap').textContent = curProj ? 'MY TRACK' : P.genName ? 'GENERATED' : (P.blank ? 'NEW TRACK' : P.genre);
+  $('titleName').textContent = curProj ? curProj.name : P.genName || P.name;
   fitTitle();
   $('presetName').innerHTML = curProj ? 'TRACK / <b>' + escapeHtml(curProj.name) + '</b> · ' + P.name
     : 'PRESET / <b>' + P.name + '</b>' + (P.ref && P.ref !== 'locked room' ? ' · ' + P.ref : '');
@@ -2331,7 +2338,7 @@ function haptic(kind){
 }
 function updateBack(){
   if (!inTG || !tg.BackButton) return;
-  const any = sel || bpmOpen() || document.querySelector('#varyMenu.open, #clearMenu.open') || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
+  const any = sel || bpmOpen() || document.querySelector('#varyMenu.open, #clearMenu.open') || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || document.body.classList.contains('gen-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
   any ? tg.BackButton.show() : tg.BackButton.hide();
 }
 function applySafeArea(){
@@ -2356,6 +2363,7 @@ if (inTG){
       else if (sel) closePanel();
       else if (document.body.classList.contains('pads-open')) setPadsOpen(false);
       else if (document.body.classList.contains('song-open')) setSongOpen(false);
+      else if (document.body.classList.contains('gen-open')) setGenOpen(false);
     });
     applySafeArea();
     for (const ev of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged']) tg.onEvent(ev, () => { applySafeArea(); resize(); });

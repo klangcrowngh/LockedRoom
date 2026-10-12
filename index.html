@@ -25,7 +25,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=96">
+<link rel="stylesheet" href="css/app.css?v=102">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -42,6 +42,7 @@
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-song" viewBox="0 0 24 24"><rect x="2" y="7" width="5" height="10"/><rect x="9.5" y="7" width="5" height="10"/><rect x="17" y="7" width="5" height="10"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-gen" viewBox="0 0 24 24"><path d="M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
 </svg>
 
@@ -126,6 +127,21 @@
       <div class="ehint">Renders the whole timeline · in Telegram the file is sent to the bot chat</div>
     </div>
   </div>
+  <!-- GEN: генератор трека по жанру — общая настройка (Track) и точечная (Parts) -->
+  <div id="gen" data-tab="track">
+    <div class="grab mo"></div>
+    <div class="shead">
+      <div class="st1"><b>GEN</b><span id="genSub">—</span></div>
+      <button id="varBtn" class="acc" title="quick vary · hold for styles"><svg class="ic"><use href="#i-vary"/></svg> Vary</button>
+      <button id="genClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="stabs gtabs"><button data-t="track" class="on">Track</button><button data-t="parts">Parts</button></div>
+    <div class="gbody">
+      <div class="gpane" id="genTrack"></div>
+      <div class="gpane" id="genParts"></div>
+    </div>
+    <button id="genGo" class="acc big">✦ Generate</button>
+  </div>
   <div id="perform">
     <div class="grab mo"></div>
     <div class="prow main">
@@ -137,7 +153,7 @@
       <div class="swing dk"><span class="lbl">Swing</span><input type="range" class="swingIn" min="0" max="0.75" step="0.01" value="0"><b class="swingV">0%</b></div>
       <button id="songBtn" class="tb"><svg class="ic"><use href="#i-song"/></svg><small>Song</small></button>
       <button id="padsBtn" class="tb mo"><svg class="ic"><use href="#i-fx"/></svg><small>FX</small></button>
-      <button id="varBtn" class="tb acc"><svg class="ic"><use href="#i-vary"/></svg><small>Vary</small></button>
+      <button id="genBtn" class="tb acc"><svg class="ic"><use href="#i-gen"/></svg><small>Gen</small></button>
       <button id="undoBtn" class="tb"><svg class="ic"><use href="#i-undo"/></svg><small>Undo</small></button>
       <button class="tb clearBtn warn" title="clear links or sounds"><svg class="ic"><use href="#i-trash"/></svg><small>Clear</small></button>
     </div>
@@ -209,8 +225,9 @@
   <div class="go" id="gateGo">[ tap to enter ]</div>
 </div>
 
-<script src="js/data.js?v=96"></script>
-<script src="js/audio.js?v=96"></script>
-<script src="js/app.js?v=96"></script>
+<script src="js/data.js?v=102"></script>
+<script src="js/audio.js?v=102"></script>
+<script src="js/app.js?v=102"></script>
+<script src="js/gen.js?v=102"></script>
 </body>
 </html>

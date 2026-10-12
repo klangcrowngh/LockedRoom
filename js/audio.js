@@ -70,6 +70,14 @@ function filt(type, f, q=1){ const b=ac.createBiquadFilter(); b.type=type; b.fre
 function decay(g, t, peak, d, a=0.002){ d *= DK; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+d); }
 function shaper(k){ const s=ac.createWaveShaper(); s.curve=curve(k); return s; }
 const noteOf = tr => (tr && tr.notes) ? (tr.notes[STEP] || 0) : 0;
+// аккорд по ладу трека: интервалы «минорного» аккорда (3, 7, 10, 14…) превращаются в ступени лада,
+// поэтому на VI ступени минора звучит мажор, на II — уменьшённый и т.д. Нет лада (старые проекты) — как было.
+const CH_STEPS = { 0:0, 3:2, 4:2, 7:4, 10:6, 11:6, 12:7, 14:8, 15:9, 19:11 };
+function CH(ivs, tr){
+  const sc = P && P.scale && SCALES[P.scale]; if (!sc) return ivs;
+  const n = noteOf(tr), pc = ((n % 12) + 12) % 12, d = sc.indexOf(pc); if (d < 0) return ivs;
+  return ivs.map(iv => { const s = CH_STEPS[iv]; if (s === undefined) return iv; const k = d + s; return sc[k % 7] + 12 * Math.floor(k / 7) - pc; });
+}
 const cutHz = tr => 250*Math.pow(28, tr.params.cut);
 const resQ  = tr => 1 + tr.params.res*24;
 const HAT808 = [205.3, 304.4, 369.6, 522.7, 540, 800];
@@ -141,7 +149,7 @@ const SYNTH = {
     f.frequency.setValueAtTime(160,t); f.frequency.exponentialRampToValueAtTime(peak,t+0.008); f.frequency.exponentialRampToValueAtTime(170,t+0.19);
     decay(g,t,1,0.2,0.003); o.connect(f); f.connect(g); g.connect(s); s.connect(l); l.connect(out(0.05,0.28)); o.start(t); o.stop(t+0.25*DK); },
   stab(t,n){ const f=filt('lowpass',1700,2), g=ac.createGain(); decay(g,t,0.09,0.5,0.004); f.connect(g); g.connect(out(0.5,0.22));
-    for (const s of [0,3,7,10]) for (const dt of [-9,9]){ const o=osc(); o.type='sawtooth';
+    for (const s of CH([0,3,7,10], n)) for (const dt of [-9,9]){ const o=osc(); o.type='sawtooth';
       o.frequency.value=mtof(P.root+36+s+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.6*DK); } },
   pluck(t,n){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+noteOf(n));
     const f=filt('lowpass',500,4), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.16;
@@ -161,7 +169,7 @@ const SYNTH = {
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.16); g.gain.setTargetAtTime(0.0001,t+0.25,0.7*DK);
     f.connect(g); g.connect(l); l.connect(out(0.5,0.08,2.8));
     const lfo=osc(); lfo.frequency.value=5.2; const lg=ac.createGain(); lg.gain.value=5; lfo.connect(lg); lfo.start(t); lfo.stop(t+2.6*DK);
-    for (const sm of [0,7,12,15]) for (const dt of [-12,12]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(base+sm); o.detune.value+=dt;
+    for (const sm of CH([0,7,12,15], n)) for (const dt of [-12,12]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(base+sm); o.detune.value+=dt;
       lg.connect(o.detune); o.connect(f); o.start(t); o.stop(t+2.6*DK); } },
   brass(t,n){ const fr=mtof(P.root+36+noteOf(n)), f=filt('lowpass',400,2), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
     f.frequency.setValueAtTime(400,t); f.frequency.exponentialRampToValueAtTime(3200,t+0.06); f.frequency.exponentialRampToValueAtTime(1300,t+0.4);
@@ -214,7 +222,7 @@ const SYNTH = {
     m.connect(mg); mg.connect(c.frequency); decay(g,t,1,0.18,0.003); c.connect(g); g.connect(l); l.connect(out(0,0,0.25));
     c.start(t); m.start(t); c.stop(t+0.25*DK); m.stop(t+0.25*DK); },
   chord(t,n){ const f=filt('lowpass',1100,1), g=ac.createGain(); decay(g,t,0.07,0.7,0.01); f.connect(g); g.connect(out(0.5,0.3,0.9));
-    for (const sm of [0,3,7,10,14]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(f); o.start(t); o.stop(t+0.8*DK); } },
+    for (const sm of CH([0,3,7,10,14], n)){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(f); o.start(t); o.stop(t+0.8*DK); } },
   hoover(t,n){ const f=filt('lowpass',2600,1.5), s=shaper(3), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
     decay(g,t,1,0.38,0.01); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0.25,0.15,0.5));
     const fr=mtof(P.root+36+noteOf(n));
@@ -304,16 +312,16 @@ const SYNTH = {
   // ---- keys & pads ----
   organ(t,n){ const f=filt('lowpass',2500,0.8), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.05;
     decay(g,t,1,0.22,0.002); f.connect(g); g.connect(l); l.connect(out(0.2,0.1,0.3));
-    for (const sm of [0,3,7,10]){ const o=osc(); o.type='square'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(f); o.start(t); o.stop(t+0.3*DK); } },
+    for (const sm of CH([0,3,7,10], n)){ const o=osc(); o.type='square'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(f); o.start(t); o.stop(t+0.3*DK); } },
   epiano(t,n){ const g=ac.createGain(), l=ac.createGain(); l.gain.value=0.07; decay(g,t,1,0.8,0.002); g.connect(l); l.connect(out(0.3,0.1,0.9));
-    for (const sm of [0,3,7]){ const fr=mtof(P.root+36+sm+noteOf(n)), c=osc(), m=osc(), mg=ac.createGain();
+    for (const sm of CH([0,3,7], n)){ const fr=mtof(P.root+36+sm+noteOf(n)), c=osc(), m=osc(), mg=ac.createGain();
       c.frequency.value=fr; m.frequency.value=fr; m.detune.value=c.detune.value; mg.gain.setValueAtTime(fr*1.6,t); mg.gain.exponentialRampToValueAtTime(1,t+0.5);
       m.connect(mg); mg.connect(c.frequency); c.connect(g); c.start(t); m.start(t); c.stop(t+0.9*DK); m.stop(t+0.9*DK); } },
   pad(t,n){ const f=filt('lowpass',600,0.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.045;
     f.frequency.setValueAtTime(600,t); f.frequency.exponentialRampToValueAtTime(1600,t+1.2);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.5); g.gain.setTargetAtTime(0.0001,t+0.7,0.8*DK);
     f.connect(g); g.connect(l); l.connect(out(0.6,0.1,3.2));
-    for (const sm of [0,3,7,12]) for (const dt of [-10,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+3*DK); } },
+    for (const sm of CH([0,3,7,12], n)) for (const dt of [-10,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+3*DK); } },
   choir(t,n){ const f1=filt('bandpass',420,6), f2=filt('bandpass',820,7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.35;
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.12); g.gain.exponentialRampToValueAtTime(0.0001,t+0.9*DK);
     f1.connect(g); f2.connect(g); g.connect(l); l.connect(out(0.6,0.1,1));
@@ -403,7 +411,7 @@ const SYNTH = {
   diststab(t,n){ const f=filt('lowpass',2600,2), s=shaper(10), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
     f.frequency.setValueAtTime(3600,t); f.frequency.exponentialRampToValueAtTime(600,t+0.18);
     decay(g,t,1,0.22,0.002); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0.4,0.1,0.35));
-    for (const sm of [0,3,7,12]) for (const dt of [-10,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.28*DK); } },
+    for (const sm of CH([0,3,7,12], n)) for (const dt of [-10,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.28*DK); } },
   chant(t,n){ const fr=mtof(P.root+24+noteOf(n)), f1=filt('bandpass',450,5), f2=filt('bandpass',780,6), f3=filt('bandpass',2500,8), s=shaper(3), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.22;
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.025); g.gain.setValueAtTime(1,t+0.16*DK); g.gain.exponentialRampToValueAtTime(0.0001,t+0.26*DK);
     f1.connect(s); f2.connect(s); f3.connect(s); s.connect(g); g.connect(l); l.connect(out(0.35,0.12,0.4));
@@ -498,7 +506,7 @@ const SYNTH = {
     const ns=noise(t,0.03), bp=filt('bandpass',2400,1), ng=ac.createGain(); decay(ng,t,0.08,0.015,0.0005); ns.connect(bp); bp.connect(ng); ng.connect(lp); },
   housepiano(t,n){ const lp=filt('lowpass',4500,0.7), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
     decay(g,t,1,0.7,0.002); lp.connect(g); g.connect(l); l.connect(out(0.3,0.1,0.8));
-    for (const sm of [0,3,7,12]){ const fr=mtof(P.root+36+sm+noteOf(n));
+    for (const sm of CH([0,3,7,12], n)){ const fr=mtof(P.root+36+sm+noteOf(n));
       for (const [k,a] of [[1,1],[2,0.5],[3,0.3],[4,0.18]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*k; og.gain.value=a; decay(og,t,a,0.7/k,0.002); o.connect(og); og.connect(lp); o.start(t); o.stop(t+0.8*DK); } } },
   rhodes(t,n){ const fr=mtof(P.root+36+noteOf(n)), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.18;
     decay(g,t,1,1.2,0.003); g.connect(l); l.connect(out(0.2,0.1,1.3));
@@ -523,22 +531,22 @@ const SYNTH = {
     lp.frequency.setValueAtTime(700,t); lp.frequency.linearRampToValueAtTime(1500,t+1.4);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.6); g.gain.setTargetAtTime(0.0001,t+0.9,0.9*DK);
     lp.connect(g); g.connect(l); l.connect(out(0.5,0.1,3.4));
-    for (const sm of [0,7,12,15]) for (const [ty,dt] of [['sawtooth',-7],['triangle',7]]){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+3.2*DK); } },
+    for (const sm of CH([0,7,12,15], n)) for (const [ty,dt] of [['sawtooth',-7],['triangle',7]]){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+24+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+3.2*DK); } },
   glasspad(t,n){ const hp=filt('highpass',300), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.04;
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.35); g.gain.setTargetAtTime(0.0001,t+0.7,0.8*DK);
     hp.connect(g); g.connect(l); l.connect(out(0.55,0.2,3));
-    for (const sm of [0,7,15]){ const fr=mtof(P.root+48+sm+noteOf(n));
+    for (const sm of CH([0,7,15], n)){ const fr=mtof(P.root+48+sm+noteOf(n));
       for (const [m,a,dt] of [[1,1,-4],[1,1,4],[2,0.3,0],[3.01,0.12,0]]){ const o=osc(), og=ac.createGain(); o.frequency.value=fr*m; o.detune.value+=dt; og.gain.value=a; o.connect(og); og.connect(hp); o.start(t); o.stop(t+2.8*DK); } } },
   junopad(t,n){ const lp=filt('lowpass',1200,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.03;
     lp.frequency.setValueAtTime(600,t); lp.frequency.exponentialRampToValueAtTime(2200,t+0.5); lp.frequency.exponentialRampToValueAtTime(1100,t+1.6);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.25); g.gain.setTargetAtTime(0.0001,t+0.6,0.7*DK);
     lp.connect(g); g.connect(l); l.connect(out(0.45,0.15,2.6));
     const ch=osc(); ch.detune.value=0; ch.frequency.value=0.6; const chg=ac.createGain(); chg.gain.value=9; ch.connect(chg); ch.start(t); ch.stop(t+2.5*DK);   // «хорус»
-    for (const sm of [0,3,7]) for (const dt of [-11,11]){ const o=osc(); o.type='square'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; chg.connect(o.detune); o.connect(lp); o.start(t); o.stop(t+2.5*DK); } },
+    for (const sm of CH([0,3,7], n)) for (const dt of [-11,11]){ const o=osc(); o.type='square'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; chg.connect(o.detune); o.connect(lp); o.start(t); o.stop(t+2.5*DK); } },
   airpad(t,n){ const g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.9); g.gain.setTargetAtTime(0.0001,t+1.2,1.0*DK);
     g.connect(l); l.connect(out(0.65,0.15,4));
-    for (const sm of [0,7,12,19]){ const o=osc(); o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const og=ac.createGain(); og.gain.value=0.5; o.connect(og); og.connect(g); o.start(t); o.stop(t+3.8*DK); }
+    for (const sm of CH([0,7,12,19], n)){ const o=osc(); o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const og=ac.createGain(); og.gain.value=0.5; o.connect(og); og.connect(g); o.start(t); o.stop(t+3.8*DK); }
     const ns=ac.createBufferSource(); ns.buffer=NB; ns.loop=true; const bp=filt('bandpass',mtof(P.root+60+noteOf(n)),6), ng=ac.createGain(); ng.gain.value=0.5;
     ns.connect(bp); bp.connect(ng); ng.connect(g); ns.start(t); ns.stop(t+3.8*DK); },
   sawlead(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',3400,1.2), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
@@ -569,20 +577,20 @@ const SYNTH = {
   polysynth(t,n){ const lp=filt('lowpass',3000,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.11;
     lp.frequency.setValueAtTime(4200,t); lp.frequency.exponentialRampToValueAtTime(1000,t+0.3);
     decay(g,t,1,0.4,0.004); lp.connect(g); g.connect(l); l.connect(out(0.3,0.15,0.5));
-    for (const sm of [0,3,7]) for (const dt of [-9,9]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.45*DK); } },
+    for (const sm of CH([0,3,7], n)) for (const dt of [-9,9]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.45*DK); } },
   tpluck(t,n){ const fr=mtof(P.root+36+noteOf(n)), lp=filt('lowpass',5000,1.5), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.15;
     lp.frequency.setValueAtTime(6500,t); lp.frequency.exponentialRampToValueAtTime(600,t+0.22);
     decay(g,t,1,0.28,0.002); lp.connect(g); g.connect(l); l.connect(out(0.3,0.35,0.4));
     for (const dt of [-25,-12,0,12,25]){ const o=osc(); o.type='sawtooth'; o.frequency.value=fr; o.detune.value+=dt; o.connect(lp); o.start(t); o.stop(t+0.32*DK); } },
   ravestab(t,n){ const hp=filt('highpass',250), lp=filt('lowpass',4200,1), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.05;
     decay(g,t,1,0.3,0.002); hp.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0.4,0.15,0.4));
-    for (const sm of [0,3,7,10,14]) for (const ty of ['square','sawtooth']){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(hp); o.start(t); o.stop(t+0.35*DK); } },
+    for (const sm of CH([0,3,7,10,14], n)) for (const ty of ['square','sawtooth']){ const o=osc(); o.type=ty; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(hp); o.start(t); o.stop(t+0.35*DK); } },
   dubchord(t,n){ const lp=filt('lowpass',1000,2), hp=filt('highpass',200), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.27;
     decay(g,t,1,0.16,0.003); lp.connect(hp); hp.connect(g); g.connect(l); l.connect(out(0.35,0.45,0.25));
-    for (const sm of [0,3,7,10]){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(lp); o.start(t); o.stop(t+0.22*DK); } },
+    for (const sm of CH([0,3,7,10], n)){ const o=osc(); o.type='sawtooth'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); o.connect(lp); o.start(t); o.stop(t+0.22*DK); } },
   deepchord(t,n){ const lp=filt('lowpass',1300,0.8), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.1;
     decay(g,t,1,0.55,0.006); lp.connect(g); g.connect(l); l.connect(out(0.45,0.2,0.7));
-    for (const sm of [0,3,7,10,14]){ const o=osc(); o.type='triangle'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const o2=osc(); o2.type='sawtooth'; o2.frequency.value=o.frequency.value; o2.detune.value+=6;
+    for (const sm of CH([0,3,7,10,14], n)){ const o=osc(); o.type='triangle'; o.frequency.value=mtof(P.root+36+sm+noteOf(n)); const o2=osc(); o2.type='sawtooth'; o2.frequency.value=o.frequency.value; o2.detune.value+=6;
       const g2=ac.createGain(); g2.gain.value=0.3; o.connect(lp); o2.connect(g2); g2.connect(lp); o.start(t); o2.start(t); o.stop(t+0.65*DK); o2.stop(t+0.65*DK); } },
 };
 
