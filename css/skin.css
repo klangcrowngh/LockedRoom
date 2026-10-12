@@ -150,3 +150,5 @@ body.skin-ko .gact b{color:#ff8a52}
 body.skin-ko .gseg.gtypes,body.skin-ko .gseg[data-k="sc.var"]{gap:5px}
 body.skin-ko #song .shead .tg{background:linear-gradient(var(--key),var(--key2))}
 body.skin-ko #song .shead .tg.on{background:linear-gradient(#3a3a39,var(--dark2));color:#ff8a52}
+body.skin-ko .gvars button{background:linear-gradient(#3b3b3a,var(--dark));color:#ecebe7;border:none;border-radius:9px;box-shadow:0 0 0 1px #121212,0 2px 0 #0e0e0e}
+body.skin-ko .gvars button.on{background:linear-gradient(#ff6d31,#f04f17);color:#fff;box-shadow:0 0 0 1px #c2420f,0 2px 0 #a8380c}

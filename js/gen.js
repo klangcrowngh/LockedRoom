@@ -258,7 +258,7 @@ const CHORDY = ['stab','diststab','chord','organ','polysynth','ravestab','dubcho
 const PADLIKE = /pad|strings|choir/;
 
 // ---------- настройки GEN (запоминаются на устройстве) ----------
-const GEN_DEF = () => ({ genre:'techno', bpm:0, key:-1, scale:'auto', energy:1, mood:1, cx:1, make:'scene', tab:'track', part:'drums', scMain:-1, scTarget:-1, scType:'break', scVar:'auto',
+const GEN_DEF = () => ({ genre:'techno', bpm:0, key:-1, scale:'auto', energy:1, mood:1, cx:1, make:'scene', tab:'track', part:'drums', scMain:-1, scTarget:-1, scType:'break', scVar:1, scEnergy:1, scChange:1,
   parts:{ drums:{ mode:'new', sound:'auto', dens:1, cx:1, swing:1, fills:1, rolls:1 }, bass:{ mode:'new', sound:'auto', dens:1, cx:1, oct:1 },
           lead:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', range:'auto' }, chords:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', rate:'auto' },
           fx:{ mode:'off', sound:'auto', dens:0, cx:1 } } });
@@ -909,7 +909,7 @@ function genRender(){
     slider('p.cx', 'Complexity', S.cx, 'Simple', 'Complex') + extra;
   renderScenesPane();
   $('genGo').innerHTML = GEN.tab === 'track' ? '✦ Generate ' + (GEN.make === 'song' ? 'song' : 'scene ' + 'ABCD'[scene])
-    : GEN.tab === 'scenes' ? '✦ Make scene ' + 'ABCD'[scTarget()] + ' · ' + SC_TYPES.find(x => x[0] === GEN.scType)[1].toLowerCase()
+    : GEN.tab === 'scenes' ? '✦ Generate scene ' + 'ABCD'[scTarget()] + ' · ' + scVarOf().name.toLowerCase()
     : '✦ Generate ' + PART_NAMES[GEN.part].toLowerCase();
   if (genGenresOpen) $('genGenres').classList.add('open');
 }
@@ -922,25 +922,58 @@ const SC_L = 'ABCD';
 // главная часть (дроп): выбранная, иначе текущая сцена, иначе первая непустая
 function scMain(){ let m = GEN.scMain >= 0 ? GEN.scMain : scene; if (sceneEmpty(m)){ const f = [0,1,2,3].find(k => !sceneEmpty(k)); if (f !== undefined) m = f; } return m; }
 function scTarget(){ const m = scMain(); let t = GEN.scTarget >= 0 ? GEN.scTarget : -1; if (t < 0 || t === m) t = [0,1,2,3].find(k => k !== m && sceneEmpty(k)) ?? [0,1,2,3].find(k => k !== m); return t; }
+// вариации сцены: тип части песни × вариант исполнения (горизонтальное меню)
+const SC_VARS = (() => { const out = [];
+  for (const [ty, nm] of SC_TYPES){ const vs = SCENE_VARIANTS[ty];
+    if (vs) vs.forEach((vn, v) => out.push({ ty, v, name: nm, sub: vn })); else out.push({ ty, v: -1, name: nm, sub: ty === 'var' ? 'drop variation' : 'same as drop' }); }
+  return out; })();
+const scVarOf = () => SC_VARS.find(x => x.ty === GEN.scType && x.v === (GEN.scVar === 'auto' ? -1 : +GEN.scVar)) || SC_VARS.find(x => x.ty === GEN.scType) || SC_VARS[0];
 function renderScenesPane(){
   const box = $('genScenes'); if (!box) return;
-  const m = scMain(), t = scTarget();
+  const m = scMain(), t = scTarget(), cur = scVarOf();
   const sseg = (k, val, dis) => '<div class="gseg" data-k="' + k + '">' + [0,1,2,3].map(i => '<button data-v="' + i + '"' + (i === val ? ' class="on"' : '') + (dis(i) ? ' disabled' : '') + '>' + SC_L[i] + '</button>').join('') + '</div>';
-  const vars = SCENE_VARIANTS[GEN.scType] || [];
   box.innerHTML =
-    row('From scene · source', sseg('sc.main', m, i => sceneEmpty(i))) +
-    row('Make scene', sseg('sc.target', t, i => i === m)) +
-    row('As', '<div class="gseg gtypes" data-k="sc.type">' + SC_TYPES.map(([v, n]) => '<button data-v="' + v + '"' + (v === GEN.scType ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') +
-    (vars.length ? row('Variant', '<div class="gseg" data-k="sc.var">' + [['auto','Auto']].concat(vars.map((n, i) => [i, n])).map(([v, n]) => '<button data-v="' + v + '"' + (String(v) === String(GEN.scVar) ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') : '') +
-    '<div class="ehint">Scene ' + SC_L[t] + ' is made from scene ' + SC_L[m] + ' · Auto picks a new variant on every tap</div>';
+    row('Generate scene', sseg('sc.target', t, i => i === m)) +
+    row('From drop', sseg('sc.main', m, i => sceneEmpty(i))) +
+    row('Variation', '<div class="gvars" data-k="sc.pick">' + SC_VARS.map(x => '<button data-v="' + x.ty + '|' + x.v + '"' + (x === cur ? ' class="on"' : '') + '><b>' + x.name + '</b><small>' + x.sub + '</small></button>').join('') + '</div>') +
+    slider('sc.energy', 'Energy · vs drop', GEN.scEnergy, 'Sparser', 'Fuller') +
+    slider('sc.change', 'Change · vs drop', GEN.scChange, 'Close', 'New') +
+    '<div class="ehint">Every tap makes a new variation of scene ' + SC_L[t] + ' from the drop ' + SC_L[m] + '</div>';
+  const strip = box.querySelector('.gvars .on'); if (strip) strip.scrollIntoView({ block:'nearest', inline:'center' });
 }
+// сцена из дропа: структура (что играет) — по вариации, затем Energy меняет плотность хэтов/перкуссии,
+// Change — насколько новые рисунки ударных, мелодии и баса (гармония — дропа)
 function genScene(){
-  const m = scMain(), t = scTarget(); if (sceneEmpty(m)){ toast('main part is empty'); return; }
-  const v = GEN.scVar === 'auto' ? undefined : +GEN.scVar;
-  makeScene(t, m, GEN.scType, v); vState = null;
-  renderBlocks(); updatePerform(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium'); genRender();
-  const vn = lastVariants[GEN.scType], tn = SC_TYPES.find(x => x[0] === GEN.scType)[1].toLowerCase();
-  toast('scene ' + SC_L[t] + ' = ' + tn + (vn ? ' (' + vn + ')' : '') + (GEN.scVar === 'auto' ? ' · tap again for another' : ''));
+  const m = scMain(), t = scTarget(); if (sceneEmpty(m)){ toast('drop scene is empty'); return; }
+  const x = scVarOf(), G = GENM[GEN.genre] || GENRES[0], e = GEN.scEnergy, c = GEN.scChange, bars = STEPS / 16, n = STEPS;
+  makeScene(t, m, x.ty === 'copy' && c > 0.25 ? 'var' : x.ty, x.v >= 0 ? x.v : undefined);
+  const keep = scene; scene = m; tracks.forEach(bindScene);
+  const harm = harmFromTracks() || genHarm || makeHarm(G, qz(GEN.mood), 1);
+  scene = t; tracks.forEach(bindScene);
+  const has = tr => tr.pat.slice(0, n).some(Boolean);
+  if (x.ty !== 'copy' || c > 0.25){
+    // ударные: хэты и перкуссия заново по плотности (только те, что в этой части играют)
+    const drums = partTracks('drums').filter(has), cur = {}; drums.forEach(tr => { const r = DRUM_ROLES.includes(tr.role) ? tr.role : drumRole(tr.v); cur[r] = tr.pat.slice(0, n); });
+    if (drums.length && (Math.abs(e - 1) > 0.15 || Math.random() < c / 2)){
+      const res = genDrums(G, { dens: qz(e), cx: qz(c), fills: c > 1 ? 1 : 0, rolls: GEN.parts.drums.rolls ?? 1 }, bars, cur);
+      for (const tr of drums){ const r = DRUM_ROLES.includes(tr.role) ? tr.role : drumRole(tr.v); if ((r === 'hat' || r === 'ohat' || r === 'perc') && res[r] && hits(res[r].p)) writeRow(tr, res[r], n); }
+    }
+    // мелодия и бас: с вероятностью по Change — новая фраза в гармонии дропа
+    const kick = partTracks('drums').find(tr => (tr.role === 'kick' || drumRole(tr.v) === 'kick'));
+    for (const tr of partTracks('lead').filter(has)) if (Math.random() < c * 0.55){ const S = Object.assign({}, GEN.parts.lead, { dens: qz(Math.min(2, e)), cx: qz(c) }); const r = genLead(G, S, bars, harm, tr.pat.slice(0, n)); writeRow(tr, r, n); }
+    for (const tr of partTracks('bass').filter(has)) if (Math.random() < c * 0.35){ const S = Object.assign({}, GEN.parts.bass, { dens: qz(Math.min(2, e)), cx: qz(c) }); const r = genBass(G, S, bars, harm, kick && has(kick) ? kick.pat.slice(0, 16) : null, tr.pat.slice(0, n)); writeRow(tr, r, n); }
+    // энергия: мало — уходят перкуссия и открытый хэт; много — возвращаются из дропа ударные, которые вариация убрала
+    if (e < 0.6) for (const tr of partTracks('drums').filter(has)){ const r = DRUM_ROLES.includes(tr.role) ? tr.role : drumRole(tr.v); if ((r === 'perc' || r === 'ohat') && Math.random() < 1 - e) writeRow(tr, { p:[] }, n); }
+    if (e > 1.4) for (const tr of partTracks('drums')) if (!has(tr) && tr.scn[m].pat.slice(0, n).some(Boolean)){ tr.scn[t] = cloneScene(tr.scn[m]); bindScene(tr); }
+    // энергия ниже середины — тише хэты и перкуссия, выше — громче
+    if (Math.abs(e - 1) > 0.15) for (const tr of partTracks('drums').filter(has)){ const r = DRUM_ROLES.includes(tr.role) ? tr.role : drumRole(tr.v);
+      if (r === 'hat' || r === 'perc' || r === 'ohat') for (let i=0;i<n;i++) if (tr.pat[i]) tr.vel[i] = Math.max(0.25, Math.min(1, tr.vel[i] * (0.75 + e * 0.25))); }
+  }
+  scene = keep; tracks.forEach(bindScene); vState = null;
+  renderBlocks(); updatePerform(); if (sel){ buildSteps(sel); buildNotes(sel); }
+  if (ac && scene === t) tracks.forEach(tr => tr.flash = ac.currentTime);
+  haptic('medium'); genRender();
+  toast('scene ' + SC_L[t] + ' · ' + x.name.toLowerCase() + ' · ' + x.sub + ' · tap again for another');
 }
 function genSet(k, v){
   if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }
@@ -949,8 +982,9 @@ function genSet(k, v){
   else if (k === 'make') GEN.make = v;
   else if (k === 'sc.main'){ GEN.scMain = +v; if (GEN.scTarget === +v) GEN.scTarget = -1; }
   else if (k === 'sc.target') GEN.scTarget = +v;
-  else if (k === 'sc.type'){ GEN.scType = v; GEN.scVar = 'auto'; }
-  else if (k === 'sc.var') GEN.scVar = v === 'auto' ? 'auto' : +v;
+  else if (k === 'sc.pick'){ const [ty, vv] = String(v).split('|'); GEN.scType = ty; GEN.scVar = +vv; }
+  else if (k === 'sc.energy') GEN.scEnergy = +v;
+  else if (k === 'sc.change') GEN.scChange = +v;
   else if (k.startsWith('p.')){
     const f = k.slice(2), S = GEN.parts[GEN.part];
     S[f] = ['mode','rhythm'].includes(f) || v === 'auto' ? v : +v;
@@ -1017,7 +1051,7 @@ function setGenOpen(on){
     if (b.dataset.a === 'genres'){ genGenresOpen = !genGenresOpen; $('genGenres').classList.toggle('open', genGenresOpen); return; }
     if (b.dataset.g){ genGenre(b.dataset.g); return; }
     if (b.dataset.p){ GEN.part = b.dataset.p; genSave(); genRender(); haptic('select'); return; }
-    const sg = b.closest('.gseg[data-k]'); if (sg && b.dataset.v !== undefined){ genSet(sg.dataset.k, b.dataset.v); return; }
+    const sg = b.closest('.gseg[data-k], .gvars[data-k]'); if (sg && b.dataset.v !== undefined){ genSet(sg.dataset.k, b.dataset.v); return; }
     const st = b.closest('.gstep'); if (st && b.dataset.d){ genStep(st.dataset.k, +b.dataset.d); return; }
     if (st && b.tagName === 'B') return;
   });
