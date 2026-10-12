@@ -152,3 +152,24 @@ body.skin-ko #song .shead .tg{background:linear-gradient(var(--key),var(--key2))
 body.skin-ko #song .shead .tg.on{background:linear-gradient(#3a3a39,var(--dark2));color:#ff8a52}
 body.skin-ko .gvars button{background:linear-gradient(#3b3b3a,var(--dark));color:#ecebe7;border:none;border-radius:9px;box-shadow:0 0 0 1px #121212,0 2px 0 #0e0e0e}
 body.skin-ko .gvars button.on{background:linear-gradient(#ff6d31,#f04f17);color:#fff;box-shadow:0 0 0 1px #c2420f,0 2px 0 #a8380c}
+
+/* ---------- без чёрных рамок: группы кнопок — отдельные клавиши, без контуров и разделителей ---------- */
+body.skin-ko .tabs,body.skin-ko .ptabs,body.skin-ko .seg,body.skin-ko .bseg,body.skin-ko .gseg,body.skin-ko .fmt,body.skin-ko .gstep,body.skin-ko .val{border:none !important}
+body.skin-ko .tabs,body.skin-ko .ptabs{gap:5px}
+body.skin-ko .tabs button,body.skin-ko .ptabs button,body.skin-ko .bseg button,body.skin-ko .gseg button,body.skin-ko .seg .scn,body.skin-ko .fmt button{border:none !important}
+body.skin-ko .prow.extra .swing{border:none;border-radius:8px;background:#e6e5e0;box-shadow:inset 0 1px 3px rgba(0,0,0,.12)}
+body.skin-ko .blk,body.skin-ko .plan{border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+body.skin-ko .blk.sel{box-shadow:inset 0 0 0 2px var(--acc)}
+/* контур тёмных клавиш — мягкий, не чёрный */
+body.skin-ko .seg .scn,body.skin-ko .pad,body.skin-ko .gseg button,body.skin-ko .bseg button,body.skin-ko .fmt button,body.skin-ko .gvars button,body.skin-ko .gact,body.skin-ko button.on{box-shadow:0 0 0 1px rgba(0,0,0,.18),0 2px 0 rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.12)}
+body.skin-ko .seg .scn.on,body.skin-ko .pad.on,body.skin-ko .gseg button.on,body.skin-ko .bseg button.on,body.skin-ko .fmt button.on,body.skin-ko .gvars button.on{box-shadow:0 0 0 1px rgba(194,66,15,.6),0 2px 0 #a8380c}
+body.skin-ko .pad.on{box-shadow:0 0 0 1px rgba(194,66,15,.6),0 0 16px rgba(255,90,31,.45)}
+
+/* Solo и Mute: индикатор-точка как светодиод; включено — Solo оранжевая клавиша, Mute тёмная с оранжевым «Muted» */
+body.skin-ko button.led{position:relative}
+body.skin-ko button.led:after{content:'';position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:#a9a8a2;box-shadow:inset 0 1px 1px rgba(0,0,0,.3)}
+body.skin-ko #pSolo.on{background:linear-gradient(#ff6d31,#f04f17);color:#fff;box-shadow:0 0 0 1px rgba(194,66,15,.6),0 2px 0 #a8380c}
+body.skin-ko #pSolo.on:after{background:#fff;box-shadow:0 0 6px #fff}
+body.skin-ko #pMute.on{background:linear-gradient(#3a3a39,var(--dark2));color:#ff8a52;box-shadow:0 0 0 1px rgba(0,0,0,.18),inset 0 2px 5px rgba(0,0,0,.45)}
+body.skin-ko #pMute.on:after{background:#ff5a1f;box-shadow:0 0 6px #ff5a1f}
+body.skin-ko #pRemove{color:#b4300f}

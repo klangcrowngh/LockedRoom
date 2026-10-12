@@ -609,7 +609,6 @@ body.panel-open #gen{display:none !important}
 .gsle{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:-4px}
 
 /* ---------- одна высота для всех выдвижных панелей: экран не прыгает при смене вкладок и панелей ---------- */
-:root{--sheetH:max(260px,min(56vh,540px,calc(100vh - 290px - var(--mainRowH,64px))))}   /* экрану с кругом всегда остаётся место */
 body.song-open #song{height:var(--sheetH);max-height:none;display:flex;flex-direction:column;overflow:hidden}
 #song .spane{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 body.gen-open #gen{height:var(--sheetH);max-height:none}
@@ -644,3 +643,58 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 .gvars button small{font-size:9px;letter-spacing:.04em;text-transform:none;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* панели GEN не прокручиваются вбок */
 .gbody{overflow-x:hidden}
+
+/* ---------- компактная вёрстка панелей: всё помещается без прокрутки ---------- */
+:root{--sheetH:max(260px,min(62vh,560px,calc(100vh - 250px - var(--actRowH,70px))))}
+@media (max-width:700px){
+  /* пока открыта панель Song или GEN — ряд сцен прячется (выбор сцены есть внутри панелей) */
+  body.song-open .prow.main .scenes,body.gen-open .prow.main .scenes{display:none !important}
+  #panel{height:calc(var(--sheetH) + var(--actRowH,70px))}
+  body.pads-open #perform{height:calc(var(--sheetH) + var(--actRowH,70px) - 4px)}
+}
+/* GEN: вкладки в шапке, подписи слева, ползунки в одну строку */
+#gen .shead{gap:6px;padding-top:6px}
+#gen .shead .gtabs{flex:1;border-bottom:none;min-width:0}
+#gen .shead .gtabs button{height:40px;font-size:10px}
+#gen .shead #varBtn{height:40px;padding:0 10px}
+#gen .grow{flex-direction:row;align-items:center;gap:8px}
+#gen .grow>.lbl{flex:0 0 74px;font-size:8.5px;letter-spacing:.14em;line-height:1.3}
+#gen .grow>.gseg,#gen .grow>.gvars{flex:1;min-width:0}
+#gen .gseg button{height:38px}
+#gen .gseg.gpart button{height:40px}
+#gen .gstep button{height:42px}
+#gen .gbig{height:44px}
+#gen .gpane{gap:7px}
+#gen .gmodes{display:none}
+#gen .gsl{display:grid;grid-template-columns:74px minmax(0,1fr) 40px;align-items:center;column-gap:8px;padding:0}
+#gen .gsl .gslh{display:contents}
+#gen .gsl .gslh .lbl{grid-column:1;grid-row:1;font-size:8.5px;letter-spacing:.14em;line-height:1.3}
+#gen .gsl .gslh b{grid-column:3;grid-row:1;text-align:right;font-size:11px}
+#gen .gsl input{grid-column:2;grid-row:1;height:34px}
+#gen .gsl .gsle{display:none}
+#genGo{height:50px}
+/* Song: длина под названием, переключатели компактнее */
+#song .shead .st1{flex-direction:column;align-items:flex-start;gap:3px}
+#song .shead .st1 span{font-size:9px}
+/* панель звука: шапка (имя, кнопки, вкладки) стоит на месте — прокручиваются только настройки */
+@media (max-width:700px){
+  #panel{overflow:hidden !important;display:none}
+  #panel.show{display:flex}
+  #panel .head,#panel .ptabs{flex:0 0 auto;position:static}
+  #panel .stepsWrap,#panel .knobs,#panel .notesWrap{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;align-content:start}
+}
+
+/* панель звука: Solo / Mute / Swap / Reset / Remove — ровная сетка из 5 клавиш */
+@media (max-width:700px){
+  #panel .chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}
+  #panel .chips button{height:40px;padding:0 2px;font-size:9.5px;letter-spacing:.08em;justify-content:center;white-space:nowrap}
+}
+#gen .gseg button{height:36px}
+/* Song: крупнее блоки шкалы и клавиши редактора (место есть — панель фиксированной высоты) */
+@media (max-width:700px){
+  #song .blk .sc{height:68px;font-size:22px}
+  #song #blkAdd{min-height:70px}
+  #song .blkEd{gap:9px;padding-top:10px}
+  #song .blkEd .bseg button,#song .blkEd .acts button{height:46px}
+  #song .stabs button{height:40px}
+}

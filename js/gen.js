@@ -884,7 +884,6 @@ function genRender(){
   box.dataset.tab = GEN.tab;
   box.querySelectorAll('.gtabs button').forEach(b => b.classList.toggle('on', b.dataset.t === GEN.tab));
   const key = P && P.scale ? KEYS[((P.root % 12) + 12) % 12] + ' ' + (SCALE_NAMES[P.scale] || '').toLowerCase() : '';
-  $('genSub').textContent = G.name + ' · ' + bpm + ' bpm' + (key ? ' · ' + key : '');
   // вкладка Track
   $('genTrack').innerHTML =
     '<button class="gbig gpick" data-a="genres"><span class="lbl">Genre</span><b>' + G.name + '</b><i>▾</i></button>' +
@@ -940,7 +939,7 @@ function renderScenesPane(){
     '<div class="ggenres gvars' + (scVarsOpen ? ' open' : '') + '" data-k="sc.pick">' + SC_VARS.map(x => '<button data-v="' + x.ty + '|' + x.v + '"' + (x === cur ? ' class="on"' : '') + '><b>' + x.name + '</b><small>' + x.sub + '</small></button>').join('') + '</div>' +
     slider('sc.energy', 'Energy · vs drop', GEN.scEnergy, 'Sparser', 'Fuller') +
     slider('sc.change', 'Change · vs drop', GEN.scChange, 'Close', 'New') +
-    '<div class="ehint">Every tap makes a new variation of scene ' + SC_L[t] + ' from the drop ' + SC_L[m] + '</div>';
+    '';
 }
 // сцена из дропа: структура (что играет) — по вариации, затем Energy меняет плотность хэтов/перкуссии,
 // Change — насколько новые рисунки ударных, мелодии и баса (гармония — дропа)

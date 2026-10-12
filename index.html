@@ -25,8 +25,8 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=141">
-<link rel="stylesheet" href="css/skin.css?v=139">
+<link rel="stylesheet" href="css/app.css?v=145">
+<link rel="stylesheet" href="css/skin.css?v=144">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="skin-ko">
@@ -108,11 +108,10 @@
   <div id="gen" data-tab="track">
     <div class="grab mo"></div>
     <div class="shead">
-      <div class="st1"><b>GEN</b><span id="genSub">—</span></div>
+      <div class="stabs gtabs"><button data-t="track" class="on">Track</button><button data-t="parts">Parts</button><button data-t="scenes">Scenes</button></div>
       <button id="varBtn" class="acc" title="quick vary · hold for styles"><svg class="ic"><use href="#i-vary"/></svg> Vary</button>
       <button id="genClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
-    <div class="stabs gtabs"><button data-t="track" class="on">Track</button><button data-t="parts">Parts</button><button data-t="scenes">Scenes</button></div>
     <div class="gbody">
       <div class="gpane" id="genTrack"></div>
       <div class="gpane" id="genParts"></div>
@@ -159,7 +158,7 @@
       <div class="nm" id="pName">—</div>
       <button id="pClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
       <div class="chips">
-        <button id="pSolo" class="acc">◉ Solo</button><button id="pMute">Mute</button>
+        <button id="pSolo" class="led">Solo</button><button id="pMute" class="led">Mute</button>
         <button id="pSwap">⇄ Swap</button><button id="pReset">Reset</button>
         <button id="pRemove" class="warn">Remove</button>
       </div>
@@ -210,7 +209,7 @@
 <script src="js/audio.js?v=128"></script>
 <script src="js/sounds.js?v=121"></script>
 <script src="js/profile.js?v=121"></script>
-<script src="js/app.js?v=137"></script>
-<script src="js/gen.js?v=141"></script>
+<script src="js/app.js?v=144"></script>
+<script src="js/gen.js?v=142"></script>
 </body>
 </html>

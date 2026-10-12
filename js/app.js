@@ -931,7 +931,11 @@ function resize(){
   const top = $('top').offsetHeight, bot = $('bottom').offsetHeight;
   document.documentElement.style.setProperty('--topH', top+'px'); document.documentElement.style.setProperty('--botH', bot+'px');
   // высота строки сцен/действий — на её место встают панель звука и эффекты, чтобы высота низа не прыгала
-  const mr = document.querySelector('.prow.main'); if (mr && mr.offsetHeight && !document.body.classList.contains('pads-open')) document.documentElement.style.setProperty('--mainRowH', (mr.offsetHeight + 8) + 'px');
+  const mr = document.querySelector('.prow.main'), scr = mr && mr.querySelector('.scenes');
+  if (mr && mr.offsetHeight && scr && scr.offsetHeight && !document.body.matches('.pads-open,.song-open,.gen-open,.panel-open')){
+    document.documentElement.style.setProperty('--mainRowH', (mr.offsetHeight + 8) + 'px');
+    document.documentElement.style.setProperty('--actRowH', (mr.offsetHeight + 8 - scr.offsetHeight - 7) + 'px');   // ряд действий без ряда сцен
+  }
   C = {x:W/2, y: top + (H-top-bot)/2};
   RAD = W < 700 ? Math.max(80, Math.min(W*0.5-34, (H-top-bot)*0.5-38)) : Math.max(80, Math.min(W*0.5-56, (H-top-bot)*0.5-40));
   // кольцо времени: на телефоне крупнее, чтобы по точкам было легко попадать пальцем
@@ -1336,7 +1340,7 @@ function openPanel(tr){
   $('pSolo').classList.toggle('on', solo === tr);
   $('panel').classList.add('show'); document.body.classList.add('panel-open');
   $('pName').innerHTML = '<span>'+pad(tracks.indexOf(tr)+1)+'</span> '+label(tr.v)+'<em>'+(LIBM[tr.v]||{}).cat+'</em>';
-  $('pMute').classList.toggle('on', tr.mute);
+  $('pMute').classList.toggle('on', tr.mute); $('pMute').textContent = tr.mute ? 'Muted' : 'Mute';
   $('pRemove').disabled = tracks.length <= 1;
   const box = $('knobs'); box.innerHTML = '';
   for (const K of KNOBS){
@@ -1403,7 +1407,7 @@ function setSolo(tr){ solo = tr; tracks.forEach(applyParams); $('pSolo').classLi
 function closePanel(){ if (!sel) return; sel = null; noteCells = []; stepCells = []; setSolo(null); $('panel').classList.remove('show'); document.body.classList.remove('panel-open'); resize(); updateBack(); }
 $('pSolo').onclick = ()=>setSolo(solo === sel ? null : sel);
 $('pClose').onclick = closePanel;
-$('pMute').onclick = ()=>{ sel.mute = !sel.mute; applyParams(sel); $('pMute').classList.toggle('on', sel.mute); };
+$('pMute').onclick = ()=>{ sel.mute = !sel.mute; applyParams(sel); $('pMute').classList.toggle('on', sel.mute); $('pMute').textContent = sel.mute ? 'Muted' : 'Mute'; haptic('select'); };
 $('pReset').onclick = ()=>{ sel.params = defParams(sel.v); applyParams(sel); openPanel(sel); hit(sel, ac.currentTime+0.01); };
 $('pSwap').onclick = ()=>openLib({ type:'swap', tr:sel });
 $('pRemove').onclick = ()=>{
