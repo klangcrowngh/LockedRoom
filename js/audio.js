@@ -3,7 +3,7 @@
 // ============================================================
 //  AUDIO ENGINE
 // ============================================================
-let curT = 0, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser = null, pCrush, flWet, flFb, pGate, gateLfo = null, spaceIn, ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec;
+let curT = 0, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, pCrush, flWet, flFb, pGate, gateLfo = null, spaceIn, tsDry, tsWet, tsDel, tsLp, ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec;
 const IS_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth < 700;
 let PIT = 0, DK = 1, CUR = null, STEP = 0, VEL = 1;   // контекст текущего удара
 const curves = {};
@@ -43,7 +43,10 @@ function buildGraph(offline){
   flWet = ac.createGain(); flWet.gain.value = 0; flFb = ac.createGain(); flFb.gain.value = 0;
   flD.delayTime.value = 0.004; flL.frequency.value = 0.22; flLg.gain.value = 0.0032; flL.connect(flLg); flLg.connect(flD.delayTime); flL.start();
   pCrush.connect(flIn); flIn.connect(flOut); flIn.connect(flD); flD.connect(flFb); flFb.connect(flD); flD.connect(flWet); flWet.connect(flOut);
-  pGate = ac.createGain(); flOut.connect(pGate); pGate.connect(hp);
+  pGate = ac.createGain(); flOut.connect(pGate);
+  // Tape Stop: микс идёт через линию задержки, задержка растёт с ускорением — высота падает до остановки
+  tsDry = ac.createGain(); tsWet = ac.createGain(); tsWet.gain.value = 0; tsDel = ac.createDelay(3); tsDel.delayTime.value = 0; tsLp = filt('lowpass', 20000, 0.7);
+  pGate.connect(tsDry); tsDry.connect(hp); pGate.connect(tsDel); tsDel.connect(tsLp); tsLp.connect(tsWet); tsWet.connect(hp);
   washIn = ac.createGain(); washIn.gain.value = 0; washDly = ac.createDelay(2); washDly.delayTime.value = 0.33;
   washFb = ac.createGain(); washFb.gain.value = 0; const wlp = filt('lowpass', 2600), whp = filt('highpass', 300);
   pKill.connect(washIn); washIn.connect(washDly); washDly.connect(wlp); wlp.connect(whp); whp.connect(washFb); washFb.connect(washDly); whp.connect(fxRet);
@@ -62,8 +65,8 @@ function buildGraph(offline){
 }
 
 // снимок / восстановление всего движка — чтобы на время рендера подменить его офлайн-копией
-function engineSnapshot(){ return { ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser, pCrush, flWet, flFb, pGate, gateLfo, spaceIn }; }
-function engineRestore(e){ ({ ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, riser, pCrush, flWet, flFb, pGate, gateLfo, spaceIn } = e); }
+function engineSnapshot(){ return { ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, pCrush, flWet, flFb, pGate, gateLfo, spaceIn, tsDry, tsWet, tsDel, tsLp }; }
+function engineRestore(e){ ({ ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, pCrush, flWet, flFb, pGate, gateLfo, spaceIn, tsDry, tsWet, tsDel, tsLp } = e); }
 
 function out(rev=0, del=0, life=1){
   const g = ac.createGain(); g.gain.value = VEL; g.connect(CUR && CUR.ch ? CUR.ch.in : bus);
@@ -681,11 +684,28 @@ function perfSet(fx, on){
     washIn.gain.setTargetAtTime(on ? 1 : 0, T, on ? 0.02 : 0.04);
     washFb.gain.setTargetAtTime(on ? 0.62 : 0, T, on ? 0.05 : 0.35);
   }
-  if (fx === 'build'){ on ? startRiser() : stopRiser(true); }
+  if (fx === 'stop') on ? startTapeStop() : stopTapeStop();
   if (fx === 'crush'){ pCrush.curve = on ? crushCurve(4) : null; }
   if (fx === 'flange'){ flWet.gain.setTargetAtTime(on ? 0.55 : 0, T, 0.05); flFb.gain.setTargetAtTime(on ? 0.55 : 0, T, on ? 0.05 : 0.2); }
   if (fx === 'space'){ spaceIn.gain.cancelScheduledValues(T); spaceIn.gain.setTargetAtTime(on ? 2.2 : 0, T, on ? 0.03 : 0.25); }
   if (fx === 'gate') on ? startGate() : stopGate();
+}
+// Tape Stop: задержка d(t) = t²/2T → скорость «плёнки» 1 − d'(t) падает от 1 до 0 за T секунд, звук глухнет и затихает
+function startTapeStop(){
+  const T0 = ac.currentTime + 0.01, T = 1.1, n = 64, cv = new Float32Array(n);
+  for (let k=0;k<n;k++){ const t = k / (n - 1) * T; cv[k] = t * t / (2 * T); }
+  for (const pr of [tsDel.delayTime, tsWet.gain, tsDry.gain, tsLp.frequency]) pr.cancelScheduledValues(T0);
+  tsDel.delayTime.setValueAtTime(0, T0); tsDel.delayTime.setValueCurveAtTime(cv, T0, T);
+  tsWet.gain.setValueAtTime(1, T0); tsDry.gain.setValueAtTime(0, T0);
+  tsWet.gain.setValueAtTime(1, T0 + T * 0.8); tsWet.gain.linearRampToValueAtTime(0, T0 + T);
+  tsLp.frequency.setValueAtTime(20000, T0); tsLp.frequency.exponentialRampToValueAtTime(500, T0 + T);
+}
+function stopTapeStop(){
+  if (!tsDel) return;
+  const T = ac.currentTime;
+  for (const pr of [tsDel.delayTime, tsWet.gain, tsDry.gain, tsLp.frequency]) pr.cancelScheduledValues(T);
+  tsWet.gain.setValueAtTime(0, T); tsDry.gain.setValueAtTime(0, T); tsDry.gain.linearRampToValueAtTime(1, T + 0.03);
+  tsDel.delayTime.setValueAtTime(0, T + 0.04); tsLp.frequency.setValueAtTime(20000, T + 0.04);
 }
 // гейт: звук «рубится» 16-ми долями в темп; начинается с ближайшей доли сетки
 function startGate(){
@@ -702,23 +722,6 @@ function stopGate(){
   const T = ac.currentTime; gateLfo.o.stop(T + 0.02); gateLfo = null;
   pGate.gain.cancelScheduledValues(T); pGate.gain.setTargetAtTime(1, T, 0.01);
 }
-function startRiser(){
-  if (riser) return;
-  const T = ac.currentTime, s = ac.createBufferSource(); s.buffer = NB; s.loop = true;
-  const bp = filt('bandpass', 300, 0.7), g = ac.createGain();
-  g.gain.setValueAtTime(0.0001, T); g.gain.exponentialRampToValueAtTime(0.14, T + 8);
-  bp.frequency.setValueAtTime(300, T); bp.frequency.exponentialRampToValueAtTime(5000, T + 8);
-  s.connect(bp); bp.connect(g); g.connect(pKill); s.start(T);
-  pHP.frequency.cancelScheduledValues(T); pHP.frequency.setTargetAtTime(600, T, 2.5);
-  riser = { s, g };
-}
-function stopRiser(drop){
-  if (!riser) return;
-  const T = ac.currentTime;
-  riser.g.gain.cancelScheduledValues(T); riser.g.gain.setTargetAtTime(0.0001, T, 0.03); riser.s.stop(T + 0.3); riser = null;
-  pHP.frequency.cancelScheduledValues(T); pHP.frequency.setTargetAtTime(10, T, 0.02);
-  if (drop) for (const v of ['crash', 'boom']) hit({ v, params:defParams(v), notes:null, pat:[] }, T + 0.02);
-}
 
 // аварийный сброс: все мастер-эффекты в исходное состояние
 function perfReset(){
@@ -729,7 +732,7 @@ function perfReset(){
   pHP.frequency.setTargetAtTime(10, T, 0.05); pHP.Q.setTargetAtTime(0.7, T, 0.05);
   pKill.frequency.setTargetAtTime(10, T, 0.02);
   washIn.gain.setTargetAtTime(0, T, 0.02); washFb.gain.setTargetAtTime(0, T, 0.15);
-  stopRiser(false); stopGate(); if (pCrush) pCrush.curve = null;
+  stopGate(); stopTapeStop(); if (pCrush) pCrush.curve = null;
   if (flWet){ flWet.gain.setTargetAtTime(0, T, 0.05); flFb.gain.setTargetAtTime(0, T, 0.05); }
   if (spaceIn){ spaceIn.gain.cancelScheduledValues(T); spaceIn.gain.setTargetAtTime(0, T, 0.1); }
   master.gain.cancelScheduledValues(T); master.gain.setTargetAtTime(0.8, T, 0.05);

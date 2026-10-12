@@ -2227,7 +2227,7 @@ function closeClearMenu(){ const m = $('clearMenu'); if (m) m.classList.remove('
 addEventListener('pointerdown', e => { const m = $('clearMenu'); if (m && m.classList.contains('open') && !m.contains(e.target) && !(clearAnchor && clearAnchor.contains(e.target))) closeClearMenu(); }, true);
 document.querySelectorAll('.clearBtn').forEach(b => b.onclick = () => { const m = $('clearMenu'); m && m.classList.contains('open') ? closeClearMenu() : openClearMenu(b); });
 // пэды 3×3 — физические клавиши (работают в любой раскладке): Q W E / A S D / Z X C
-const PAD_KEYS = { KeyQ:'lpf', KeyW:'hpf', KeyE:'kill', KeyA:'wash', KeyS:'gate', KeyD:'crush', KeyZ:'flange', KeyX:'space', KeyC:'build' };
+const PAD_KEYS = { KeyQ:'lpf', KeyW:'hpf', KeyE:'kill', KeyA:'wash', KeyS:'gate', KeyD:'crush', KeyZ:'flange', KeyX:'space', KeyC:'stop' };
 addEventListener('keydown', e=>{
   if (!ac || e.repeat) return;
   if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
