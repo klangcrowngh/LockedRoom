@@ -2408,7 +2408,7 @@ let gateReady = false, gateProg = 0, gateTarget = 0.1, gateShown = 0;
   }
   t.innerHTML = html.join('');
   const cv = $('gateCv'), x = cv.getContext('2d'), t0 = performance.now();
-  const accOf = () => getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#ff2e3a';
+  const accOf = () => '#ff5a1f';   // экран загрузки светится тем же оранжевым, что и экран приложения
   function frame(){
     if (!document.body.contains(cv)) return;
     const D = cv.clientWidth || 260, dpr = Math.min(2, devicePixelRatio || 1);
