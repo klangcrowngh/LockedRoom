@@ -25,8 +25,8 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=134">
-<link rel="stylesheet" href="css/skin.css?v=134">
+<link rel="stylesheet" href="css/app.css?v=135">
+<link rel="stylesheet" href="css/skin.css?v=135">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="skin-ko">
@@ -82,7 +82,7 @@
       <button id="songOn" class="tg" title="scenes follow the timeline">Song mode</button><button id="songLoop" class="tg">Loop</button>
       <button id="songClose" class="closeX"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
-    <div class="stabs"><button data-st="arr" class="on">Timeline</button><button data-st="exp">Export</button></div>
+    <div class="stabs"><button data-st="arr" class="on">Timeline</button><button data-st="build">Build</button><button data-st="exp">Export</button></div>
 
     <!-- 1. таймлайн: блоки и редактор выбранного -->
     <div class="spane" data-p="arr">
@@ -92,8 +92,19 @@
         <div class="er"><span class="lbl">Bars</span><div class="bseg" id="edBars"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button><button data-v="8">8</button><button data-v="16">16</button><button data-v="32">32</button></div></div>
         <div class="er acts"><button id="edLeft" title="move left">←</button><button id="edRight" title="move right">→</button><button id="edDup" title="duplicate"><svg class="ic"><use href="#i-copy"/></svg><span>Copy</span></button><button id="edDel" class="warn" title="delete"><svg class="ic"><use href="#i-x"/></svg><span>Delete</span></button></div>
       </div>
-      <div class="sfoot"><button data-tpl="loop" class="ghost">Reset to one block</button><button id="songToGen" class="acc">✦ Build song · GEN</button></div>
+      <button data-tpl="loop" class="ghost">Reset timeline to one block</button>
       <div class="ehint">Tap a block to edit it · <b>Song mode</b> plays the blocks in order</div>
+    </div>
+
+    <!-- 2. сборка песни: главная сцена (дроп) → вся песня -->
+    <div class="spane" data-p="build">
+      <div class="mainSel"><span class="lbl">Main part</span><div class="bseg" id="bMain"><button data-s="0">A</button><button data-s="1">B</button><button data-s="2">C</button><button data-s="3">D</button></div></div>
+      <div class="ehint">Your main part is the <b>drop</b>. The song is built around it:</div>
+      <div class="plan" id="bPlan"></div>
+      <button id="bBuild" class="acc big">✦ Build song</button>
+      <div class="warnline" id="bWarn"></div>
+      <button id="arrOnly" class="ghost">Keep my scenes · only arrange</button>
+      <div class="ehint">Single scenes — <b>GEN → Scenes</b></div>
     </div>
 
     <!-- 3. экспорт -->
@@ -212,7 +223,7 @@
 <script src="js/audio.js?v=128"></script>
 <script src="js/sounds.js?v=121"></script>
 <script src="js/profile.js?v=121"></script>
-<script src="js/app.js?v=134"></script>
-<script src="js/gen.js?v=134"></script>
+<script src="js/app.js?v=135"></script>
+<script src="js/gen.js?v=135"></script>
 </body>
 </html>

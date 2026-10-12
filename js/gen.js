@@ -731,10 +731,7 @@ const resolveSound = (p, G, S) => {
   return pickMood(G.snd[p].filter(v => SYNTH[v]).length ? G.snd[p].filter(v => SYNTH[v]) : list);
 };
 // снимок для Undo: звуки, все сцены, темп, лад, свинг, песня
-function genUndo(){
-  pushUndoFull();
-  Object.assign(undoStack[undoStack.length - 1], { gen:{ bpm, steps:STEPS, root:P.root, scale:P.scale, swing, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, genName:P.genName, arr:arr.map(b => ({ ...b })), harm:genHarm, vs:tracks.map(t => t.v), ps:tracks.map(t => ({ ...t.params })), ms:tracks.map(t => t.mixSig) } });
-}
+function genUndo(){}   // история (Undo) снимается автоматически — см. ИСТОРИЯ в app.js
 function genUndoRestore(u){
   const g = u.gen; if (!g) return;
   bpm = g.bpm; swing = g.swing; P.root = g.root; P.scale = g.scale; P.drive = g.drive; P.grit = g.grit; P.genKey = g.genKey; P.genre = g.genre; P.genName = g.genName; genHarm = g.harm;
@@ -918,7 +915,7 @@ function genRender(){
 }
 let genGenresOpen = false;
 // ============================================================
-//  SCENES: песня из главной части и отдельные сцены (вместо Edit one scene в Song)
+//  SCENES: отдельные сцены из другой сцены (вся песня собирается в Song → Build)
 // ============================================================
 const SC_TYPES = [['intro','Intro'],['groove','Groove'],['build','Build-up'],['break','Break'],['var','Drop 2'],['copy','Copy']];
 const SC_L = 'ABCD';
@@ -927,37 +924,15 @@ function scMain(){ let m = GEN.scMain >= 0 ? GEN.scMain : scene; if (sceneEmpty(
 function scTarget(){ const m = scMain(); let t = GEN.scTarget >= 0 ? GEN.scTarget : -1; if (t < 0 || t === m) t = [0,1,2,3].find(k => k !== m && sceneEmpty(k)) ?? [0,1,2,3].find(k => k !== m); return t; }
 function renderScenesPane(){
   const box = $('genScenes'); if (!box) return;
-  const m = scMain(), t = scTarget(), anyFull = [0,1,2,3].some(k => !sceneEmpty(k)), others = [0,1,2,3].filter(k => k !== m && !sceneEmpty(k));
+  const m = scMain(), t = scTarget();
   const sseg = (k, val, dis) => '<div class="gseg" data-k="' + k + '">' + [0,1,2,3].map(i => '<button data-v="' + i + '"' + (i === val ? ' class="on"' : '') + (dis(i) ? ' disabled' : '') + '>' + SC_L[i] + '</button>').join('') + '</div>';
-  const plan = buildPlanFor(m).map(([r, k]) => '<span class="' + (r === 'drop' ? 'pk' : '') + '"><b>' + SC_L[k] + '</b><small>' + r + '</small></span>').join('');
   const vars = SCENE_VARIANTS[GEN.scType] || [];
   box.innerHTML =
-    '<div class="gsec">Whole song</div>' +
-    row('Main part · drop', sseg('sc.main', m, i => sceneEmpty(i))) +
-    '<div class="plan">' + plan + '</div>' +
-    '<button class="gbig gact" data-a="sc-build"' + (anyFull ? '' : ' disabled') + '><b>✦ Build song from ' + SC_L[m] + '</b></button>' +
-    '<div class="warnline' + (others.length ? ' hot' : '') + '">' + (!anyFull ? 'make a pattern first' : others.length ? 'rewrites scene' + (others.length > 1 ? 's ' : ' ') + others.map(k => SC_L[k]).join(', ') + ' · undo reverts' : 'empty scenes will be filled') + '</div>' +
-    ([0,1,2,3].filter(k => !sceneEmpty(k)).length >= 2 ? '<button class="ghost" data-a="sc-arrange">Keep my scenes · only arrange</button>' : '') +
-    '<div class="gsec">One scene</div>' +
+    row('From scene · source', sseg('sc.main', m, i => sceneEmpty(i))) +
     row('Make scene', sseg('sc.target', t, i => i === m)) +
     row('As', '<div class="gseg gtypes" data-k="sc.type">' + SC_TYPES.map(([v, n]) => '<button data-v="' + v + '"' + (v === GEN.scType ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') +
     (vars.length ? row('Variant', '<div class="gseg" data-k="sc.var">' + [['auto','Auto']].concat(vars.map((n, i) => [i, n])).map(([v, n]) => '<button data-v="' + v + '"' + (String(v) === String(GEN.scVar) ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') : '') +
-    '<div class="ehint">From scene ' + SC_L[m] + ' · Auto picks a new variant on every tap</div>';
-}
-function genBuildSong(){
-  const m = scMain(); if (sceneEmpty(m)){ toast('make a pattern first'); return; }
-  pushUndo(true); buildArrangement(m);
-  tracks.forEach(bindScene); renderBlocks(); updatePerform(); haptic('heavy'); genRender();
-  toast('song built · intro: ' + lastVariants.intro + ' · groove: ' + lastVariants.groove + ' · break: ' + lastVariants.break + ' · again for other versions');
-}
-function genArrange(){ pushUndo(true); if (!arrangeExisting()){ undoStack.pop(); toast('all scenes are empty'); return; } renderBlocks(); haptic('medium'); toast('arranged your scenes · patterns unchanged'); }
-function genScene(){
-  const m = scMain(), t = scTarget(); if (sceneEmpty(m)){ toast('main part is empty'); return; }
-  const v = GEN.scVar === 'auto' ? undefined : +GEN.scVar;
-  pushUndo(true); makeScene(t, m, GEN.scType, v); vState = null;
-  renderBlocks(); updatePerform(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium'); genRender();
-  const vn = lastVariants[GEN.scType], tn = SC_TYPES.find(x => x[0] === GEN.scType)[1].toLowerCase();
-  toast('scene ' + SC_L[t] + ' = ' + tn + (vn ? ' (' + vn + ')' : '') + (GEN.scVar === 'auto' ? ' · tap again for another' : ''));
+    '<div class="ehint">Scene ' + SC_L[t] + ' is made from scene ' + SC_L[m] + ' · Auto picks a new variant on every tap · whole song — <b>Song → Build</b></div>';
 }
 function genSet(k, v){
   if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }
@@ -1032,8 +1007,6 @@ function setGenOpen(on){
   box.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !box.contains(b)) return;
     if (b.dataset.a === 'genres'){ genGenresOpen = !genGenresOpen; $('genGenres').classList.toggle('open', genGenresOpen); return; }
-    if (b.dataset.a === 'sc-build'){ genBuildSong(); return; }
-    if (b.dataset.a === 'sc-arrange'){ genArrange(); return; }
     if (b.dataset.g){ genGenre(b.dataset.g); return; }
     if (b.dataset.p){ GEN.part = b.dataset.p; genSave(); genRender(); haptic('select'); return; }
     const sg = b.closest('.gseg[data-k]'); if (sg && b.dataset.v !== undefined){ genSet(sg.dataset.k, b.dataset.v); return; }

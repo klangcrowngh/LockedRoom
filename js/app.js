@@ -157,31 +157,65 @@ function setLength(n){
 }
 
 // ---------- генератор вариаций и отмена ----------
-let undoStack = [], copyArm = false;
-function pushUndo(all){
-  undoStack.push({ scene, ids:tracks.map(t=>t.id), data:tracks.map(t=>cloneScene(t.scn[scene])), all: all ? tracks.map(t => t.scn.map(cloneScene)) : null, steps: all ? STEPS : 0, arr: all ? arr.map(b => ({ ...b })) : null, bpm: all ? bpm : 0, types: sceneTypes.slice() });
-  if (undoStack.length > 30) undoStack.shift();
+let undoStack = [], copyArm = false;   // undoStack — старый стек, больше не используется (оставлен для совместимости вызовов)
+function pushUndo(){}                   // шаги истории теперь снимаются автоматически (см. ИСТОРИЯ ниже)
+// ============================================================
+//  ИСТОРИЯ: Undo / Redo любого изменения проекта — как Ctrl+Z
+// ============================================================
+// После каждого действия (отпустил палец/клавишу, изменил ручку или поле) проект сравнивается со снимком;
+// если что-то изменилось — прошлый снимок уходит в историю. Так откатывается всё: связи, ручки, звуки,
+// темп, сцены, песня, генерация. Текущая сцена и воспроизведение историей не считаются.
+const HIST_MAX = 60;
+let histUndo = [], histRedo = [], histCur = null, histTm = 0;
+const histKey = d => { const c = Object.assign({}, d); delete c.scene; delete c.song; return JSON.stringify(c); };
+function histCommit(){
+  if (RENDERING || typeof serialize !== 'function') return;
+  const d = serialize(), k = histKey(d);
+  if (!histCur){ histCur = { d, k }; return; }
+  if (k === histCur.k) return;
+  histUndo.push(histCur); if (histUndo.length > HIST_MAX) histUndo.shift();
+  histRedo = []; histCur = { d, k };
 }
+function histSoon(){ clearTimeout(histTm); histTm = setTimeout(histCommit, 150); }
+for (const ev of ['pointerup', 'keyup', 'change']) addEventListener(ev, histSoon, true);
 function undo(){
-  const u = undoStack.pop(); if (!u){ toast('nothing to undo'); return; }
-  if (u.types) sceneTypes = u.types.slice();   // роли сцен тоже возвращаются
-  if (u.full){
-    for (const tr of tracks.slice()) if (!u.list.includes(tr)){ if (sel === tr) closePanel(); dropChain(tr); }
-    for (const tr of u.list) if (!tracks.includes(tr) && ac) buildChain(tr);
-    tracks = u.list.slice();
-    tracks.forEach((tr, k) => { tr.scn = u.all[k].map(cloneScene); tr.scSrc = u.sc[k] && tracks.includes(u.sc[k]) ? u.sc[k] : null; tr.spawn = performance.now(); bindScene(tr); });
-    if (sel){ buildSteps(sel); buildNotes(sel); }
-    if (u.gen && typeof genUndoRestore === 'function') genUndoRestore(u);
-    vState = null; renderLib(); updateUI(); toast('undo'); haptic('light'); return;
-  }
-  // звуки, добавленные через Vary после этого шага, убираем
-  for (const tr of tracks.slice()) if (tr.gen && !u.ids.includes(tr.id)){ if (sel === tr) closePanel(); dropChain(tr); tracks.forEach(x => { if (x.scSrc === tr) x.scSrc = null; }); tracks.splice(tracks.indexOf(tr), 1); }
-  tracks.forEach(tr => { const k = u.ids.indexOf(tr.id); if (k >= 0) tr.scn[u.scene] = u.data[k]; });
-  if (u.all) tracks.forEach(tr => { const k = u.ids.indexOf(tr.id); if (k >= 0) tr.scn = u.all[k].map(cloneScene); });
-  if (u.all){ STEPS = u.steps || STEPS; if (u.arr) arr = u.arr; if (u.bpm) bpm = u.bpm; tracks.forEach(bindScene); updatePerform(); renderBlocks(); }
-  renderLib(); updateUI();
-  tracks.forEach(bindScene); if (sel){ buildSteps(sel); buildNotes(sel); }
-  toast('undo'); haptic('light');
+  clearTimeout(histTm); histCommit();
+  const prev = histUndo.pop(); if (!prev){ toast('nothing to undo'); return; }
+  histRedo.push(histCur); histCur = prev; restoreState(prev.d);
+  toast('undo · ' + histUndo.length + ' left'); haptic('light');
+}
+function redo(){
+  clearTimeout(histTm); histCommit();
+  const nx = histRedo.pop(); if (!nx){ toast('nothing to redo'); return; }
+  histUndo.push(histCur); histCur = nx; restoreState(nx.d);
+  toast('redo'); haptic('light');
+}
+// вернуть проект к снимку (звуки, параметры, все сцены, песня, темп, лад); текущая сцена и игра не прерываются
+function restoreState(d){
+  const keepSel = sel ? tracks.indexOf(sel) : -1, old = tracks.slice();
+  if (d.preset !== P.name){ const pi = PRESETS.findIndex(x => x.name === d.preset); if (pi >= 0) applyPreset(pi); }
+  if (typeof d.acc === 'string') setAcc(d.acc);
+  P.root = Number.isFinite(d.root) ? d.root : P.root; P.scale = d.scale; P.drive = d.drive ?? P.drive; P.grit = d.grit ?? P.grit;
+  P.genKey = d.genKey; P.genre = d.genre ?? P.genre; P.genName = d.genName;
+  if (busSh){ busSh.curve = curve(P.grit || 0); busComp.gain.value = 1/(1+(P.grit||0)*0.6); }
+  bpm = d.bpm; swing = +d.swing || 0; if (d.steps !== STEPS){ STEPS = d.steps; stepLog = []; }
+  sceneTypes = (d.types || []).slice(); while (sceneTypes.length < 4) sceneTypes.push('');
+  arr = (d.arr || []).map(([s, b]) => ({ s, b })); if (!arr.length) arr = [{ s:0, b:1 }];
+  selBlk = Math.min(selBlk, arr.length - 1); songLoop = d.loop !== 0;
+  old.forEach(dropChain);
+  tracks = d.tracks.map((x, k) => {
+    const tr = makeTrack(SYNTH[x.v] ? x.v : 'perc'), o = old[k];
+    if (o){ tr.a = o.a; if (o.v === x.v){ tr.id = o.id; tr.part = o.part; tr.role = o.role; tr.gen = o.gen; tr.mixSig = o.mixSig; tr.spawn = o.spawn; } }
+    tr.mute = !!x.m; tr.params = Object.assign(defParams(tr.v), x.p || {});
+    tr.scn = Array.from({ length:SCENES }, (_, s) => decScene(x.s && x.s[s])); bindScene(tr);
+    return tr;
+  });
+  d.tracks.forEach((x, k) => { if (x.sc >= 0 && tracks[x.sc] && x.sc !== k) tracks[k].scSrc = tracks[x.sc]; });
+  if (ac) tracks.forEach(buildChain);
+  if (keepSel >= 0 && tracks[keepSel]) openPanel(tracks[keepSel]); else if (sel) closePanel();
+  vState = null; linkFlash = {};
+  $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; showSwing(); updateUI(); renderLib(); renderBlocks(); updatePerform();
+  if (typeof genRender === 'function') genRender();
 }
 const pickR = a => a[Math.random()*a.length|0];
 function moveStep(tr, i, j){
@@ -1609,7 +1643,14 @@ setPanelTab('steps');
   b.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(tm); long = true; openVaryMenu(); });
   b.onclick = () => { if (long){ long = false; return; } closeVaryMenu(); variate(); };
 })();
-$('undoBtn').onclick = undo;
+// Undo: тап — шаг назад, удержание — вернуть отменённое (redo)
+(() => {
+  const b = $('undoBtn'); let tm = null, long = false;
+  b.addEventListener('pointerdown', () => { long = false; clearTimeout(tm); tm = setTimeout(() => { long = true; redo(); }, 450); });
+  for (const ev of ['pointerup','pointerleave','pointercancel']) b.addEventListener(ev, () => clearTimeout(tm));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+  b.onclick = () => { if (long){ long = false; return; } undo(); };
+})();
 
 const PAD_ON = {};
 function padSet(fx, on){
@@ -1726,14 +1767,33 @@ document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { pushUnd
 // ---------- сборка песни и сцен — во вкладке GEN → Scenes (gen.js) ----------
 const ROLE_NAME = { intro:'intro', groove:'groove', build:'build-up', peak:'drop', peak2:'drop 2', break:'break' };
 function buildPlanFor(m){ const [g, b, i] = [0,1,2,3].filter(k => k !== m); return [['intro', i], ['groove', g], ['drop', m], ['break', b], ['drop', m], ['groove', g], ['outro', i]]; }
-function updateSongGen(){ if (typeof genRender === 'function' && document.body.classList.contains('gen-open')) genRender(); }
+// ---------- вкладка Build: главная сцена → вся песня ----------
+let mainSc = 0;
+function updateBuild(){
+  if (sceneEmpty(mainSc)){ const f = [0,1,2,3].find(k => !sceneEmpty(k)); if (f !== undefined) mainSc = f; }
+  const L = 'ABCD', anyFull = [0,1,2,3].some(k => !sceneEmpty(k));
+  document.querySelectorAll('#bMain button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mainSc); b.disabled = sceneEmpty(k); });
+  $('bPlan').innerHTML = buildPlanFor(mainSc).map(([r, k]) => '<span class="' + (r === 'drop' ? 'pk' : '') + '"><b>' + L[k] + '</b><small>' + r + '</small></span>').join('');
+  const others = [0,1,2,3].filter(k => k !== mainSc && !sceneEmpty(k));
+  $('bWarn').textContent = !anyFull ? 'make a pattern first' : others.length ? 'rewrites scene' + (others.length > 1 ? 's ' : ' ') + others.map(k => L[k]).join(', ') + ' · undo reverts' : 'empty scenes will be filled';
+  $('bWarn').classList.toggle('hot', others.length > 0);
+  $('bBuild').disabled = !anyFull;
+  $('arrOnly').style.display = [0,1,2,3].filter(k => !sceneEmpty(k)).length >= 2 ? '' : 'none';
+}
+document.querySelectorAll('#bMain button').forEach(b => b.onclick = () => { mainSc = +b.dataset.s; updateBuild(); haptic('select'); });
+$('bBuild').onclick = () => {
+  if (sceneEmpty(mainSc)){ toast('make a pattern first'); return; }
+  buildArrangement(mainSc);
+  tracks.forEach(bindScene); renderBlocks(); updatePerform(); showSongTab('arr'); haptic('heavy');
+  toast('song built · intro: ' + lastVariants.intro + ' · groove: ' + lastVariants.groove + ' · break: ' + lastVariants.break + ' · build again for other versions');
+};
+$('arrOnly').onclick = () => { if (!arrangeExisting()){ toast('all scenes are empty'); return; } renderBlocks(); showSongTab('arr'); haptic('medium'); toast('arranged your scenes · patterns unchanged'); };
+function updateSongGen(){ if ($('bMain')) updateBuild(); if (typeof genRender === 'function' && document.body.classList.contains('gen-open')) genRender(); }
 // вкладки листа Song на телефоне: Arrange / Export
 function showSongTab(t){
   document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x.dataset.st === t));
-  $('song').dataset.tab = t;
+  $('song').dataset.tab = t; if (t === 'build'){ if (!sceneEmpty(scene)) mainSc = scene; updateBuild(); }
 }
-// со шкалы песни — к сборке песни/сцен в GEN
-$('songToGen').onclick = () => { setSongOpen(false); GEN.tab = 'scenes'; setGenOpen(true); haptic('select'); };
 document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => { showSongTab(b.dataset.st); haptic('select'); });
 $('song').dataset.tab = 'arr';
 const barsPer = () => STEPS / 16;   // сколько тактов в одном повторе сцены
@@ -1855,7 +1915,7 @@ function decScene(o){
   return s;
 }
 function serialize(){
-  return { v:2, preset:P.name, acc:P.acc, root:P.root, scale:P.scale || undefined, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, types:sceneTypes.slice(), bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
+  return { v:2, preset:P.name, acc:P.acc, root:P.root, scale:P.scale || undefined, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, genName:P.genName, types:sceneTypes.slice(), bpm, swing:r3(swing), steps:STEPS, scene, fx:fxMode, arr:arr.map(b => [b.s, b.b]), song:songOn ? 1 : 0, loop:songLoop ? 1 : 0,
     tracks: tracks.map(tr => ({ v:tr.v, m:tr.mute ? 1 : 0, sc: tr.scSrc ? tracks.indexOf(tr.scSrc) : -1,
       p: Object.fromEntries(Object.entries(tr.params).map(([k,x]) => [k, r3(x)])), s: tr.scn.map(encScene) })) };
 }
@@ -1863,6 +1923,7 @@ function deserialize(d){
   if (!d || !Array.isArray(d.tracks)) throw new Error('bad project');
   applyPreset(Math.max(0, PRESETS.findIndex(p => p.name === d.preset)));
   if (typeof d.acc === 'string' && /^#[0-9a-f]{6}$/i.test(d.acc)) setAcc(d.acc);   // свой цвет трека
+  if (typeof d.genName === 'string') P.genName = d.genName;
   // тональность, лад и характер звука (если трек сделан генератором)
   if (Number.isFinite(d.root)) P.root = Math.max(12, Math.min(48, d.root|0));
   if (typeof d.scale === 'string' && SCALES[d.scale]) P.scale = d.scale;
@@ -2129,10 +2190,7 @@ document.addEventListener('pointerdown', e => { if (bpmOpen() && !e.target.close
 addEventListener('resize', () => { if (bpmOpen()) closeBpm(); });
 // ---------- Clear: меню очистки ----------
 // полный снимок (звуки + все сцены) — чтобы Undo вернул и удалённые звуки
-function pushUndoFull(){
-  undoStack.push({ full:true, types:sceneTypes.slice(), scene, list:tracks.slice(), ids:tracks.map(t => t.id), all:tracks.map(t => t.scn.map(cloneScene)), sc:tracks.map(t => t.scSrc) });
-  if (undoStack.length > 30) undoStack.shift();
-}
+function pushUndoFull(){}   // история снимается автоматически
 function dropTrack(tr){
   if (sel === tr) closePanel(); if (solo === tr) setSolo(null);
   dropChain(tr); tracks.forEach(x => { if (x.scSrc === tr) x.scSrc = null; });
@@ -2196,7 +2254,8 @@ addEventListener('keydown', e=>{
   if (e.key==='ArrowRight') loadPreset(presetIdx+1);
   if (e.key==='ArrowLeft') loadPreset(presetIdx-1);
   if ('1234'.includes(e.key)) setScene(+e.key - 1);
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))){ e.preventDefault(); redo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ'){ e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveProject(curProj ? curProj.name : ''); return; }
   if (e.code === 'KeyG') variate();
   const fx = PAD_KEYS[e.code]; if (fx && !e.ctrlKey && !e.metaKey) padSet(fx, true);
@@ -2348,7 +2407,7 @@ $('coachOk').onclick = ()=>{ document.body.classList.remove('coach'); local.set(
 
 const START_POOL = PRESETS.map((p, i) => i).filter(i => !PRESETS[i].blank);
 const FIRST_PRESET = START_POOL[Math.floor(Math.random()*START_POOL.length)];   // каждый запуск — случайный пресет
-makeGrain(); applySkin(true); loadPreset(FIRST_PRESET);
+makeGrain(); applySkin(true); loadPreset(FIRST_PRESET); histCommit();
 resize(); requestAnimationFrame(draw);
 (async function boot(){
   await loadIndex();

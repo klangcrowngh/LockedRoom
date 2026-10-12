@@ -639,6 +639,3 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 /* ---------- Song: переключатели в шапке, нижняя строка действий ---------- */
 #song .shead .tg{height:36px;padding:0 10px;font-size:9px;flex:0 0 auto}
 #song .shead .st1{min-width:0}
-.sfoot{display:flex;gap:6px}
-.sfoot button{flex:1;height:44px;padding:0 8px;font-size:10px}
-.sfoot #songToGen{flex:1.3}
