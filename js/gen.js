@@ -927,6 +927,7 @@ const SC_VARS = (() => { const out = [];
   for (const [ty, nm] of SC_TYPES){ const vs = SCENE_VARIANTS[ty];
     if (vs) vs.forEach((vn, v) => out.push({ ty, v, name: nm, sub: vn })); else out.push({ ty, v: -1, name: nm, sub: ty === 'var' ? 'drop variation' : 'same as drop' }); }
   return out; })();
+let scVarsOpen = false;   // выпадающий список вариаций раскрыт
 const scVarOf = () => SC_VARS.find(x => x.ty === GEN.scType && x.v === (GEN.scVar === 'auto' ? -1 : +GEN.scVar)) || SC_VARS.find(x => x.ty === GEN.scType) || SC_VARS[0];
 function renderScenesPane(){
   const box = $('genScenes'); if (!box) return;
@@ -935,11 +936,11 @@ function renderScenesPane(){
   box.innerHTML =
     row('Generate scene', sseg('sc.target', t, i => i === m)) +
     row('From drop', sseg('sc.main', m, i => sceneEmpty(i))) +
-    row('Variation', '<div class="gvars" data-k="sc.pick">' + SC_VARS.map(x => '<button data-v="' + x.ty + '|' + x.v + '"' + (x === cur ? ' class="on"' : '') + '><b>' + x.name + '</b><small>' + x.sub + '</small></button>').join('') + '</div>') +
+    '<button class="gbig gpick" data-a="scvars"><span class="lbl">Variation</span><b>' + cur.name + ' · ' + cur.sub + '</b><i>' + (scVarsOpen ? '▴' : '▾') + '</i></button>' +
+    '<div class="ggenres gvars' + (scVarsOpen ? ' open' : '') + '" data-k="sc.pick">' + SC_VARS.map(x => '<button data-v="' + x.ty + '|' + x.v + '"' + (x === cur ? ' class="on"' : '') + '><b>' + x.name + '</b><small>' + x.sub + '</small></button>').join('') + '</div>' +
     slider('sc.energy', 'Energy · vs drop', GEN.scEnergy, 'Sparser', 'Fuller') +
     slider('sc.change', 'Change · vs drop', GEN.scChange, 'Close', 'New') +
     '<div class="ehint">Every tap makes a new variation of scene ' + SC_L[t] + ' from the drop ' + SC_L[m] + '</div>';
-  const strip = box.querySelector('.gvars .on'); if (strip) strip.scrollIntoView({ block:'nearest', inline:'center' });
 }
 // сцена из дропа: структура (что играет) — по вариации, затем Energy меняет плотность хэтов/перкуссии,
 // Change — насколько новые рисунки ударных, мелодии и баса (гармония — дропа)
@@ -982,7 +983,7 @@ function genSet(k, v){
   else if (k === 'make') GEN.make = v;
   else if (k === 'sc.main'){ GEN.scMain = +v; if (GEN.scTarget === +v) GEN.scTarget = -1; }
   else if (k === 'sc.target') GEN.scTarget = +v;
-  else if (k === 'sc.pick'){ const [ty, vv] = String(v).split('|'); GEN.scType = ty; GEN.scVar = +vv; }
+  else if (k === 'sc.pick'){ const [ty, vv] = String(v).split('|'); GEN.scType = ty; GEN.scVar = +vv; scVarsOpen = false; }
   else if (k === 'sc.energy') GEN.scEnergy = +v;
   else if (k === 'sc.change') GEN.scChange = +v;
   else if (k.startsWith('p.')){
@@ -1049,6 +1050,7 @@ function setGenOpen(on){
   box.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !box.contains(b)) return;
     if (b.dataset.a === 'genres'){ genGenresOpen = !genGenresOpen; $('genGenres').classList.toggle('open', genGenresOpen); return; }
+    if (b.dataset.a === 'scvars'){ scVarsOpen = !scVarsOpen; genRender(); haptic('select'); return; }
     if (b.dataset.g){ genGenre(b.dataset.g); return; }
     if (b.dataset.p){ GEN.part = b.dataset.p; genSave(); genRender(); haptic('select'); return; }
     const sg = b.closest('.gseg[data-k], .gvars[data-k]'); if (sg && b.dataset.v !== undefined){ genSet(sg.dataset.k, b.dataset.v); return; }

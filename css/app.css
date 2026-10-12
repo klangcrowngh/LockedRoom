@@ -638,8 +638,9 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 /* ---------- Song: переключатели в шапке, нижняя строка действий ---------- */
 #song .shead .tg{height:36px;padding:0 10px;font-size:9px;flex:0 0 auto}
 #song .shead .st1{min-width:0}
-/* GEN → Scenes: горизонтальное меню вариаций (листается пальцем) */
-.gvars{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:2px 2px 6px;margin:0 -2px;touch-action:pan-x}
-.gvars button{flex:0 0 auto;min-width:118px;height:58px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:0 12px;scroll-snap-align:start;text-align:left}
-.gvars button b{font-size:12px;letter-spacing:.1em;font-weight:700}
-.gvars button small{font-size:9px;letter-spacing:.06em;text-transform:none;opacity:.75;white-space:nowrap}
+/* GEN → Scenes: выпадающий список вариаций (как выбор жанра) */
+.gvars button{height:52px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:0 10px;text-align:left}
+.gvars button b{font-size:11px;letter-spacing:.1em;font-weight:700}
+.gvars button small{font-size:9px;letter-spacing:.04em;text-transform:none;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* панели GEN не прокручиваются вбок */
+.gbody{overflow-x:hidden}
