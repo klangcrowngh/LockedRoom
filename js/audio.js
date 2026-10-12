@@ -598,12 +598,15 @@ const SYNTH = {
 //  НАСТРОЙКИ КАЖДОГО ЗВУКА
 // ============================================================
 const toneHz = v => 150*Math.pow(120, v);
+const lowcutHz = v => 20 * Math.pow(40, v);   // 20 Гц … 800 Гц
 const KNOBS = [
   { k:'vol',   name:'Volume',    min:0,   max:1.5, step:0.01, def:0.9,  fmt:v=>Math.round(v*100)+'%' },
   { k:'pitch', name:'Pitch',     min:-12, max:12,  step:1,    def:0,    fmt:v=>(v>0?'+':'')+v+' st' },
   { k:'decay', name:'Length',    min:0.3, max:3,   step:0.01, def:1,    fmt:v=>'×'+v.toFixed(2) },
   { k:'tone',  name:'Tone',      min:0,   max:1,   step:0.01, def:1,    fmt:v=>v>=0.999?'open':Math.round(toneHz(v))+' Hz' },
+  { k:'lowcut', name:'Low Cut',   min:0,   max:1,   step:0.01, def:0,    fmt:v=>v<=0?'off':Math.round(lowcutHz(v))+' Hz' },
   { k:'drive', name:'Drive',     min:0,   max:1,   step:0.01, def:0,    fmt:v=>v<=0?'off':'+'+Math.round(v*30)+' dB' },
+  { k:'pan',   name:'Pan',        min:-1,  max:1,   step:0.01, def:0,    fmt:v=>Math.abs(v)<0.01?'center':(v<0?'L ':'R ')+Math.round(Math.abs(v)*100) },
   { k:'rev',   name:'Reverb',     min:0,   max:1,   step:0.01, def:0,    fmt:v=>v<=0?'off':Math.round(v*100)+'%' },
   { k:'dly',   name:'Delay',      min:0,   max:1,   step:0.01, def:0,    fmt:v=>v<=0?'off':Math.round(v*100)+'%' },
   { k:'dlyT',  name:'Delay Time', min:1,   max:8,   step:1,    def:3,    fmt:v=>DLY_NAMES[v] },
@@ -627,7 +630,9 @@ function buildChain(tr){
   const c = tr.ch = {};
   c.in = ac.createGain(); c.pre = ac.createGain(); c.drv = ac.createWaveShaper(); c.drv.oversample = IS_MOBILE && !RENDERING ? '2x' : '4x'; c.comp = ac.createGain();
   c.lp = filt('lowpass', 20000, 0.7); c.vol = ac.createGain(); c.rev = ac.createGain(); c.dly = ac.createGain();
-  c.in.connect(c.pre); c.pre.connect(c.drv); c.drv.connect(c.comp); c.comp.connect(c.lp); c.duck = ac.createGain(); c.lp.connect(c.duck); c.duck.connect(c.vol); c.vol.connect(bus);
+  // срез низа (чтобы звуки не спорили с бочкой и басом) и панорама
+  c.hp = filt('highpass', 10, 0.7); c.pan = ac.createStereoPanner ? ac.createStereoPanner() : ac.createGain();
+  c.in.connect(c.pre); c.pre.connect(c.drv); c.drv.connect(c.comp); c.comp.connect(c.lp); c.lp.connect(c.hp); c.duck = ac.createGain(); c.hp.connect(c.duck); c.duck.connect(c.vol); c.vol.connect(c.pan); c.pan.connect(bus);
   c.vol.connect(c.rev); c.rev.connect(revIn);
   c.dl = ac.createDelay(2); c.dlp = filt('lowpass', 3200); c.dhp = filt('highpass', 180); c.dfb = ac.createGain();
   c.vol.connect(c.dly); c.dly.connect(c.dl); c.dl.connect(c.dlp); c.dlp.connect(c.dhp); c.dhp.connect(c.dfb); c.dfb.connect(c.dl); c.dhp.connect(fxRet);
@@ -645,8 +650,10 @@ function applyParams(tr){
     c.comp.gain.setTargetAtTime(0.5/Math.tanh(pre*0.5), T, 0.02);
   }
   c.lp.frequency.setTargetAtTime(p.tone>=0.999 ? 20000 : toneHz(p.tone), T, 0.02);
+  c.hp.frequency.setTargetAtTime(p.lowcut > 0 ? lowcutHz(p.lowcut) : 10, T, 0.02);
+  if (c.pan.pan) c.pan.pan.setTargetAtTime(Math.max(-1, Math.min(1, p.pan || 0)), T, 0.02);
   const silent = tr.mute || (solo && solo !== tr);
-  c.vol.gain.setTargetAtTime(silent ? 0 : p.vol, T, 0.02);
+  c.vol.gain.setTargetAtTime(silent ? 0 : p.vol * (p.trim || 1), T, 0.02);   // trim — скрытая подстройка уровня от автосведения
   c.rev.gain.setTargetAtTime(p.rev*0.8, T, 0.02);
   c.dly.gain.setTargetAtTime(p.dly*0.8, T, 0.02); c.dfb.gain.setTargetAtTime(p.dlyFb, T, 0.02);
   c.dl.delayTime.setTargetAtTime(stepDur()*p.dlyT, T, 0.03);

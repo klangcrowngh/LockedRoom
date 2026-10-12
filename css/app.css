@@ -600,3 +600,14 @@ body.panel-open #gen{display:none !important}
   body.gen-open #gen .grab{display:block !important}
   body.gen-open .prow.main{border-top:none}
 }
+/* GEN: ползунки — крупные, под палец */
+.gsl{display:flex;flex-direction:column;gap:2px;padding:2px 0}
+.gslh{display:flex;justify-content:space-between;align-items:baseline}
+.gslh .lbl{font-size:9px;letter-spacing:.2em}
+.gslh b{font-size:12px;color:var(--acc);font-weight:700;letter-spacing:.06em}
+.gsl input[type=range]{height:40px;touch-action:none}
+.gsl input[type=range]::-webkit-slider-runnable-track{height:4px}
+.gsl input[type=range]::-moz-range-track{height:4px}
+.gsl input[type=range]::-webkit-slider-thumb{width:26px;height:30px;margin-top:-13px;background:var(--acc)}
+.gsl input[type=range]::-moz-range-thumb{width:26px;height:30px;background:var(--acc)}
+.gsle{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:-4px}

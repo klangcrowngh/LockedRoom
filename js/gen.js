@@ -425,7 +425,7 @@ function genDrums(G, S, bars, cur){
       for (let k=0;k<nr && on.length;k++){ const i = on.splice(Math.random()*on.length|0, 1)[0]; rat[i] = cx === 2 ? pickR(rats) : rats[0]; }
       if (cx === 2) for (let k=0;k<2 && on.length;k++){ const i = on.splice(Math.random()*on.length|0, 1)[0]; prob[i] = 0.7; }
     }
-    res[r] = { p, vel, rat, prob };
+    res[r] = { p, vel, rat, prob, hum: r === 'hat' || r === 'ohat' || r === 'perc' };
   }
   // сбивка в конце 2-го такта
   if (bars === 2 && S.fills){
@@ -492,7 +492,7 @@ function leadRhythm(kind, dens, cx){
   while (hits(p) < n){ const i = weightedPick(ws.map((w, j) => p[j] ? 0 : w)); if (i < 0) break; p[i] = true; }
   return p;
 }
-function genLead(G, S, bars, harm, curP){
+function genLead(G, S, bars, harm, curP, avoidP, up = 0){
   const kind = S.rhythm !== 'auto' ? S.rhythm : G.lead.rhythm, range = S.range !== 'auto' ? +S.range : G.lead.range;
   const lo = [0, -2, -4][range - 1], hi = [7, 11, 16][range - 1];
   const steps = { 0:[[0, 0.3], [1, 0.5], [2, 0.2]], 1:[[0, 0.2], [1, 0.45], [2, 0.2], [3, 0.1], [4, 0.05]], 2:[[0, 0.1], [1, 0.35], [2, 0.25], [3, 0.15], [4, 0.1], [5, 0.05]] }[S.cx];
@@ -543,20 +543,21 @@ function genLead(G, S, bars, harm, curP){
     }
     for (const i of on) if (i % 4 === 0 && [harm[slotOf(i)], harm[slotOf(i)] + 2, harm[slotOf(i)] + 4].some(x => ((x - c.deg[i]) % 7 + 7) % 7 === 0)) s += 0.6;
     if (curP) s += Math.min(3, ham(c.p, curP)) * 0.3;
+    if (avoidP && kind !== 'arp' && kind !== 'acid') s -= on.filter(i => avoidP[i]).length * 0.4;   // не бить туда же, где аккорды
     return s;
   };
   const c = best([...Array(16)].map(make), score), n = c.p.length;
   const notes = Array(n).fill(0), vel = Array(n).fill(1), rat = Array(n).fill(1);
   for (let i=0;i<n;i++) if (c.p[i]){
-    notes[i] = degSemi(c.deg[i]);
+    notes[i] = degSemi(c.deg[i]) + up;
     vel[i] = kind === 'acid' ? (Math.random() < 0.35 ? 1 : 0.68) : i % 4 === 0 ? 1 : i % 2 ? 0.72 : 0.85;
     if (kind === 'acid' && S.cx === 2 && Math.random() < 0.08) rat[i] = 2;
   }
-  return { p: c.p, notes, vel, rat };
+  return { p: c.p, notes, vel, rat, hum: true };
 }
 
 // ---------- аккорды ----------
-function genChords(G, S, bars, harm, sound, curP){
+function genChords(G, S, bars, harm, sound, curP, bassP){
   const style = S.rhythm !== 'auto' ? S.rhythm : (PADLIKE.test(sound) ? 'pad' : G.chords.style);
   const mk = () => {
     let p;
@@ -566,7 +567,8 @@ function genChords(G, S, bars, harm, sound, curP){
     const r = laneBar(spec, S.dens); if (!hits(r.p)) r.p[pickR([2, 3, 6])] = true;
     return { p: twoBars(r.p, S.cx, spec).slice(0, 16 * bars), fit: r.fit };
   };
-  const c = best([...Array(10)].map(mk), x => x.fit + (curP ? Math.min(3, ham(x.p, curP)) * 0.4 : 0));
+  const clash = x => bassP && style !== 'pad' ? x.p.filter((on, i) => on && bassP[i]).length : 0;   // аккорд и бас — по очереди
+  const c = best([...Array(12)].map(mk), x => x.fit + (curP ? Math.min(3, ham(x.p, curP)) * 0.4 : 0) - clash(x) * 0.7);
   const n = c.p.length, notes = Array(n).fill(0), vel = Array(n).fill(1);
   for (let i=0;i<n;i++) if (c.p[i]){ let s = degSemi(harm[slotOf(i)]); if (s > 6) s -= 12; notes[i] = s; vel[i] = style === 'pad' ? 0.9 : i % 4 === 0 ? 0.95 : 0.85; }
   // сложность: иногда аккорд-предвосхищение на «и» перед сменой
@@ -592,39 +594,145 @@ function writeRow(t, r, n){
   const now = performance.now();
   for (let i=0;i<MAXS;i++){
     const on = i < n && !!r.p[i];
-    t.pat[i] = on; t.vel[i] = on && r.vel ? r.vel[i] : 1; t.prob[i] = on && r.prob ? r.prob[i] : 1; t.rat[i] = on && r.rat ? r.rat[i] : 1;
+    t.pat[i] = on; t.vel[i] = on && r.vel ? Math.min(1, r.vel[i] * (r.hum ? 1 + (Math.random() - 0.5) * 0.12 : 1)) : 1; t.prob[i] = on && r.prob ? r.prob[i] : 1; t.rat[i] = on && r.rat ? r.rat[i] : 1;
     if (on && r.notes) t.notes[i] = r.notes[i];
     if (on) t.born[i] = now;
   }
 }
-// свести звук по роли
-function mixTrack(t, role){ Object.assign(t.params, defParams(t.v), MIX[role] || {}); applyParams(t); }
+// ============================================================
+//  АВТОСВЕДЕНИЕ
+// ============================================================
+// Громкость каждого звука выставляется по его замеренному уровню (SND_PROF) и роли: звук громче/тише
+// среднего своей роли — подтягивается к нему. Поверх — баланс ролей, срез низа, панорама, посылы
+// в ревер/дилей и сайдчейн по жанру. Звуки, которые ты уже крутил руками, не трогаются.
+const MIX_ROLE = {
+  kick:  { vol:0.95, cut:0,   pan:0,     rev:0,    dly:0 },
+  snare: { vol:0.8,  cut:120, pan:0,     rev:0.2,  dly:0 },
+  hat:   { vol:0.5,  cut:400, pan:0.3,   rev:0,    dly:0 },
+  ohat:  { vol:0.42, cut:300, pan:-0.25, rev:0.1,  dly:0 },
+  perc:  { vol:0.55, cut:150, pan:-0.4,  rev:0.15, dly:0.2 },
+  bass:  { vol:0.9,  cut:28,  pan:0,     rev:0,    dly:0,    duck:0.6,  duckRel:0.18 },
+  lead:  { vol:0.75, cut:180, pan:0.15,  rev:0.3,  dly:0.25, duck:0.35, duckRel:0.15 },
+  chords:{ vol:0.6,  cut:160, pan:-0.15, rev:0.25, dly:0.2,  duck:0.45, duckRel:0.2 },
+  pad:   { vol:0.6,  cut:140, pan:0,     rev:0.5,  dly:0,    duck:0.7,  duckRel:0.3 },
+  fx:    { vol:0.55, cut:120, pan:0.4,   rev:0.35, dly:0 },
+};
+// баланс ролей (дБ) — подобран по замерам спектра готовых треков (tools/analyze.js)
+const MIX_BAL = { kick:-3, bass:-5, snare:5, hat:7, ohat:6, perc:5, lead:7, chords:6, pad:5, fx:2 };
+// жанровые поправки: дБ к ролям, множители посылов, сайдчейна и ширины
+const MIX_GENRE = {
+  hardtechno:{ kick:1, rev:0.6, duck:1.1 }, melodic:{ pad:1, lead:1, rev:1.2, dly:1.2 }, deephouse:{ chords:1, hat:-1, rev:1.1, duck:0.7 },
+  house:{ chords:1, duck:0.8 }, techhouse:{ perc:1, bass:1, duck:0.8 }, proghouse:{ lead:1, pad:1, rev:1.2 }, trance:{ lead:1.5, pad:1, rev:1.3, dly:1.2, duck:1.1 },
+  acid:{ lead:1, rev:0.8 }, minimal:{ perc:1, rev:0.9, dly:1.2 }, dubtechno:{ chords:1.5, hat:-2, rev:1.4, dly:2 }, electro:{ bass:1, rev:0.7 },
+  ebm:{ bass:1, rev:0.7 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
+  ukg:{ bass:1, duck:0.7 }, trap:{ bass:2, hat:-1, duck:0.3 }, synthwave:{ snare:1, lead:1, rev:1.4 }, idm:{ rev:1.1, width:1.3 },
+  ambient:{ kick:-3, pad:2, rev:1.8, dly:1.5, duck:0.3, width:1.3 },
+};
+const mixRoleOf = t => { const p = partOf(t);
+  if (p === 'drums') return DRUM_ROLES.includes(t.role) ? t.role : drumRole(t.v);
+  if (p === 'chords') return t.role === 'pad' || PADLIKE.test(t.v) ? 'pad' : 'chords';
+  return p === 'lead' ? 'lead' : p === 'bass' ? 'bass' : 'fx'; };
+// средний уровень звуков каждой роли в библиотеке
+const ROLE_MED = (() => { const by = {};
+  for (const s of LIB){ const pr = SND_PROF[s.id]; if (!pr || pr[0] < -50) continue; const r = mixRoleOf({ v:s.id }); (by[r] = by[r] || []).push(pr[0]); }
+  const out = {}; for (const r in by){ const a = by[r].sort((x, y) => x - y); out[r] = a[a.length >> 1]; } return out; })();
+const lowcutV = hz => hz <= 0 ? 0 : Math.max(0, Math.min(1, Math.log(hz / 20) / Math.log(40)));
+const mixKeys = ['vol','trim','lowcut','pan','rev','dly','dlyT','duck','duckRel'];
+const mixSig = t => mixKeys.map(k => (+t.params[k] || 0).toFixed(3)).join(',');
+// свести один звук (side: −1/+1 — в какую сторону панорама, если таких звуков несколько)
+function mixTrack(t, role, side = 1){
+  role = role && MIX_ROLE[role] ? role : mixRoleOf(t);
+  const G = GENM[GEN.genre] || {}, gm = MIX_GENRE[G.id] || {}, b = MIX_ROLE[role], pr = SND_PROF[t.v];
+  const dev = pr && ROLE_MED[role] !== undefined ? Math.max(-9, Math.min(9, ROLE_MED[role] - pr[0])) : 0;
+  const dB = dev + (MIX_BAL[role] || 0) + (gm[role] || 0);
+  Object.assign(t.params, defParams(t.v));
+  let cut = b.cut;
+  if (pr && role !== 'kick' && role !== 'bass' && pr[2] > 0.5) cut = Math.min(cut, role === 'perc' || role === 'fx' ? 40 : 80);   // звук сам по себе низкий — режем мягче
+  setGain(t, b.vol * Math.pow(10, dB / 20));
+  t.params.lowcut = lowcutV(cut);
+  t.params.pan = Math.max(-0.8, Math.min(0.8, b.pan * side * (gm.width || 1)));
+  t.params.rev = Math.min(1, b.rev * (gm.rev || 1)); t.params.dly = Math.min(1, b.dly * (gm.dly || 1)); t.params.dlyT = 3;
+  t.params.duck = Math.min(1, (b.duck || 0) * (gm.duck || 1)); t.params.duckRel = b.duckRel || 0.18;
+  applyParams(t); t.mixSig = mixSig(t);
+}
+// общий уровень звука = регулятор громкости (до 120%) × скрытый trim (остальное)
+function setGain(t, g){ g = Math.max(0.02, Math.min(12, g)); t.params.vol = Math.min(1.2, g); t.params.trim = g / t.params.vol; }
+const gainOf = t => t.params.vol * (t.params.trim || 1);
+// энергия звука в сцене по его профилю (без мастера): удары × громкость × длина
+function trackEnergy(t){
+  if (t.mute) return 0;
+  const pr = SND_PROF[t.v] || [ROLE_MED[mixRoleOf(t)] ?? -20, 0.1]; let e = 0;
+  for (let i=0;i<STEPS;i++) if (t.pat[i]) e += (t.vel[i] ** 2) * (t.rat[i] || 1) * (t.prob[i] ?? 1);
+  return e * Math.pow(10, (pr[0] + 20 * Math.log10(Math.max(1e-4, gainOf(t)))) / 10) * Math.min(1.5, pr[1]);
+}
+const bandsOf = t => { const pr = SND_PROF[t.v]; return pr ? [pr[2], pr[3], pr[4]] : ({ kick:[1,0,0], bass:[0.9,0.1,0], hat:[0,0,1], ohat:[0,0,1] })[mixRoleOf(t)] || [0.1,0.8,0.1]; };
+// примерная громкость сцены
+function estLoud(){ const loopSec = STEPS * 60 / bpm / 4; return 10 * Math.log10(tracks.reduce((a, t) => a + trackEnergy(t), 0) / loopSec + 1e-12); }
+// спектральный баланс по жанру: доля низа (<250 Гц) и верха (>3 кГц) в энергии сцены
+const SPEC_TARGET = { low:0.69, high:0.045 };
+const SPEC_GENRE = { dubstep:{ low:0.78 }, trap:{ low:0.76 }, dnb:{ low:0.66, high:0.06 }, ambient:{ low:0.55, high:0.035 }, idm:{ low:0.6 },
+  deephouse:{ low:0.72 }, dubtechno:{ low:0.72, high:0.03 }, trance:{ low:0.64, high:0.06 }, proghouse:{ low:0.65 }, synthwave:{ low:0.62, high:0.05 }, melodic:{ low:0.66 } };
+function specBalance(auto){
+  const G = GENM[GEN.genre] || {}, T = Object.assign({}, SPEC_TARGET, SPEC_GENRE[G.id] || {});
+  // группы: «низ» (бочка, бас) не трогаем; «верх» — звуки, где больше всего верха; остальное — «середина»
+  const grp = t => { const r = mixRoleOf(t); if (r === 'kick' || r === 'bass') return 'low'; const b = bandsOf(t); return b[2] > b[1] ? 'high' : 'mid'; };
+  for (let pass = 0; pass < 2; pass++){
+    const B = [0, 0, 0]; for (const t of tracks){ const e = trackEnergy(t), b = bandsOf(t); for (let k=0;k<3;k++) B[k] += e * b[k]; }
+    const tot = B[0] + B[1] + B[2]; if (!tot || !B[0]) return;
+    const wantMid = (1 - T.low - T.high) / T.low, wantHigh = T.high / T.low;   // отношения к низу
+    const gMid = B[1] > 0 ? Math.sqrt(wantMid / (B[1] / B[0])) : 1, gHigh = B[2] > 0 ? Math.sqrt(wantHigh / (B[2] / B[0])) : 1;
+    const lim = x => Math.max(0.5, Math.min(2, x));   // не больше ±6 дБ за проход
+    for (const t of auto){ const g = grp(t); if (g === 'mid') setGain(t, gainOf(t) * lim(gMid)); else if (g === 'high') setGain(t, gainOf(t) * lim(gHigh)); }
+  }
+}
+let LOUD_TARGET = -7.5;   // по estLoud; калибруется замером готовых треков (tools/analyze.js)
+// свести все «нетронутые» звуки и выровнять общую громкость сцены
+function autoMix(){
+  const count = {};
+  for (const t of tracks){
+    if (t.mixSig && t.mixSig !== mixSig(t)) continue;            // крутили руками — не трогаем
+    const r = mixRoleOf(t); count[r] = (count[r] || 0) + 1;
+    mixTrack(t, r, count[r] % 2 ? 1 : -1);
+  }
+  const auto = tracks.filter(t => t.mixSig && t.mixSig === mixSig(t));
+  if (!auto.length) return;
+  specBalance(auto);
+  const g = Math.pow(10, Math.max(-6, Math.min(6, LOUD_TARGET - estLoud())) / 20);
+  for (const t of auto){ setGain(t, gainOf(t) * g); applyParams(t); t.mixSig = mixSig(t); }
+}
 function newPartTrack(v, part, role){
   const t = addGenTrack(v); if (!t) return null;
-  t.part = part; t.role = role; mixTrack(t, role === 'chords' ? 'mel' : role);
-  if (role === 'chords'){ t.role = PADLIKE.test(v) ? 'pad' : 'mel'; mixTrack(t, t.role); if (t.role === 'mel'){ t.params.vol = 0.6; applyParams(t); } }
+  t.part = part; t.role = role === 'chords' ? (PADLIKE.test(v) ? 'pad' : 'mel') : role;
+  mixTrack(t);
   return t;
 }
 function replaceSound(t, v){
   if (t.v === v) return;
   t.v = v; t.spawn = performance.now();
-  const role = t.role || roleOfGen(v); mixTrack(t, role);
+  mixTrack(t);
+}
+// настроение → выбор звука: Dark — из более тёмных, Bright — из более ярких (по замеру спектра)
+const brightOf = v => { const pr = SND_PROF[v]; return pr ? pr[4] + 0.35 * pr[3] : 0.5; };
+function pickMood(list){
+  if (!list.length) return null; if (GEN.mood === 1 || list.length < 3) return pickR(list);
+  const s = list.slice().sort((a, b) => brightOf(a) - brightOf(b)), half = Math.ceil(s.length * 0.6);
+  return pickR(GEN.mood === 0 ? s.slice(0, half) : s.slice(s.length - half));
 }
 const resolveSound = (p, G, S) => {
   const list = soundList(p, G);
   if (S.sound !== 'auto' && list.includes(S.sound)) return S.sound;
-  return pickR(G.snd[p].filter(v => SYNTH[v]).length ? G.snd[p].filter(v => SYNTH[v]) : list);
+  return pickMood(G.snd[p].filter(v => SYNTH[v]).length ? G.snd[p].filter(v => SYNTH[v]) : list);
 };
 // снимок для Undo: звуки, все сцены, темп, лад, свинг, песня
 function genUndo(){
   pushUndoFull();
-  Object.assign(undoStack[undoStack.length - 1], { gen:{ bpm, steps:STEPS, root:P.root, scale:P.scale, swing, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, genName:P.genName, arr:arr.map(b => ({ ...b })), harm:genHarm, vs:tracks.map(t => t.v) } });
+  Object.assign(undoStack[undoStack.length - 1], { gen:{ bpm, steps:STEPS, root:P.root, scale:P.scale, swing, drive:P.drive, grit:P.grit, genKey:P.genKey, genre:P.genre, genName:P.genName, arr:arr.map(b => ({ ...b })), harm:genHarm, vs:tracks.map(t => t.v), ps:tracks.map(t => ({ ...t.params })), ms:tracks.map(t => t.mixSig) } });
 }
 function genUndoRestore(u){
   const g = u.gen; if (!g) return;
   bpm = g.bpm; swing = g.swing; P.root = g.root; P.scale = g.scale; P.drive = g.drive; P.grit = g.grit; P.genKey = g.genKey; P.genre = g.genre; P.genName = g.genName; genHarm = g.harm;
   if (g.steps !== STEPS){ STEPS = g.steps; stepLog = []; }
-  arr = g.arr.map(b => ({ ...b })); u.list.forEach((t, k) => { if (g.vs[k] && t.v !== g.vs[k]){ t.v = g.vs[k]; mixTrack(t, t.role || roleOfGen(t.v)); } });
+  arr = g.arr.map(b => ({ ...b })); u.list.forEach((t, k) => { if (g.vs[k] && t.v !== g.vs[k]){ t.v = g.vs[k]; } if (g.ps && g.ps[k]){ t.params = { ...g.ps[k] }; t.mixSig = g.ms[k]; if (t.ch) applyParams(t); } });
   if (busSh){ busSh.curve = curve(P.grit || 0); busComp.gain.value = 1/(1+(P.grit||0)*0.6); }
   $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; showSwing(); renderBlocks(); updatePerform(); if (typeof genRender === 'function') genRender();
 }
@@ -666,7 +774,7 @@ function applyPart(p, G, bars, whole){
       if (!res[r]) { (byRole[r] || []).forEach(t => writeRow(t, { p:[] }, n)); continue; }
       let ts = byRole[r];
       if ((!ts || !ts.length) && !hits(res[r].p)) continue;   // пустая партия — звук не добавляем
-      if (!ts || !ts.length){ const v = kit ? kit[r] : pickR(G.kit[r]); const t = newPartTrack(v, 'drums', r); if (!t) continue; ts = [t]; }
+      if (!ts || !ts.length){ const v = kit ? kit[r] : pickMood(G.kit[r]); const t = newPartTrack(v, 'drums', r); if (!t) continue; ts = [t]; }
       else if (kit) ts.forEach(t => replaceSound(t, kit[r]));
       ts.forEach((t, k) => { t.role = r; t.part = 'drums'; writeRow(t, k === 0 ? res[r] : { p: res[r].p.map((x, i) => x && i % 4 === 2), vel: res[r].vel }, n); });
     }
@@ -677,15 +785,19 @@ function applyPart(p, G, bars, whole){
   if (whole && ts.length > 1){ ts.slice(1).forEach(dropTrack); ts = [ts[0]]; }
   const want = (whole && S.sound === 'auto') || S.sound !== 'auto' ? resolveSound(p, G, S) : null;
   if (!ts.length){ const t = newPartTrack(want || resolveSound(p, G, S), p, p === 'bass' ? 'bass' : p === 'lead' ? 'mel' : p === 'chords' ? 'chords' : 'perc'); if (!t) return; ts = [t]; }
-  else if (want){ replaceSound(ts[0], want); if (p === 'chords'){ ts[0].role = PADLIKE.test(want) ? 'pad' : 'mel'; mixTrack(ts[0], ts[0].role); } }
+  else if (want){ if (p === 'chords') ts[0].role = PADLIKE.test(want) ? 'pad' : 'mel'; replaceSound(ts[0], want); }
   const kick = tracks.find(t => partOf(t) === 'drums' && (t.role === 'kick' || drumRole(t.v) === 'kick'));
   for (const t of ts){
     const cur = t.pat.slice(0, n);
     t.part = p; if (!t.role) t.role = p === 'bass' ? 'bass' : p === 'fx' ? 'perc' : 'mel';
     let r;
     if (p === 'bass') r = genBass(G, S, bars, genHarm, kick ? kick.pat.slice(0, 16) : null, cur);
-    else if (p === 'lead') r = genLead(G, S, bars, genHarm, cur);
-    else if (p === 'chords'){ r = genChords(G, S, bars, genHarm, t.v, cur); t.role = r.style === 'pad' ? 'pad' : 'mel'; }
+    else if (p === 'lead'){
+      const ch = partTracks('chords').find(x => x.role !== 'pad'), chP = ch ? ch.pat.slice(0, n) : null;
+      const up = partTracks('chords').length && (BASE[t.v] ?? 36) <= 36 && !/acid/.test(t.v) && (S.range === 'auto' ? G.lead.range : +S.range) < 3 ? 12 : 0;   // лид — на октаву выше аккордов
+      r = genLead(G, S, bars, genHarm, cur, chP, up);
+    }
+    else if (p === 'chords'){ const bs = partTracks('bass')[0]; r = genChords(G, S, bars, genHarm, t.v, cur, bs ? bs.pat.slice(0, n) : null); t.role = r.style === 'pad' ? 'pad' : 'mel'; }
     else r = genFx(G, S, bars, t.v);
     if (!MELODIC.includes(t.v)) r.notes = null;
     writeRow(t, r, n);
@@ -693,7 +805,21 @@ function applyPart(p, G, bars, whole){
 }
 const PART_ORDER = ['drums','bass','chords','lead','fx'];
 // ---------- главный вход: весь трек или одна партия ----------
+// ползунки дают дробные значения 0…2; каждый прогон берёт соседний уровень с нужной вероятностью
+// (70 % между Mid и High → чаще High, иногда Mid), а количества ударов считаются по точному значению
+const qz = v => { v = Math.max(0, Math.min(2, +v || 0)); const f = Math.floor(v); return Math.min(2, f + (Math.random() < v - f ? 1 : 0)); };
 function genRun(only){
+  const keep = { mood:GEN.mood, energy:GEN.energy, cx:GEN.cx, parts:PARTS.map(p => [GEN.parts[p].dens, GEN.parts[p].cx]) };
+  GEN.mood = qz(GEN.mood); GEN.energy = qz(GEN.energy); GEN.cx = qz(GEN.cx);
+  PARTS.forEach(p => { GEN.parts[p].dens = qz(GEN.parts[p].dens); GEN.parts[p].cx = qz(GEN.parts[p].cx); });
+  try { genRunCore(only); }
+  finally {
+    GEN.mood = keep.mood; GEN.energy = keep.energy; GEN.cx = keep.cx;
+    PARTS.forEach((p, k) => { GEN.parts[p].dens = keep.parts[k][0]; GEN.parts[p].cx = keep.parts[k][1]; });
+    genRender();
+  }
+}
+function genRunCore(only){
   if (!ac) return;
   const G = GENM[GEN.genre] || GENRES[0], whole = !only;
   genUndo();
@@ -713,6 +839,7 @@ function genRun(only){
   }
   // круг: звуки по порядку партий
   tracks.sort((a, b) => PART_ORDER.indexOf(partOf(a)) - PART_ORDER.indexOf(partOf(b)) || DRUM_ROLES.indexOf(a.role) - DRUM_ROLES.indexOf(b.role));
+  autoMix();
   // сайдчейн от кика
   const kick = tracks.find(t => t.role === 'kick');
   tracks.forEach(t => { if (t.scSrc && !tracks.includes(t.scSrc)) t.scSrc = null; if (kick && t !== kick && t.params.duck > 0) t.scSrc = kick; });
@@ -736,6 +863,11 @@ const KEYS = 'C C# D D# E F F# G G# A A# B'.split(' ');
 const LV = ['Low','Mid','High'];
 function seg(id, opts, val){ return '<div class="gseg" data-k="' + id + '">' + opts.map(([v, t]) => '<button data-v="' + v + '"' + (String(v) === String(val) ? ' class="on"' : '') + '>' + t + '</button>').join('') + '</div>'; }
 function row(lbl, html){ return '<div class="grow"><span class="lbl">' + lbl + '</span>' + html + '</div>'; }
+// ползунок 0–100 % (внутри — 0…2: между соседними уровнями генератор смешивает плавно)
+function slider(id, lbl, val, lo, hi){ const pc = Math.round((+val || 0) * 50);
+  return '<div class="gsl" data-k="' + id + '"><div class="gslh"><span class="lbl">' + lbl + '</span><b>' + pc + '%</b></div>' +
+    '<input type="range" min="0" max="100" step="1" value="' + pc + '" style="--p:' + pc + '%" aria-label="' + lbl + '">' +
+    '<div class="gsle"><span>' + lo + '</span><span>' + hi + '</span></div></div>'; }
 function stepper(id, txt, sub){ return '<div class="gstep" data-k="' + id + '"><button data-d="-1" aria-label="previous">‹</button><b>' + txt + (sub ? '<small>' + sub + '</small>' : '') + '</b><button data-d="1" aria-label="next">›</button></div>'; }
 function partSoundName(p){
   const S = GEN.parts[p], G = GENM[GEN.genre];
@@ -755,9 +887,9 @@ function genRender(){
     '<button class="gbig gpick" data-a="genres"><span class="lbl">Genre</span><b>' + G.name + '</b><i>▾</i></button>' +
     '<div class="ggenres" id="genGenres">' + GENRES.map(g => '<button data-g="' + g.id + '"' + (g.id === GEN.genre ? ' class="on"' : '') + '>' + g.name + '</button>').join('') + '</div>' +
     '<div class="g3">' + stepper('bpm', GEN.bpm ? GEN.bpm : 'Auto', 'BPM') + stepper('key', GEN.key < 0 ? 'Auto' : KEYS[GEN.key], 'Key') + stepper('scale', GEN.scale === 'auto' ? 'Auto' : SCALE_NAMES[GEN.scale], 'Scale') + '</div>' +
-    row('Energy', seg('energy', [[0,'Low'],[1,'Mid'],[2,'High']], GEN.energy)) +
-    row('Mood', seg('mood', [[0,'Dark'],[1,'Neutral'],[2,'Bright']], GEN.mood)) +
-    row('Complexity', seg('cx', [[0,'Simple'],[1,'Mid'],[2,'Complex']], GEN.cx)) +
+    slider('energy', 'Energy', GEN.energy, 'Low', 'High') +
+    slider('mood', 'Mood', GEN.mood, 'Dark', 'Bright') +
+    slider('cx', 'Complexity', GEN.cx, 'Simple', 'Complex') +
     row('Make', seg('make', [['scene','Scene ' + 'ABCD'[scene]],['song','Full song']], GEN.make)) +
     '<div class="gmodes">' + PARTS.map(p => '<span class="' + GEN.parts[p].mode + '">' + PART_NAMES[p] + '<i>' + GEN.parts[p].mode + '</i></span>').join('') + '</div>';
   // вкладка Parts
@@ -770,15 +902,15 @@ function genRender(){
     '<div class="gseg gpart">' + PARTS.map(p => '<button data-p="' + p + '"' + (p === GEN.part ? ' class="on"' : '') + '>' + PART_NAMES[p] + '</button>').join('') + '</div>' +
     stepper('sound', partSoundName(GEN.part), GEN.part === 'drums' ? 'Kit' : 'Sound') +
     row('Mode', seg('p.mode', [['new','New'],['keep','Keep'],['off','Off']], S.mode)) +
-    row('Density', seg('p.dens', [[0,'Low'],[1,'Mid'],[2,'High']], S.dens)) +
-    row('Complexity', seg('p.cx', [[0,'Low'],[1,'Mid'],[2,'High']], S.cx)) + extra;
+    slider('p.dens', 'Density', S.dens, 'Sparse', 'Dense') +
+    slider('p.cx', 'Complexity', S.cx, 'Simple', 'Complex') + extra;
   $('genGo').innerHTML = GEN.tab === 'track' ? '✦ Generate ' + (GEN.make === 'song' ? 'song' : 'scene ' + 'ABCD'[scene]) : '✦ Generate ' + PART_NAMES[GEN.part].toLowerCase();
   if (genGenresOpen) $('genGenres').classList.add('open');
 }
 let genGenresOpen = false;
 function genSet(k, v){
-  if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; if (+v === 0 && GEN.parts.fx.mode === 'new') GEN.parts.fx.dens = 0; }
-  else if (k === 'cx'){ GEN.cx = +v; for (const p of PARTS) GEN.parts[p].cx = +v; GEN.parts.drums.fills = +v; }
+  if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }
+  else if (k === 'cx'){ GEN.cx = +v; for (const p of PARTS) GEN.parts[p].cx = +v; GEN.parts.drums.fills = Math.round(+v); }
   else if (k === 'mood') GEN.mood = +v;
   else if (k === 'make') GEN.make = v;
   else if (k.startsWith('p.')){
@@ -813,7 +945,7 @@ function previewSound(p){
   }
   if (S.sound === 'auto') return;
   const t = partTracks(p)[0];
-  if (t){ replaceSound(t, S.sound); if (p === 'chords'){ t.role = PADLIKE.test(S.sound) ? 'pad' : 'mel'; mixTrack(t, t.role); } hit(t, ac.currentTime + 0.02); renderLib(); updateUI(); }
+  if (t){ if (p === 'chords') t.role = PADLIKE.test(S.sound) ? 'pad' : 'mel'; replaceSound(t, S.sound); hit(t, ac.currentTime + 0.02); renderLib(); updateUI(); }
   else { const tmp = makeTrack(S.sound); hit(tmp, ac.currentTime + 0.02); }
 }
 // жанр: подставляем его обычные режимы партий (например, у Acid нет аккордов)
@@ -835,6 +967,12 @@ function setGenOpen(on){
   $('genBtn').onclick = () => setGenOpen(!document.body.classList.contains('gen-open'));
   $('genClose').onclick = () => setGenOpen(false);
   box.querySelectorAll('.gtabs button').forEach(b => b.onclick = () => { GEN.tab = b.dataset.t; genSave(); genRender(); haptic('select'); });
+  // ползунки: при движении — только подпись, при отпускании — сохранить
+  box.addEventListener('input', e => {
+    const sl = e.target.closest('.gsl'); if (!sl) return;
+    const v = +e.target.value; e.target.style.setProperty('--p', v + '%'); sl.querySelector('b').textContent = v + '%';
+  });
+  box.addEventListener('change', e => { const sl = e.target.closest('.gsl'); if (sl) genSet(sl.dataset.k, +e.target.value / 50); });
   box.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !box.contains(b)) return;
     if (b.dataset.a === 'genres'){ genGenresOpen = !genGenresOpen; $('genGenres').classList.toggle('open', genGenresOpen); return; }
