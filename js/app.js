@@ -31,7 +31,7 @@ const sceneHas = k => tracks.some(tr => tr.scn[k].pat.some((on,i) => on && i < S
 // цвета для новых треков
 const TRACK_COLORS = ['#ff2e3a','#ff8a00','#ffd400','#b6ff3b','#2bff88','#00e5ff','#3d6bff','#9b5cff','#ff3df0','#ff5fa2'];
 // цвет подсветки на поле: в теме «Sampler» — оранжевый корпусный, иначе — цвет трека
-const drawAcc = () => document.body.classList.contains('skin-ko') ? '#ff5a1f' : P.acc;
+const drawAcc = () => '#ff5a1f';   // экран сэмплера светится оранжевым
 const curAcc = () => (typeof P !== 'undefined' && P && P.acc) || '';
 function setAcc(c){ P.acc = c; document.documentElement.style.setProperty('--acc', c); }
 function applyPreset(i){
@@ -968,19 +968,16 @@ function makeGrain(){
 }
 
 // ---------- режимы фона ----------
-const FX_MODES = ['tunnel','rings','flow','warp','sampler','off'];
+const FX_MODES = ['tunnel','rings','flow','warp','off'];
 let fxMode = 'tunnel', fxUser = false, kicks = [], hist = [], histTick = 0, flowP = [];
 function defaultFx(pr){
   return pr.fx || ({ 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
     || ({ 'Acid':'flow', 'Techno':'rings', 'Minimal / Dub':'warp', 'Electro / EBM':'tunnel' })[pr.genre] || 'tunnel';
 }
-// фон «Sampler» меняет весь интерфейс: светлый корпус, тёмный экран, клавиши (css/skin.css)
+// стиль сэмплера — основной: светлый корпус, тёмный экран, клавиши (css/skin.css); фоновые эффекты — на экране
 let lcdPat = null;
 function applySkin(on){
-  if (document.body.classList.contains('skin-ko') === on) return;
   document.body.classList.toggle('skin-ko', on);
-  try { localStorage.setItem('lr_skin', on ? '1' : ''); } catch (e) {}
-  if (typeof makeSprites === 'function' && tracks.length) makeSprites();
   const col = on ? '#d8d7d2' : '#050505', mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = col;
   if (typeof inTG !== 'undefined' && inTG) try {
     if (tg.isVersionAtLeast('6.1')){ tg.setHeaderColor(col); tg.setBackgroundColor(col); }
@@ -988,14 +985,13 @@ function applySkin(on){
   } catch (e) {}
   if (W) resize();
 }
-// user — смена кнопкой фона; тему «Sampler» меняет только она (генератор и пресеты её не сбрасывают)
-function setFx(m, user){
-  if (fxMode === 'sampler' && m !== 'sampler' && !user) return;
-  fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1); applySkin(m === 'sampler');
+function setFx(m){
+  if (!FX_MODES.includes(m)) m = 'off';
+  fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1);
   if (fbA){ for (const c of [fbA, fbB]) c.getContext('2d').clearRect(0,0,c.width,c.height); }
   flowP = []; hist = []; tShapes = [];
 }
-$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length], true); toast(fxMode === 'sampler' ? 'style · sampler' : 'background · ' + fxMode); };
+$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length]); toast('screen · ' + fxMode); };
 
 function runFX(pn){
   const dim = sel ? 0.45 : 1;
@@ -1003,11 +999,11 @@ function runFX(pn){
   else if (fxMode === 'flow'){ stepFlow(pn); g.globalAlpha = 0.85*dim; g.drawImage(fbA, 0, 0, W, H); g.globalAlpha = 1; }
   else if (fxMode === 'rings'){ drawRings(pn, dim); }
   else if (fxMode === 'warp'){ drawWarp(pn, dim); }
-  else if (fxMode === 'sampler'){            // экран: точки LCD-матрицы
-    if (!lcdPat){ const c = document.createElement('canvas'); c.width = c.height = 4; const x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.045)'; x.fillRect(1, 1, 2, 2); lcdPat = g.createPattern(c, 'repeat'); }
-    g.fillStyle = '#0d0e0d'; g.fillRect(0, 0, W, H); g.fillStyle = lcdPat; g.fillRect(0, 0, W, H);
-  }
+
   if (fxMode !== 'warp' && grid && grid.width){ g.globalAlpha = 0.7; g.drawImage(grid, 0, 0, W, H); g.globalAlpha = 1; }
+  // экран сэмплера: точки LCD-матрицы поверх любого эффекта
+  if (!lcdPat){ const c = document.createElement('canvas'); c.width = c.height = 4; const x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.045)'; x.fillRect(1, 1, 2, 2); lcdPat = g.createPattern(c, 'repeat'); }
+  g.fillStyle = lcdPat; g.fillRect(0, 0, W, H);
   // эффекты не мешают интерфейсу: внутри круга мягко темнее, центр закрыт
   if (fxMode !== 'off'){
     const rS = S_R*RAD, m1 = g.createRadialGradient(C.x, C.y, rS*0.3, C.x, C.y, rS*1.22);
@@ -1022,7 +1018,7 @@ function runFX(pn){
 // FLOW: частицы рождаются у круга и разлетаются наружу по спирали
 function stepFlow(pn){
   if (!fbA) return;
-  const x = fbA.getContext('2d'), w = fbA.width, h = fbA.height, cx = C.x, cy = C.y, T = pn/4000, acc = P.acc;
+  const x = fbA.getContext('2d'), w = fbA.width, h = fbA.height, cx = C.x, cy = C.y, T = pn/4000, acc = drawAcc();
   const r0 = S_R*RAD + 36, rMax = Math.hypot(w, h)/2 + 40;
   x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation = 'source-over';
   x.fillStyle = 'rgba(5,5,5,0.12)'; x.fillRect(0,0,w,h);
@@ -1048,7 +1044,7 @@ function stepFlow(pn){
 // TUNNEL (векторный): формы рождаются у круга, увеличиваются и поворачиваются, оставаясь чёткими
 let tShapes = [], tTick = 0;
 function drawTunnel(pn, dim){
-  const acc = P.acc, maxR = Math.hypot(W, H)/2 + 60;
+  const acc = drawAcc(), maxR = Math.hypot(W, H)/2 + 60;
   if ((tTick++ % 5) === 0){
     roseK += ((3 + bands.m*7) - roseK)*0.06; roseP += 0.012 + bands.h*0.05;
     const rose = [];
@@ -1086,7 +1082,7 @@ function drawTunnel(pn, dim){
 function drawRings(pn, dim){
   if (spec && playing && (histTick++ % 3 === 0)){ hist.unshift(Array.from(spec.slice(0, 64))); if (hist.length > 28) hist.pop(); }
   if (!hist.length) return;
-  const base = S_R*RAD + 64, maxR = Math.hypot(W, H)/2 + 40, n = 28, stp = (maxR - base)/n, acc = P.acc, M = 160;
+  const base = S_R*RAD + 64, maxR = Math.hypot(W, H)/2 + 40, n = 28, stp = (maxR - base)/n, acc = drawAcc(), M = 160;
   for (let k = hist.length-1; k >= 0; k--){
     const row = hist[k], r = base + k*stp, rot = pn/24000 + k*0.035;
     g.beginPath();
@@ -1105,7 +1101,7 @@ function drawRings(pn, dim){
 
 // WARP: точечная сетка на весь экран, рябь от бочек и дыхание от баса
 function drawWarp(pn, dim){
-  const st = 24, acc = P.acc, rr = kicks.map(t0 => (pn - t0)/1000).filter(a => a < 2.2);
+  const st = 24, acc = drawAcc(), rr = kicks.map(t0 => (pn - t0)/1000).filter(a => a < 2.2);
   for (let y = (C.y % st); y < H; y += st) for (let x = (C.x % st); x < W; x += st){
     const dx = x - C.x, dy = y - C.y, d = Math.hypot(dx, dy) || 1;
     let off = Math.sin(d*0.025 - pn*0.0025) * (1.5 + bands.b*8);
@@ -1150,7 +1146,7 @@ function drawFrame(){
 
   g.setTransform(DPR,0,0,DPR,0,0);
   g.globalCompositeOperation = 'source-over';
-  g.fillStyle = '#050505'; g.fillRect(0,0,W,H);
+  g.fillStyle = '#0d0e0d'; g.fillRect(0,0,W,H);
   runFX(pn);
 
   // центральное свечение от уровня звука
@@ -2375,8 +2371,8 @@ if (inTG){
   try {
     tg.ready(); tg.expand();
     if (tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();   // свайп по полю не закрывает приложение
-    if (tg.isVersionAtLeast('6.1')){ tg.setHeaderColor('#050505'); tg.setBackgroundColor('#050505'); }
-    if (tg.isVersionAtLeast('7.10') && tg.setBottomBarColor) tg.setBottomBarColor('#050505');
+    if (tg.isVersionAtLeast('6.1')){ tg.setHeaderColor('#d8d7d2'); tg.setBackgroundColor('#d8d7d2'); }
+    if (tg.isVersionAtLeast('7.10') && tg.setBottomBarColor) tg.setBottomBarColor('#d8d7d2');
     tg.BackButton.onClick(() => {
       const vm = $('varyMenu'), cm = $('clearMenu');
       if (vm && vm.classList.contains('open')) closeVaryMenu();
@@ -2494,8 +2490,7 @@ $('coachOk').onclick = ()=>{ document.body.classList.remove('coach'); local.set(
 
 const START_POOL = PRESETS.map((p, i) => i).filter(i => !PRESETS[i].blank);
 const FIRST_PRESET = START_POOL[Math.floor(Math.random()*START_POOL.length)];   // каждый запуск — случайный пресет
-makeGrain(); loadPreset(FIRST_PRESET);
-try { if (localStorage.getItem('lr_skin') === '1'){ fxUser = true; setFx('sampler', true); } } catch (e) {}   // тема «Sampler» запоминается
+makeGrain(); applySkin(true); loadPreset(FIRST_PRESET);
 resize(); requestAnimationFrame(draw);
 (async function boot(){
   await loadIndex();
