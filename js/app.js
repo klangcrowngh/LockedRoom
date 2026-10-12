@@ -1733,8 +1733,19 @@ function renderBlocks(){
   const sec = arrTotal()*STEPS*stepDur();
   $('songLen').textContent = arrTotal() * barsPer() + ' bars · ' + fmtTime(sec);
   $('songLoop').classList.toggle('on', songLoop);
+  renderSongMap(sec);
   updateSongProgress();
 }
+// карта песни: все блоки в одну полосу, ширина — по длине; тап — выбрать блок
+function renderSongMap(sec){
+  const tot = arrTotal() || 1, L = 'ABCD';
+  const cells = arr.map((b, k) => '<span data-k="' + k + '" data-s="' + b.s + '" style="flex:' + b.b + '"' + (k === selBlk ? ' class="sel"' : '') + '>' + (b.b / tot > 0.045 ? L[b.s] : '') + '</span>').join('');
+  for (const id of ['songMap', 'expMap']){ const m = $(id); if (m) m.innerHTML = cells + '<i class="ph"></i>'; }
+  const used = [0,1,2,3].filter(s => arr.some(b => b.s === s)).map(s => L[s]).join(' ');
+  const xs = $('expSum');
+  if (xs) xs.innerHTML = '<div class="big">' + fmtTime(sec) + '</div><div class="kv"><span><b>' + tot * barsPer() + '</b>bars</span><span><b>' + arr.length + '</b>blocks</span><span><b>' + bpm + '</b>bpm</span><span><b>' + used + '</b>scenes</span></div>';
+}
+['songMap', 'expMap'].forEach(id => { const m = $(id); if (m) m.onclick = e => { const c = e.target.closest('span[data-k]'); if (!c) return; selBlk = +c.dataset.k; renderBlocks(); showSongTab('arr'); haptic('select'); }; });
 function updateSongProgress(){
   const els = document.querySelectorAll('#blocks .blk'); if (!els.length) return;
   const pos = playPos();
@@ -1744,6 +1755,9 @@ function updateSongProgress(){
     frac = Math.min(1, ((songBar - r.start) + (pos >= 0 ? (pos % STEPS)/STEPS : 0)) / r.blk.b);
   }
   els.forEach((el, k) => { el.classList.toggle('cur', k === cur); el.lastChild.style.width = k === cur ? (frac*100) + '%' : (k < cur ? '100%' : '0'); });
+  // бегунок на карте песни
+  let at = -1; if (cur >= 0){ const tot = arrTotal() || 1; let s0 = 0; for (let k=0;k<cur;k++) s0 += arr[k].b; at = (s0 + frac * arr[cur].b) / tot; }
+  document.querySelectorAll('.smap .ph').forEach(p => { p.style.display = at < 0 ? 'none' : ''; p.style.left = (at * 100) + '%'; });
 }
 $('songBtn').onclick = () => setSongOpen(!document.body.classList.contains('song-open'));
 $('songClose').onclick = () => setSongOpen(false);

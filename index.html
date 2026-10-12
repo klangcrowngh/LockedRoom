@@ -25,8 +25,8 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=145">
-<link rel="stylesheet" href="css/skin.css?v=144">
+<link rel="stylesheet" href="css/app.css?v=150">
+<link rel="stylesheet" href="css/skin.css?v=148">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="skin-ko">
@@ -86,6 +86,7 @@
 
     <!-- 1. таймлайн: блоки и редактор выбранного -->
     <div class="spane" data-p="arr">
+      <div class="smap" id="songMap"></div>
       <div class="tl"><div class="blocks" id="blocks"></div><button id="blkAdd" title="add block">+</button></div>
       <div class="blkEd" id="blkEd">
         <div class="er"><span class="lbl">Scene</span><div class="bseg" id="edScene"><button data-v="0">A</button><button data-v="1">B</button><button data-v="2">C</button><button data-v="3">D</button></div></div>
@@ -96,12 +97,13 @@
 
     <!-- 3. экспорт -->
     <div class="spane" data-p="exp">
-      <div class="srow exp">
-        <div class="fmt"><button data-fmt="mp3" class="on">MP3</button><button data-fmt="wav">WAV</button></div>
-        <button id="renderBtn" class="acc"><svg class="ic"><use href="#i-save"/></svg> <span id="renderLbl">Render &amp; save</span></button>
-        <span class="msg" id="renderMsg"></span>
+      <div class="xsum" id="expSum"></div>
+      <div class="smap" id="expMap"></div>
+      <div class="fmt big"><button data-fmt="mp3" class="on"><b>MP3</b><small>small file · to share</small></button><button data-fmt="wav"><b>WAV</b><small>lossless · for mixing</small></button></div>
+      <div class="xfoot">
+        <span class="msg" id="renderMsg">renders the whole timeline · in Telegram the file goes to the bot chat</span>
+        <button id="renderBtn" class="acc big"><svg class="ic"><use href="#i-save"/></svg> <span id="renderLbl">Render &amp; save</span></button>
       </div>
-      <div class="ehint">Renders the whole timeline · in Telegram the file is sent to the bot chat</div>
     </div>
   </div>
   <!-- GEN: генератор трека по жанру — общая настройка (Track) и точечная (Parts) -->
@@ -209,7 +211,7 @@
 <script src="js/audio.js?v=146"></script>
 <script src="js/sounds.js?v=121"></script>
 <script src="js/profile.js?v=121"></script>
-<script src="js/app.js?v=146"></script>
+<script src="js/app.js?v=147"></script>
 <script src="js/gen.js?v=142"></script>
 </body>
 </html>

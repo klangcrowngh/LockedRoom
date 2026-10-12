@@ -698,3 +698,65 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
   #song .blkEd .bseg button,#song .blkEd .acts button{height:46px}
   #song .stabs button{height:40px}
 }
+
+/* ---------- Song: место используется — карта песни, крупный редактор, сводка экспорта ---------- */
+.smap{position:relative;display:flex;gap:2px;height:30px;flex:none;cursor:pointer}
+.smap span{min-width:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;letter-spacing:0;border-radius:3px;background:#3a3a39;color:#cfcec9}
+.smap span[data-s="1"]{background:#4d4d4b}.smap span[data-s="2"]{background:#2b2b2a}.smap span[data-s="3"]{background:#5e5e5b}
+.smap span.sel{box-shadow:inset 0 0 0 2px var(--acc);color:#fff}
+.smap .ph{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--acc);box-shadow:0 0 6px var(--acc);display:none;pointer-events:none}
+#song .spane[data-p="arr"] .blkEd{margin-top:auto;border:none}
+.xsum{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:var(--lcd,#1b1b1a);color:#e6e5e1;box-shadow:inset 0 2px 6px rgba(0,0,0,.6);flex:none}
+.xsum .big{font-size:34px;font-weight:700;letter-spacing:.02em;color:#ff8a52;font-variant-numeric:tabular-nums}
+.xsum .kv{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.xsum .kv span{display:flex;flex-direction:column;font-size:8px;letter-spacing:.16em;color:#9b9a95;text-transform:uppercase}
+.xsum .kv b{font-size:13px;letter-spacing:.06em;color:#e6e5e1}
+.fmt.big{display:flex;gap:8px;flex:none}
+.fmt.big button{flex:1;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.fmt.big button b{font-size:15px;letter-spacing:.2em}
+.fmt.big button small{font-size:8px;letter-spacing:.12em;opacity:.75;text-transform:uppercase}
+.xfoot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.xfoot .msg{color:var(--dim);font-size:9px;letter-spacing:.06em;text-align:center;text-transform:none}
+#renderBtn.big{height:52px;width:100%;justify-content:center;font-size:12px}
+@media (max-width:700px){
+  #song .spane[data-p="arr"],#song .spane[data-p="exp"]{gap:12px}
+  #song .blkEd .bseg button,#song .blkEd .acts button{height:50px}
+}
+/* ---------- GEN: ряды распределяются по высоте, клавиши крупнее ---------- */
+#gen .gbody{display:flex;flex-direction:column}
+#gen .gpane{flex:1 0 auto;justify-content:space-between;padding-bottom:10px}
+#gen .gseg button{height:44px}
+#gen .gseg.gpart button{height:46px}
+#gen .gstep button{height:48px}
+#gen .gbig{height:48px}
+#gen .gsl input{height:44px}
+/* блоки таймлайна растут по свободной высоте */
+#song .spane[data-p="arr"] .tl{flex:1 1 0;min-height:72px;max-height:132px}
+#song .tl .blocks{height:100%;align-items:stretch}
+#song .tl .blk .sc{height:auto !important;flex:1}
+#song #blkAdd{min-height:0 !important}
+/* низкие экраны: панели компактнее, крупные элементы — только если есть место */
+@media (max-height:700px){
+  #gen .gpane{justify-content:flex-start;gap:5px;padding-bottom:4px}
+  #gen .gseg button,#gen .gseg.gpart button,#gen .gstep button,#gen .gbig{height:36px}
+  #gen .gsl input{height:30px}
+  #song .spane[data-p="arr"],#song .spane[data-p="exp"]{gap:7px}
+  #song .spane[data-p="arr"] .smap{display:none}
+  #song .spane[data-p="arr"] .tl{flex:0 0 58px;min-height:58px}
+  #song .blkEd{gap:6px;padding-top:4px}
+  #song .blkEd .bseg button,#song .blkEd .acts button{height:38px}
+  .xsum{padding:8px 12px}.xsum .big{font-size:24px}
+  .fmt.big button{height:46px}
+  #renderBtn.big{height:44px}
+  #song .stabs button{height:34px}
+}
+@media (max-height:700px){
+  #gen .gpane{gap:3px}
+  #gen .shead .gtabs button,#gen .shead #varBtn,#gen .shead .closeX{height:34px}
+  #gen .gseg button,#gen .gseg.gpart button,#gen .gstep button,#gen .gbig{height:32px}
+  #gen .gsl input{height:26px}
+  #genGo{height:42px}
+  #song .spane[data-p="exp"] .smap{display:none}
+  .xsum .kv{gap:2px 10px}
+}
+@media (max-height:700px){#gen .gsl input{height:24px}}

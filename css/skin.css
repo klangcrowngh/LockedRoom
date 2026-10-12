@@ -173,3 +173,30 @@ body.skin-ko #pSolo.on:after{background:#fff;box-shadow:0 0 6px #fff}
 body.skin-ko #pMute.on{background:linear-gradient(#3a3a39,var(--dark2));color:#ff8a52;box-shadow:0 0 0 1px rgba(0,0,0,.18),inset 0 2px 5px rgba(0,0,0,.45)}
 body.skin-ko #pMute.on:after{background:#ff5a1f;box-shadow:0 0 6px #ff5a1f}
 body.skin-ko #pRemove{color:#b4300f}
+
+/* ---------- Tracks: без тёмных остатков, крупные строки ---------- */
+body.skin-ko .dhead{background:var(--bg);border-color:var(--line);padding:12px 14px 12px 18px}
+body.skin-ko .dhead b{color:var(--fg);font-size:14px}
+body.skin-ko .pr:hover,body.skin-ko .gcard .pr:hover{background:#dbdad4}
+body.skin-ko .gcard:before{display:none}
+body.skin-ko .gcard.now{box-shadow:inset 3px 0 0 var(--acc)}
+body.skin-ko .gh{padding:15px 14px 15px 16px}
+body.skin-ko .gh .gt b{font-size:12px}
+body.skin-ko .gh .gt small i{color:#fff;background:var(--acc);border-radius:3px;padding:1px 5px;margin-left:2px;letter-spacing:.1em}
+body.skin-ko .gcard .pr{padding:12px 14px 12px 12px;min-height:52px}
+body.skin-ko .gcard .pr .sw{width:8px;height:8px;border-radius:50%;align-self:center;opacity:1}
+body.skin-ko .gcard .pr.cur .sw{width:8px;box-shadow:0 0 0 3px rgba(255,90,31,.25)}
+body.skin-ko .gcard .pr.cur .t{color:#c4410f}
+body.skin-ko .gcard .pr .b{font-size:10px;color:var(--fg);background:#d6d5cf;border-radius:4px;padding:3px 6px;font-variant-numeric:tabular-nums}
+body.skin-ko .pbox .pbh{padding:14px 14px 8px}
+body.skin-ko .pbox .pact{padding:6px 14px}
+body.skin-ko .pbox .pact input{height:44px;font-size:13px;padding:0 12px}
+body.skin-ko .pbox .pact .acc{height:44px;padding:0 16px}
+body.skin-ko .pbox .pact.share button{height:42px}
+body.skin-ko .pbox .plist{margin:4px 0 0;padding:4px 0}
+body.skin-ko .pbox .pr{padding:11px 14px;min-height:46px;margin:2px 8px;border-radius:7px;border-left:none}
+body.skin-ko .pbox .pr.cur{background:#d4d3cd}
+body.skin-ko .pbox .pr.cur .t{color:#c4410f}
+body.skin-ko .psec{padding:18px 18px 6px;color:var(--dim)}
+body.skin-ko .pbox .pempty{padding:8px 22px 10px}
+body.skin-ko .gcard .pr.cur .b{background:#c4c3bd}
