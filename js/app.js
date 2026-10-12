@@ -30,6 +30,8 @@ const sceneHas = k => tracks.some(tr => tr.scn[k].pat.some((on,i) => on && i < S
 
 // цвета для новых треков
 const TRACK_COLORS = ['#ff2e3a','#ff8a00','#ffd400','#b6ff3b','#2bff88','#00e5ff','#3d6bff','#9b5cff','#ff3df0','#ff5fa2'];
+// цвет подсветки на поле: в теме «Sampler» — оранжевый корпусный, иначе — цвет трека
+const drawAcc = () => document.body.classList.contains('skin-ko') ? '#ff5a1f' : P.acc;
 const curAcc = () => (typeof P !== 'undefined' && P && P.acc) || '';
 function setAcc(c){ P.acc = c; document.documentElement.style.setProperty('--acc', c); }
 function applyPreset(i){
@@ -893,7 +895,7 @@ function resize(){
   DPR = Math.min(IS_MOBILE ? 1.5 : 2, window.devicePixelRatio||1); W = innerWidth; H = innerHeight;
   cv.width = W*DPR; cv.height = H*DPR;
   const top = $('top').offsetHeight, bot = $('bottom').offsetHeight;
-  document.documentElement.style.setProperty('--topH', top+'px');
+  document.documentElement.style.setProperty('--topH', top+'px'); document.documentElement.style.setProperty('--botH', bot+'px');
   C = {x:W/2, y: top + (H-top-bot)/2};
   RAD = W < 700 ? Math.max(80, Math.min(W*0.5-34, (H-top-bot)*0.5-38)) : Math.max(80, Math.min(W*0.5-56, (H-top-bot)*0.5-40));
   // кольцо времени: на телефоне крупнее, чтобы по точкам было легко попадать пальцем
@@ -946,7 +948,7 @@ function makeSprites(){
     const gr = x.createRadialGradient(64,64,0,64,64,64);
     gr.addColorStop(0,`rgba(${r},${gg},${b},1)`); gr.addColorStop(0.25,`rgba(${r},${gg},${b},.35)`); gr.addColorStop(1,`rgba(${r},${gg},${b},0)`);
     x.fillStyle = gr; x.fillRect(0,0,128,128); return c; };
-  const h = P.acc;
+  const h = drawAcc();
   glowS = { acc: mk(parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)), white: mk(255,255,255) };
 }
 function makeGrid(){
@@ -964,18 +966,34 @@ function makeGrain(){
 }
 
 // ---------- режимы фона ----------
-const FX_MODES = ['tunnel','rings','flow','warp','off'];
+const FX_MODES = ['tunnel','rings','flow','warp','sampler','off'];
 let fxMode = 'tunnel', fxUser = false, kicks = [], hist = [], histTick = 0, flowP = [];
 function defaultFx(pr){
   return pr.fx || ({ 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
     || ({ 'Acid':'flow', 'Techno':'rings', 'Minimal / Dub':'warp', 'Electro / EBM':'tunnel' })[pr.genre] || 'tunnel';
 }
-function setFx(m){
-  fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1);
+// фон «Sampler» меняет весь интерфейс: светлый корпус, тёмный экран, клавиши (css/skin.css)
+let lcdPat = null;
+function applySkin(on){
+  if (document.body.classList.contains('skin-ko') === on) return;
+  document.body.classList.toggle('skin-ko', on);
+  try { localStorage.setItem('lr_skin', on ? '1' : ''); } catch (e) {}
+  if (typeof makeSprites === 'function' && tracks.length) makeSprites();
+  const col = on ? '#d8d7d2' : '#050505', mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = col;
+  if (typeof inTG !== 'undefined' && inTG) try {
+    if (tg.isVersionAtLeast('6.1')){ tg.setHeaderColor(col); tg.setBackgroundColor(col); }
+    if (tg.isVersionAtLeast('7.10') && tg.setBottomBarColor) tg.setBottomBarColor(col);
+  } catch (e) {}
+  if (W) resize();
+}
+// user — смена кнопкой фона; тему «Sampler» меняет только она (генератор и пресеты её не сбрасывают)
+function setFx(m, user){
+  if (fxMode === 'sampler' && m !== 'sampler' && !user) return;
+  fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1); applySkin(m === 'sampler');
   if (fbA){ for (const c of [fbA, fbB]) c.getContext('2d').clearRect(0,0,c.width,c.height); }
   flowP = []; hist = []; tShapes = [];
 }
-$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length]); toast('background · ' + fxMode); };
+$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length], true); toast(fxMode === 'sampler' ? 'style · sampler' : 'background · ' + fxMode); };
 
 function runFX(pn){
   const dim = sel ? 0.45 : 1;
@@ -983,6 +1001,10 @@ function runFX(pn){
   else if (fxMode === 'flow'){ stepFlow(pn); g.globalAlpha = 0.85*dim; g.drawImage(fbA, 0, 0, W, H); g.globalAlpha = 1; }
   else if (fxMode === 'rings'){ drawRings(pn, dim); }
   else if (fxMode === 'warp'){ drawWarp(pn, dim); }
+  else if (fxMode === 'sampler'){            // экран: точки LCD-матрицы
+    if (!lcdPat){ const c = document.createElement('canvas'); c.width = c.height = 4; const x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.045)'; x.fillRect(1, 1, 2, 2); lcdPat = g.createPattern(c, 'repeat'); }
+    g.fillStyle = '#0d0e0d'; g.fillRect(0, 0, W, H); g.fillStyle = lcdPat; g.fillRect(0, 0, W, H);
+  }
   if (fxMode !== 'warp' && grid && grid.width){ g.globalAlpha = 0.7; g.drawImage(grid, 0, 0, W, H); g.globalAlpha = 1; }
   // эффекты не мешают интерфейсу: внутри круга мягко темнее, центр закрыт
   if (fxMode !== 'off'){
@@ -1115,7 +1137,7 @@ function draw(){
   requestAnimationFrame(draw);
 }
 function drawFrame(){
-  const t = now(), acc = P.acc, pos = playPos(), cur = pos<0 ? -1 : Math.floor(pos)%STEPS, pn = performance.now();
+  const t = now(), acc = drawAcc(), pos = playPos(), cur = pos<0 ? -1 : Math.floor(pos)%STEPS, pn = performance.now();
   easeAngles();
   while (vq.length && vq[0].t <= t) spawnFx(vq.shift());
   if (an){ an.getByteFrequencyData(spec); an.getByteTimeDomainData(wave);
@@ -2470,7 +2492,9 @@ $('coachOk').onclick = ()=>{ document.body.classList.remove('coach'); local.set(
 
 const START_POOL = PRESETS.map((p, i) => i).filter(i => !PRESETS[i].blank);
 const FIRST_PRESET = START_POOL[Math.floor(Math.random()*START_POOL.length)];   // каждый запуск — случайный пресет
-makeGrain(); loadPreset(FIRST_PRESET); resize(); requestAnimationFrame(draw);
+makeGrain(); loadPreset(FIRST_PRESET);
+try { if (localStorage.getItem('lr_skin') === '1'){ fxUser = true; setFx('sampler', true); } } catch (e) {}   // тема «Sampler» запоминается
+resize(); requestAnimationFrame(draw);
 (async function boot(){
   await loadIndex();
   try {

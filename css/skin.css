@@ -1,0 +1,113 @@
+/* LOCKED ROOM — тема «Sampler»: светлый корпус, тёмный LCD-экран, объёмные клавиши, оранжевые акценты.
+   Включается фоном «Sampler» (кнопка фона). Все правила — только внутри body.skin-ko. */
+body.skin-ko{
+  --bg:#d8d7d2; --fg:#1c1c1b; --dim:#77766f; --line:#c3c2bb; --acc:#ff5a1f;
+  --key:#e9e8e3; --key2:#dcdbd5; --keyEdge:#b4b3ac; --keyShade:#a3a29b;
+  --dark:#2c2c2b; --dark2:#1f1f1e; --panel:#cfcec8; --lcd:#111211; --lcdTxt:#ff6a2e;
+  font-family:'Inter','Helvetica Neue',Arial,sans-serif; background:var(--bg); color:var(--fg);
+}
+body.skin-ko #skinFrame{display:block}
+/* корпус сверху и снизу — сплошной, без градиентов */
+body.skin-ko #top{background:var(--bg);border-bottom:none}
+body.skin-ko #bottom{background:var(--bg);border-top:none}
+body.skin-ko #hint{color:var(--dim)}
+body.skin-ko #hint b{color:var(--fg)}
+body.skin-ko .sep{background:var(--line)}
+body.skin-ko .grab{background:#a5a49d !important;border-radius:2px}
+/* окно экрана: всё вокруг закрыто «пластиком» корпуса */
+#skinFrame{display:none;position:fixed;left:8px;right:8px;top:calc(var(--topH,64px) + 2px);bottom:calc(var(--botH,120px) + 4px);border-radius:14px;pointer-events:none;z-index:5;
+  box-shadow:0 0 0 200vmax var(--bg),inset 0 0 0 1px #000,inset 0 3px 10px rgba(0,0,0,.75),0 1px 0 rgba(255,255,255,.7),0 -1px 0 rgba(0,0,0,.18)}
+
+/* ---------- клавиши ---------- */
+body.skin-ko button{background:linear-gradient(var(--key),var(--key2));color:var(--fg);border:none;border-radius:7px;font-weight:600;letter-spacing:.06em;
+  box-shadow:0 0 0 1px var(--keyEdge),0 2px 0 var(--keyShade),0 3px 5px rgba(0,0,0,.12);transition:transform .06s,box-shadow .06s,background .15s,color .15s}
+body.skin-ko button:hover{color:var(--fg)}
+body.skin-ko button:active{transform:translateY(1px);box-shadow:0 0 0 1px var(--keyEdge),0 1px 0 var(--keyShade)}
+body.skin-ko button.on{background:linear-gradient(#3a3a39,var(--dark2));color:#f4f4f2;box-shadow:0 0 0 1px #111,0 2px 0 #0d0d0d}
+body.skin-ko button.acc,body.skin-ko #genGo,body.skin-ko button.big{background:linear-gradient(#ff6d31,#f04f17);color:#fff;box-shadow:0 0 0 1px #c2420f,0 2px 0 #a8380c,0 3px 6px rgba(240,79,23,.25)}
+body.skin-ko button.acc.on{background:linear-gradient(#e2470f,#c93c0b);color:#fff}
+body.skin-ko button.warn:hover{color:#c4300f}
+body.skin-ko .clearBtn.arm{background:#ff2e3a;color:#fff}
+/* тёмные клавиши: сцены, пэды, сегменты выбора */
+body.skin-ko .seg,body.skin-ko .gseg,body.skin-ko .bseg,body.skin-ko .fmt,body.skin-ko #songGen{border:none;gap:5px;background:transparent}
+body.skin-ko .seg .scn,body.skin-ko .pad,body.skin-ko .gseg button,body.skin-ko .bseg button,body.skin-ko .fmt button,body.skin-ko #songGen button{
+  background:linear-gradient(#3b3b3a,var(--dark));color:#ecebe7;border:none;border-radius:7px;box-shadow:0 0 0 1px #121212,0 2px 0 #0e0e0e,0 3px 5px rgba(0,0,0,.18)}
+body.skin-ko .seg .scn.on,body.skin-ko .pad.on,body.skin-ko .gseg button.on,body.skin-ko .bseg button.on,body.skin-ko .fmt button.on{background:linear-gradient(#ff6d31,#f04f17);color:#fff;box-shadow:0 0 0 1px #c2420f,0 2px 0 #a8380c}
+body.skin-ko .scn.has:after{background:#8d8c86}
+body.skin-ko .scn.on:after{background:#fff}
+body.skin-ko .pad.on{box-shadow:0 0 0 1px #c2420f,0 0 16px rgba(255,90,31,.45)}
+/* клавиши без «объёма»: вкладки, строки списков, пункты меню, стрелки внутри переключателей */
+body.skin-ko .stabs button,body.skin-ko .item .play,body.skin-ko .pr .x,body.skin-ko #varyMenu button,body.skin-ko .popMenu button,body.skin-ko .sheetHead button,body.skin-ko .gstep button{
+  background:transparent;box-shadow:none;border-radius:0}
+body.skin-ko .stabs{border-bottom-color:var(--line)}
+body.skin-ko .stabs button{color:var(--dim)}
+body.skin-ko .stabs button.on,body.skin-ko .stabs button.on:hover{color:var(--fg);border-bottom-color:var(--acc);background:transparent}
+body.skin-ko .gh{background:transparent}
+
+/* ---------- табло (LCD): название и темп ---------- */
+body.skin-ko #titleBtn,body.skin-ko #bpm{background:var(--lcd);color:#c9c8c2;box-shadow:inset 0 0 0 1px #000,inset 0 2px 6px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.7);border-radius:8px}
+body.skin-ko #titleBtn small{color:#8a8983}
+body.skin-ko #titleBtn b,body.skin-ko #bpm b{color:var(--lcdTxt);font-family:'JetBrains Mono',ui-monospace,monospace}
+body.skin-ko .logo i,body.skin-ko .sub b,body.skin-ko .val b{color:var(--acc)}
+body.skin-ko #toast{background:var(--lcd);color:var(--lcdTxt);border:none;border-radius:8px;box-shadow:0 0 0 1px #000,0 6px 20px rgba(0,0,0,.35);font-family:'JetBrains Mono',ui-monospace,monospace}
+
+/* ---------- выдвижные панели — «пластик» чуть темнее корпуса ---------- */
+body.skin-ko.gen-open #gen,body.skin-ko.song-open #song,body.skin-ko.pads-open #perform,body.skin-ko #panel,body.skin-ko #panel .head,body.skin-ko.coach #coach{
+  background:var(--panel);border:none;border-radius:14px 14px 0 0;box-shadow:0 -1px 0 rgba(255,255,255,.6),0 -6px 18px rgba(0,0,0,.12)}
+body.skin-ko #panel .head{border-radius:0;box-shadow:none}
+body.skin-ko.coach #coach{border-radius:14px;box-shadow:0 0 0 2px var(--acc)}
+body.skin-ko .ptabs{background:var(--panel);border:none;gap:5px}
+body.skin-ko .chips button{background:linear-gradient(var(--key),var(--key2))}
+body.skin-ko .blkEd{border-color:var(--line)}
+/* блоки таймлайна и план песни — маленькие экраны */
+body.skin-ko .blk{background:var(--lcd);border:1px solid #000;border-radius:7px;color:#e6e5e1}
+body.skin-ko .blk.sel{background:#262625;border-color:var(--acc)}
+body.skin-ko .blk.sel .sc{color:#fff}
+body.skin-ko .plan{background:var(--lcd);border:1px solid #000;border-radius:8px}
+body.skin-ko .plan span{color:#8a8983}
+body.skin-ko .plan span b{color:#eceae6}
+body.skin-ko details.more,body.skin-ko .bsec{border-color:var(--line)}
+body.skin-ko button.ghost{background:transparent;box-shadow:inset 0 0 0 1px var(--keyEdge);color:var(--dim)}
+/* GEN */
+body.skin-ko .gstep{border:none;border-radius:8px;background:linear-gradient(var(--key),var(--key2));box-shadow:0 0 0 1px var(--keyEdge),0 2px 0 var(--keyShade)}
+body.skin-ko .gstep b{border-color:var(--line)}
+body.skin-ko .gstep b small{color:var(--dim)}
+body.skin-ko .gbig b{color:#c4410f}
+body.skin-ko .gmodes span{border:1px solid var(--line);border-radius:6px;background:#dad9d3}
+body.skin-ko .gmodes span i{color:#c4410f}
+body.skin-ko .gmodes span.keep i{color:var(--fg)}
+body.skin-ko .gslh b{color:#c4410f}
+
+/* ---------- шаги, ноты, ручки ---------- */
+body.skin-ko .st{background:var(--key);border:1px solid var(--keyEdge);border-radius:5px;color:var(--dim)}
+body.skin-ko .st.beat{border-color:#8f8e88}
+body.skin-ko .st.on{background:var(--acc);border-color:#c2420f;color:#fff}
+body.skin-ko .st.cur{outline-color:var(--fg)}
+body.skin-ko .cell{background:var(--key);border-color:var(--keyEdge);border-radius:4px}
+body.skin-ko .cell .zero{background:#a9a8a2}
+body.skin-ko .knob select{background:var(--key);border-color:var(--keyEdge);color:var(--fg)}
+body.skin-ko .ntype input{background:var(--key);border-color:var(--keyEdge);color:var(--fg)}
+/* ползунки: дорожка в корпусе, ручка — белая «кнопка» */
+body.skin-ko input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--acc) var(--p),#adaca6 var(--p))}
+body.skin-ko input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--acc) var(--p),#adaca6 var(--p))}
+body.skin-ko input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-10px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff,#dddcd6);box-shadow:0 0 0 1px #9d9c96,0 2px 4px rgba(0,0,0,.3)}
+body.skin-ko input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff,#dddcd6);box-shadow:0 0 0 1px #9d9c96,0 2px 4px rgba(0,0,0,.3)}
+body.skin-ko .gsl input[type=range]::-webkit-slider-thumb{width:30px;height:30px;margin-top:-13px}
+body.skin-ko .gsl input[type=range]::-moz-range-thumb{width:30px;height:30px}
+
+/* ---------- списки: треки, библиотека, меню, темп ---------- */
+body.skin-ko #pre,body.skin-ko #lib{background:var(--bg);backdrop-filter:none;border-color:var(--line)}
+body.skin-ko #lib .lhead,body.skin-ko #lib .lfoot{border-color:var(--line)}
+body.skin-ko .gcard,body.skin-ko .pbox{background:#e6e5e0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+body.skin-ko .gcard.open,body.skin-ko .gcard.now{border-color:#a9a8a2}
+body.skin-ko .gcard.open .gb>div,body.skin-ko .pbox .plist{border-color:var(--line)}
+body.skin-ko .gh:hover,body.skin-ko .item:hover{background:#dbdad4}
+body.skin-ko .gcard .pr.cur{background:#d4d3cd}
+body.skin-ko .pact input,body.skin-ko .pact textarea{border-color:var(--keyEdge);background:var(--key);border-radius:6px}
+body.skin-ko .pempty{color:var(--dim)}
+body.skin-ko #varyMenu,body.skin-ko .popMenu,body.skin-ko #bpmPop{background:#e6e5e0;border:1px solid var(--keyEdge);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);color:var(--fg)}
+body.skin-ko #varyMenu button:hover,body.skin-ko .popMenu button:hover{background:#d6d5cf;color:#c4410f}
+body.skin-ko #varyMenu button.orig,body.skin-ko .popMenu button.danger,body.skin-ko .popMenu .vmh.sub,body.skin-ko #varyMenu .vmh.sub{border-color:var(--line)}
+body.skin-ko .popMenu button.danger{color:#c4300f}
+/* экран загрузки остаётся тёмным «дисплеем» */
+body.skin-ko #gate{--bg:#0d0e0d;--fg:#f2f2f2;--dim:#6b6b6b;background:#0d0e0d;color:#f2f2f2;font-family:'JetBrains Mono',ui-monospace,monospace}
