@@ -23,7 +23,7 @@ const PROGS = {
 };
 
 const GENRES = [
-  { id:'techno', name:'Techno', bpm:[128,134], swing:[0,0.05], drive:5, grit:1.4, fx:['tunnel','rings'], legacy:'techno',
+  { id:'techno', name:'Techno', bpm:[128,134], swing:[0,0.05], drive:5, grit:1.4, legacy:'techno',
     scales:{ dark:['phrygian','minor'], mid:['minor','dorian'], bright:['dorian'] },
     kit:{ kick:['kick','kick909','rumblekick','punchkick'], snare:['clap909','clap','snare909'], hat:['hat909','hat','hat808'], ohat:['ohat909','ride','ohat'], perc:['metal','rim707','perc','click','tom909'] },
     snd:{ bass:['rumble','sub','reese','fmbass','mono'], lead:['pluck','darksaw','bell','blip','hoover'], chords:['stab','chord','diststab','dubchord'], fx:['sweepup','impact','noiz','crash'] },
@@ -33,7 +33,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0040300403004030', n:[1,4], prog:'static', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'hardtechno', name:'Hard Techno', bpm:[145,155], swing:[0,0], drive:9, grit:3, fx:['tunnel'], legacy:'techno',
+  { id:'hardtechno', name:'Hard Techno', bpm:[145,155], swing:[0,0], drive:9, grit:3, legacy:'techno',
     scales:{ dark:['phrygian','harmonic'], mid:['minor','phrygian'], bright:['minor'] },
     kit:{ kick:['hardkick','distkick','gabber','rumblekick'], snare:['clap909','bigclap','steel'], hat:['hat909','hat','tick'], ohat:['ohat909','ride'], perc:['metal','indhit','tom909'] },
     snd:{ bass:['rumble','reese','buzz','growl'], lead:['hoover','darksaw','siren','acid'], chords:['ravestab','diststab','stab'], fx:['impact','sweepup','boom','crash'] },
@@ -43,7 +43,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'new' } },
 
-  { id:'melodic', name:'Melodic Techno', bpm:[120,126], swing:[0,0.04], drive:3, grit:0.8, fx:['flow','rings'], legacy:'techno',
+  { id:'melodic', name:'Melodic Techno', bpm:[120,126], swing:[0,0.04], drive:3, grit:0.8, legacy:'techno',
     scales:{ dark:['minor','harmonic','phrygian'], mid:['minor','dorian'], bright:['dorian','major'] },
     kit:{ kick:['kick','deepkick','kick909'], snare:['clap','snare909','roomclap','rim'], hat:['hat909','shaker','crisphat'], ohat:['ohat909','ride'], perc:['perc','click','clave','tom'] },
     snd:{ bass:['sawbass','moog','reese','sub','mono'], lead:['tpluck','pluck','sawlead','bell','synclead','supersaw'], chords:['junopad','warmpad','airpad','glasspad','polysynth','strings'], fx:['sweepup','impact','crash'] },
@@ -53,7 +53,7 @@ const GENRES = [
     lead:{ rhythm:'arp', range:2 }, chords:{ style:'pad', prog:'emotional', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'deephouse', name:'Deep House', bpm:[118,124], swing:[0.1,0.2], drive:2, grit:0.4, fx:['warp','flow'], legacy:'house',
+  { id:'deephouse', name:'Deep House', bpm:[118,124], swing:[0.1,0.2], drive:2, grit:0.4, legacy:'house',
     scales:{ dark:['minor','dorian'], mid:['dorian','minor'], bright:['major','mixolydian','dorian'] },
     kit:{ kick:['kick909','deepkick','kick808','lofikick'], snare:['clap','snap','rim','clap808'], hat:['shaker','hat707','hat909','crisphat'], ohat:['ohat909','ohat808'], perc:['conga','bongo','rim','wood','clave'] },
     snd:{ bass:['dubbass','bass','moog','sub','offbass'], lead:['kalimba','marimba','bell','rhodes','vox','sinelead'], chords:['deepchord','dubchord','epiano','organ','warmpad','housepiano'], fx:['crackle','sweepup','crash'] },
@@ -63,7 +63,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'1031103110311031', n:[2,5], prog:'deep', rate:1 },
     parts:{ lead:'off', chords:'new', fx:'off' } },
 
-  { id:'house', name:'House', bpm:[120,126], swing:[0.06,0.16], drive:2, grit:0.5, fx:['warp','flow'], legacy:'house',
+  { id:'house', name:'House', bpm:[120,126], swing:[0.06,0.16], drive:2, grit:0.5, legacy:'house',
     scales:{ dark:['minor','dorian'], mid:['dorian','mixolydian'], bright:['major','mixolydian'] },
     kit:{ kick:['kick909','punchkick','kick808'], snare:['clap909','clap808','clap','roomclap'], hat:['hat909','hat707','shaker','tamb'], ohat:['ohat909','ohat808'], perc:['conga','bongo','cowbell','tamb','clave'] },
     snd:{ bass:['offbass','bass','moog','bass808','dubbass'], lead:['rhodes','piano','vox','bell','wurli','clav'], chords:['housepiano','organ','epiano','chord','polysynth'], fx:['crash','sweepup','impact'] },
@@ -73,7 +73,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030302003030020', n:[2,6], prog:'house', rate:2 },
     parts:{ lead:'off', chords:'new', fx:'off' } },
 
-  { id:'techhouse', name:'Tech House', bpm:[124,128], swing:[0.08,0.18], drive:3, grit:0.7, fx:['warp','tunnel'], legacy:'house',
+  { id:'techhouse', name:'Tech House', bpm:[124,128], swing:[0.08,0.18], drive:3, grit:0.7, legacy:'house',
     scales:{ dark:['minor','phrygian'], mid:['minor','dorian'], bright:['dorian','mixolydian'] },
     kit:{ kick:['punchkick','kick909','kick','deepkick'], snare:['clap','snap','tightclap','clap909'], hat:['hat909','shaker','pedalhat','hat707'], ohat:['ohat909','ohat'], perc:['rim','bongo','conga','perc','click','wood'] },
     snd:{ bass:['bass808','moog','sub','fmbass','offbass','mono'], lead:['vox','blip','sinelead','pluck'], chords:['stab','dubchord','organ'], fx:['crash','sweepup','glitch','noiz'] },
@@ -83,7 +83,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030020030020030', n:[1,3], prog:'static', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'off' } },
 
-  { id:'proghouse', name:'Progressive House', bpm:[122,128], swing:[0,0.04], drive:2, grit:0.5, fx:['rings','flow'], legacy:'trance',
+  { id:'proghouse', name:'Progressive House', bpm:[122,128], swing:[0,0.04], drive:2, grit:0.5, legacy:'trance',
     scales:{ dark:['minor'], mid:['minor','major'], bright:['major','lydian'] },
     kit:{ kick:['kick909','punchkick','kick'], snare:['clap909','roomclap','bigclap'], hat:['hat909','hat','shaker'], ohat:['ohat909','ride'], perc:['tamb','shaker','perc','click'] },
     snd:{ bass:['offbass','sawbass','moog','sub'], lead:['tpluck','pluck','supersaw','sawlead','bell'], chords:['junopad','polysynth','warmpad','glasspad','strings','chord'], fx:['sweepup','crash','impact'] },
@@ -93,7 +93,7 @@ const GENRES = [
     lead:{ rhythm:'arp', range:2 }, chords:{ style:'pad', prog:'emotional', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
 
-  { id:'trance', name:'Trance', bpm:[136,140], swing:[0,0], drive:3, grit:0.6, fx:['rings','tunnel'], legacy:'trance',
+  { id:'trance', name:'Trance', bpm:[136,140], swing:[0,0], drive:3, grit:0.6, legacy:'trance',
     scales:{ dark:['minor','harmonic'], mid:['minor'], bright:['major','minor'] },
     kit:{ kick:['kick909','punchkick','kick'], snare:['clap909','roomclap','bigclap'], hat:['hat909','hat'], ohat:['ohat909'], perc:['tamb','ride','shaker'] },
     snd:{ bass:['offbass','sawbass','sub'], lead:['tpluck','supersaw','pluck','sawlead','hoover'], chords:['junopad','polysynth','glasspad','strings','choir'], fx:['sweepup','crash','impact'] },
@@ -103,7 +103,7 @@ const GENRES = [
     lead:{ rhythm:'arp', range:2 }, chords:{ style:'pad', prog:'emotional', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
 
-  { id:'acid', name:'Acid', bpm:[128,136], swing:[0,0.08], drive:4, grit:1.2, fx:['flow','warp'], legacy:'acid',
+  { id:'acid', name:'Acid', bpm:[128,136], swing:[0,0.08], drive:4, grit:1.2, legacy:'acid',
     scales:{ dark:['phrygian','minor'], mid:['minor','dorian'], bright:['dorian','mixolydian'] },
     kit:{ kick:['kick909','kick','kick808'], snare:['clap909','snare909','clap','rim'], hat:['hat909','hat808'], ohat:['ohat909','ohat808'], perc:['cowbell','rim','clave','tom909'] },
     snd:{ bass:['sub','bass808','rumble'], lead:['acid303','acid'], chords:['stab','chord'], fx:['sweepup','zap','crash'] },
@@ -113,7 +113,7 @@ const GENRES = [
     lead:{ rhythm:'acid', range:2 }, chords:{ style:'stab', m:'0030003000300030', n:[1,2], prog:'static', rate:1 },
     parts:{ bass:'off', lead:'new', chords:'off', fx:'off' } },
 
-  { id:'minimal', name:'Minimal', bpm:[122,128], swing:[0.1,0.2], drive:2, grit:0.4, fx:['warp','flow'], legacy:'minimal',
+  { id:'minimal', name:'Minimal', bpm:[122,128], swing:[0.1,0.2], drive:2, grit:0.4, legacy:'minimal',
     scales:{ dark:['minor','phrygian'], mid:['dorian','minor'], bright:['dorian','mixolydian'] },
     kit:{ kick:['deepkick','clickkick','kick','lofikick'], snare:['rim','snap','tightclap','rim707'], hat:['shaker','tick','crisphat','pedalhat'], ohat:['ride','ohat909'], perc:['clave','wood','click','bongo','triangle'] },
     snd:{ bass:['sub','dubbass','bass808'], lead:['marimba','kalimba','bell','blip','glock'], chords:['dubchord','deepchord','epiano'], fx:['crackle','glitch','zap'] },
@@ -123,7 +123,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0010001000100010', n:[1,3], prog:'static', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'dubtechno', name:'Dub Techno', bpm:[116,124], swing:[0,0.08], drive:1, grit:0.3, fx:['flow','warp'], legacy:'minimal',
+  { id:'dubtechno', name:'Dub Techno', bpm:[116,124], swing:[0,0.08], drive:1, grit:0.3, legacy:'minimal',
     scales:{ dark:['minor'], mid:['minor','dorian'], bright:['dorian'] },
     kit:{ kick:['deepkick','kick','lofikick'], snare:['rim','snap','lofisnare'], hat:['hat909','shaker','tick'], ohat:['ohat909','ride'], perc:['click','wood','clave'] },
     snd:{ bass:['sub','dubbass'], lead:['bell','sinelead'], chords:['dubchord','deepchord','chord'], fx:['crackle','noiz'] },
@@ -133,7 +133,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:1 }, chords:{ style:'stab', a:['...x.......x....', '..x.......x.....', '...x..x....x..x.'], m:'0010001000100010', n:[0,2], prog:'static', rate:1 },
     parts:{ lead:'off', chords:'new', fx:'off' } },
 
-  { id:'electro', name:'Electro', bpm:[120,130], swing:[0,0.08], drive:3, grit:0.8, fx:['tunnel','warp'], legacy:'electro',
+  { id:'electro', name:'Electro', bpm:[120,130], swing:[0,0.08], drive:3, grit:0.8, legacy:'electro',
     scales:{ dark:['phrygian','minor'], mid:['minor'], bright:['dorian'] },
     kit:{ kick:['kick808','kick707','kick606'], snare:['snare808','clap808','snare707'], hat:['hat808','hat707','hat606'], ohat:['ohat808'], perc:['cowbell','rim707','clave','tom'] },
     snd:{ bass:['fmbass','sqbass','mono','bass808'], lead:['blip','sqlead','pwm','sawlead','synclead','vox'], chords:['polysynth','stab','chord'], fx:['zap','laser','glitch'] },
@@ -143,7 +143,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030020030020030', n:[1,3], prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'new' } },
 
-  { id:'ebm', name:'EBM / Dark Electro', bpm:[118,128], swing:[0,0], drive:6, grit:2, fx:['tunnel','rings'], legacy:'dark',
+  { id:'ebm', name:'EBM / Dark Electro', bpm:[118,128], swing:[0,0], drive:6, grit:2, legacy:'dark',
     scales:{ dark:['phrygian','harmonic'], mid:['minor','phrygian'], bright:['minor'] },
     kit:{ kick:['distkick','hardkick','kick909','kick'], snare:['darksnare','steel','snare909'], hat:['hat808','tick','hat'], ohat:['ohat808'], perc:['metal','indhit','steel'] },
     snd:{ bass:['ebm','buzz','mono','reese'], lead:['darksaw','chant','vox','siren','hoover'], chords:['diststab','ravestab','pad','choir'], fx:['impact','boom','noiz'] },
@@ -153,7 +153,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:1 }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'off' } },
 
-  { id:'breaks', name:'Breakbeat', bpm:[128,138], swing:[0,0.08], drive:4, grit:1, fx:['tunnel','warp'], legacy:'electro',
+  { id:'breaks', name:'Breakbeat', bpm:[128,138], swing:[0,0.08], drive:4, grit:1, legacy:'electro',
     scales:{ dark:['minor','phrygian'], mid:['minor','dorian'], bright:['dorian'] },
     kit:{ kick:['kick909','punchkick','kick808','kick'], snare:['crispsnare','snare909','snare','bigclap'], hat:['hat909','hat','hat808'], ohat:['ohat909','ride'], perc:['tom909','conga','cowbell','tamb'] },
     snd:{ bass:['reese','fmbass','sawbass','sub','moog'], lead:['hoover','pluck','blip','sawlead','vox'], chords:['ravestab','stab','chord','polysynth'], fx:['sweepup','crash','impact','zap'] },
@@ -163,7 +163,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030020030020030', n:[1,3], prog:'static', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'dnb', name:'Drum & Bass', bpm:[170,176], swing:[0,0], drive:4, grit:1, fx:['tunnel','rings'], legacy:'electro',
+  { id:'dnb', name:'Drum & Bass', bpm:[170,176], swing:[0,0], drive:4, grit:1, legacy:'electro',
     scales:{ dark:['minor','phrygian'], mid:['minor','dorian'], bright:['dorian','major'] },
     kit:{ kick:['punchkick','kick909','kick','clickkick'], snare:['crispsnare','snare909','snare','steel'], hat:['hat909','hat','crisphat'], ohat:['ride','ohat909'], perc:['shaker','tamb','rim','click'] },
     snd:{ bass:['reese','sub','sawbass','growl','fmbass'], lead:['pluck','bell','sinelead','sawlead','vox'], chords:['airpad','warmpad','glasspad','strings','epiano'], fx:['sweepup','crash','impact','sweepdown'] },
@@ -173,7 +173,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:2 }, chords:{ style:'pad', prog:'emotional', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'dubstep', name:'Dubstep', bpm:[138,142], swing:[0,0.05], drive:6, grit:2, fx:['tunnel','warp'], legacy:'dark',
+  { id:'dubstep', name:'Dubstep', bpm:[138,142], swing:[0,0.05], drive:6, grit:2, legacy:'dark',
     scales:{ dark:['phrygian','minor'], mid:['minor'], bright:['minor','dorian'] },
     kit:{ kick:['punchkick','kick','hardkick','distkick'], snare:['bigclap','crispsnare','snare','steel'], hat:['hat','hat909','tick'], ohat:['ohat909','ride'], perc:['metal','tom','indhit','click'] },
     snd:{ bass:['wobble','growl','reese','sub','buzz'], lead:['siren','hoover','sawlead','vox'], chords:['pad','choir','strings','diststab'], fx:['impact','boom','sweepup','laser'] },
@@ -183,7 +183,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:1 }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'off', chords:'new', fx:'new' } },
 
-  { id:'ukg', name:'UK Garage', bpm:[130,134], swing:[0.15,0.28], drive:3, grit:0.7, fx:['warp','flow'], legacy:'house',
+  { id:'ukg', name:'UK Garage', bpm:[130,134], swing:[0.15,0.28], drive:3, grit:0.7, legacy:'house',
     scales:{ dark:['minor','dorian'], mid:['dorian','minor'], bright:['major','dorian'] },
     kit:{ kick:['kick909','punchkick','kick808'], snare:['clap','snare909','rim','snap'], hat:['hat909','shaker','hat707'], ohat:['ohat909','ohat808'], perc:['rim','tamb','click','bongo'] },
     snd:{ bass:['bass808','sub','moog','fmbass','offbass'], lead:['vox','bell','rhodes','piano','sqlead'], chords:['organ','epiano','deepchord','chord','housepiano'], fx:['sweepup','crash','zap'] },
@@ -193,7 +193,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030020300200302', n:[1,4], prog:'deep', rate:2 },
     parts:{ lead:'off', chords:'new', fx:'off' } },
 
-  { id:'trap', name:'Trap / Bass', bpm:[136,150], swing:[0,0.06], drive:5, grit:1.6, fx:['tunnel','rings'], legacy:'dark',
+  { id:'trap', name:'Trap / Bass', bpm:[136,150], swing:[0,0.06], drive:5, grit:1.6, legacy:'dark',
     scales:{ dark:['phrygian','harmonic'], mid:['minor','harmonic'], bright:['minor','dorian'] },
     kit:{ kick:['kick808','punchkick','kick'], snare:['clap808','snare808','bigclap','snap'], hat:['hat808','hat606','tick'], ohat:['ohat808'], perc:['rim','cowbell','click','tom'] },
     snd:{ bass:['bass808','sub','growl'], lead:['bell','pluck','vox','glock','sinelead'], chords:['choir','strings','pad','airpad'], fx:['impact','laser','sweepup'] },
@@ -203,7 +203,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:1 }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'synthwave', name:'Synthwave', bpm:[96,116], swing:[0,0], drive:2, grit:0.5, fx:['rings','flow'], legacy:'electro',
+  { id:'synthwave', name:'Synthwave', bpm:[96,116], swing:[0,0], drive:2, grit:0.5, legacy:'electro',
     scales:{ dark:['minor','dorian'], mid:['minor','major'], bright:['major','lydian','mixolydian'] },
     kit:{ kick:['kick707','kick909','punchkick','kick606'], snare:['roomclap','bigclap','snare707','snare'], hat:['hat707','hat909','hat606'], ohat:['ohat808','ohat909'], perc:['tom','tamb','cowbell'] },
     snd:{ bass:['sawbass','sqbass','moog','mono'], lead:['sawlead','sqlead','pwm','synclead','brass','bell'], chords:['polysynth','junopad','strings','warmpad'], fx:['sweepup','crash','impact'] },
@@ -213,7 +213,7 @@ const GENRES = [
     lead:{ rhythm:'straight', range:2 }, chords:{ style:'pad', prog:'pop', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'idm', name:'IDM / Glitch', bpm:[100,130], swing:[0,0.15], drive:3, grit:1, fx:['warp','rings'], legacy:'minimal',
+  { id:'idm', name:'IDM / Glitch', bpm:[100,130], swing:[0,0.15], drive:3, grit:1, legacy:'minimal',
     scales:{ dark:['phrygian','minor'], mid:['dorian','lydian'], bright:['lydian','major'] },
     kit:{ kick:['clickkick','lofikick','kick707','kick808'], snare:['lofisnare','snap','rim','steel'], hat:['tick','crisphat','pedalhat'], ohat:['ride'], perc:['click','wood','metal','clave','triangle'] },
     snd:{ bass:['sub','fmbass','sqbass','mono'], lead:['kalimba','glock','bell','blip','marimba'], chords:['glasspad','airpad','epiano','deepchord'], fx:['glitch','zap','laser','crackle'] },
@@ -223,7 +223,7 @@ const GENRES = [
     lead:{ rhythm:'synco', range:2 }, chords:{ style:'pad', prog:'dreamy', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
 
-  { id:'ambient', name:'Ambient Techno', bpm:[110,122], swing:[0,0.05], drive:1, grit:0.2, fx:['flow','rings'], legacy:'minimal',
+  { id:'ambient', name:'Ambient Techno', bpm:[110,122], swing:[0,0.05], drive:1, grit:0.2, legacy:'minimal',
     scales:{ dark:['minor'], mid:['dorian','major'], bright:['lydian','major'] },
     kit:{ kick:['deepkick','lofikick','kick'], snare:['rim','snap'], hat:['shaker','crisphat','tick'], ohat:['ride'], perc:['click','triangle','wood'] },
     snd:{ bass:['sub','dubbass'], lead:['bell','glock','kalimba','sinelead'], chords:['airpad','glasspad','warmpad','strings','choir'], fx:['crackle','sweepup'] },
@@ -762,7 +762,6 @@ function setGlobals(G, whole){
     swing = d === 0 ? 0 : Math.round((d === 2 ? Math.min(0.4, sw[1] + 0.12) : rnd(sw[0], sw[1])) * 100) / 100;
     P.drive = Math.max(0, G.drive + (S.energy - 1)); P.grit = G.grit; P.genKey = G.legacy; P.genre = G.name; P.genName = G.name;
     if (busSh){ busSh.curve = curve(P.grit); busComp.gain.value = 1/(1+P.grit*0.6); }
-    const fx = pickR(G.fx); if (FX_MODES.includes(fx)) setFx(fx);
     $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; showSwing();
   }
 }

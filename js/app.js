@@ -57,7 +57,7 @@ function loadPreset(i){
   if (!P.blank){ scene = 1; tracks.forEach(bindScene); variate(3, true); scene = 0; } tracks.forEach(bindScene); dying = [];
   tracks.forEach(buildChain);
   arr = tplArr(P.tpl || 'club'); setSongOn(false, true);
-  linkFlash = {}; makeSprites(); if (!fxUser) setFx(defaultFx(P)); updateUI(); renderLib(); renderBlocks();
+  linkFlash = {}; makeSprites(); updateUI(); renderLib(); renderBlocks();
 }
 
 function firstStep(tr){ const i = tr.pat.indexOf(true); return i < 0 ? 0 : i; }
@@ -273,7 +273,7 @@ const sceneEmpty = k => !tracks.some(t => t.scn[k].pat.some((x, i) => x && i < S
 // Варианты одной роли взаимозаменяемы, поэтому сочетаний тысячи, а слои остаются согласованы.
 const K4 = 'x...x...x...x...', BB = '....x.......x...';
 const GENRE_POOLS = {
-  techno: { bpm:[128,136], drive:5, grit:1.4, fx:['tunnel','rings'],
+  techno: { bpm:[128,136], drive:5, grit:1.4,
     kick:[[['kick','kick909'], K4], [['hardkick','kick909'], K4], [['kick','punchkick'], 'x...x...x...x..x']],
     snare:[[['clap909','clap'], BB], [['snare909','clap'], '....x.......x.x.'], [['bigclap','clap909'], '............x...'], [['rim707','rim'], '..x..x....x..x..']],
     hat:[[['hat909','hat808'], '..x...x...x...x.'], [['hat','hat909'], 'xxxxxxxxxxxxxxxx'], [['hat909','tick'], 'x.xxx.xxx.xxx.xx'], [['hat808','hat909'], '.xx..xx..xx..xx.']],
@@ -283,7 +283,7 @@ const GENRE_POOLS = {
     mel:[[['stab','chord'], '..x.......x..x..'], [['pluck','darksaw'], 'x..x..x.x..x..x.'], [['bell','blip'], 'x...x.x...x.x...'], [['hoover'], 'x.......x.......'], [['stab','diststab'], 'x..x..x.........']],
     pad:[[['pad','warmpad'], 'x...............', [0]], [['strings'], 'x.......x.......', [0,-2]]],
     opt:{ ohat:0.5, perc:0.6, mel:0.75, pad:0.3 } },
-  acid: { bpm:[126,134], drive:4, grit:1.2, fx:['flow','warp'],
+  acid: { bpm:[126,134], drive:4, grit:1.2,
     kick:[[['kick909','kick'], K4], [['kick808','kick909'], 'x...x...x...x.x.']],
     snare:[[['clap909','snare909'], BB], [['clap','clap909'], '....x.......x..x'], [['rim'], '..x...x...x..x..']],
     hat:[[['hat909','hat808'], '..x...x...x...x.'], [['hat808'], 'x.x.x.x.x.x.x.x.'], [['hat909'], 'xxxxxxxxxxxxxxxx']],
@@ -293,7 +293,7 @@ const GENRE_POOLS = {
     mel:[[['acid303'], 'x.xx.xx.x.xxx.x.', null, [1,.7,1,.7,.7,1,.7,.7,1,.7]], [['acid303'], 'xx.x.xx.xx.x.x.x', null, [1,.7,.7,1,.7,.7,1,.7,.7,1]],
          [['acid303','acid'], 'xxxxxxxxxxxxxxxx', null, [1,.6,.8,.6]], [['acid303'], 'x.x.xx.xx.x.xx.x', null, [1,.7,.7,1]]],
     opt:{ ohat:0.4, perc:0.5, bass:0.4, mel:1 } },
-  house: { bpm:[120,126], drive:2, grit:0.5, fx:['warp','flow'],
+  house: { bpm:[120,126], drive:2, grit:0.5,
     kick:[[['kick909','kick808'], K4], [['punchkick','kick909'], K4]],
     snare:[[['clap909','clap808'], BB], [['clap','roomclap'], BB], [['snap','clap808'], '....x.......x..x']],
     hat:[[['shaker'], 'x.xxx.xxx.xxx.xx'], [['hat909','hat707'], '..x...x...x...x.'], [['tamb','shaker'], 'xxxxxxxxxxxxxxxx'], [['hat707'], '.xx..xx..xx..xx.']],
@@ -303,7 +303,7 @@ const GENRE_POOLS = {
     mel:[[['organ','housepiano'], '...x..x....x..x.', [0]], [['rhodes','epiano'], 'x.....x...x.....'], [['housepiano'], '..x...x...x...x.', [0,0,3,-2]], [['organ'], 'x..x..x.........', [0,0,-2]], [['epiano','rhodes'], '...x.......x....']],
     pad:[[['warmpad','junopad'], 'x...............', [0]], [['strings'], 'x.......x.......', [0,3]]],
     opt:{ ohat:0.7, perc:0.6, mel:0.85, pad:0.3 } },
-  electro: { bpm:[116,126], drive:3, grit:0.8, fx:['tunnel','warp'],
+  electro: { bpm:[116,126], drive:3, grit:0.8,
     kick:[[['kick808'], 'x......x..x.....'], [['kick808','kick707'], 'x.....x...x..x..'], [['kick707'], 'x..x......x.....'], [['kick808'], 'x.......x.x.....']],
     snare:[[['snare808','clap808'], BB], [['snare707','snare808'], '....x.......x...'], [['clap808'], '....x.......x..x']],
     hat:[[['hat808'], 'x.x.x.x.x.x.x.x.'], [['hat707','hat808'], 'x.xxx.xxx.xxx.xx'], [['hat808'], 'xxxxxxxxxxxxxxxx']],
@@ -313,7 +313,7 @@ const GENRE_POOLS = {
     mel:[[['blip','sqlead'], '..x...x...x.x...'], [['pwm','sawlead'], 'x.......x...x...'], [['blip'], 'x.x.x.x.x.x.x.x.'], [['sqlead','synclead'], 'x..x..x.....x...'], [['vox','sinelead'], 'x...............', [0]]],
     pad:[[['pad','junopad'], 'x...............', [0]]],
     opt:{ ohat:0.4, perc:0.7, mel:0.8, pad:0.2 } },
-  minimal: { bpm:[122,128], drive:2, grit:0.4, fx:['warp','flow'],
+  minimal: { bpm:[122,128], drive:2, grit:0.4,
     kick:[[['deepkick','kick'], K4], [['clickkick','deepkick'], K4], [['lofikick','deepkick'], K4]],
     snare:[[['rim'], '..x..x....x..x..'], [['snap','tightclap'], BB], [['rim707','snap'], '.....x.......x..']],
     hat:[[['shaker'], 'x.xxx.xxx.xxx.xx'], [['tick','crisphat'], 'x.x.x.x.x.x.x.x.'], [['crisphat'], '..x...x...x...x.'], [['tick'], 'xxxxxxxxxxxxxxxx']],
@@ -323,7 +323,7 @@ const GENRE_POOLS = {
     mel:[[['dubchord'], '...x.......x....', [0]], [['deepchord','bell'], '..x.......x.....'], [['marimba','kalimba'], 'x..x...x..x.....'], [['dubchord'], '......x.......x.', [0,3]]],
     pad:[[['airpad','pad'], 'x...............', [0]]],
     opt:{ ohat:0.3, perc:0.85, mel:0.7, pad:0.25 } },
-  trance: { bpm:[134,140], drive:3, grit:0.6, fx:['rings','tunnel'],
+  trance: { bpm:[134,140], drive:3, grit:0.6,
     kick:[[['kick909','punchkick'], K4]],
     snare:[[['clap909'], BB], [['roomclap','clap909'], BB]],
     hat:[[['hat909'], '..x...x...x...x.'], [['hat'], 'xxxxxxxxxxxxxxxx'], [['hat909','hat'], 'x.xxx.xxx.xxx.xx']],
@@ -333,7 +333,7 @@ const GENRE_POOLS = {
     mel:[[['tpluck'], 'x.xx.xx.x.xx.xx.'], [['supersaw'], 'x.....x.....x...'], [['tpluck','pluck'], 'x.x.x.x.x.x.x.x.'], [['supersaw','hoover'], 'x.......x.......'], [['bell','tpluck'], 'x..x..x...x..x..']],
     pad:[[['junopad','warmpad'], 'x...............', [0]], [['glasspad'], 'x...............', [0]], [['strings','choir'], 'x.......x.......', [0,-2]]],
     opt:{ ohat:0.5, perc:0.3, mel:1, pad:0.7 } },
-  dark: { bpm:[120,128], drive:7, grit:2.2, fx:['tunnel','rings'],
+  dark: { bpm:[120,128], drive:7, grit:2.2,
     kick:[[['distkick','hardkick'], K4], [['hardkick'], 'x...x...x...x.x.']],
     snare:[[['darksnare'], BB], [['steel','darksnare'], BB], [['darksnare'], '............x.xx']],
     hat:[[['hat808'], '..x...x...x...x.'], [['tick'], 'xxxxxxxxxxxxxxxx'], [['hat808','tick'], 'x.x.x.x.x.x.x.x.']],
@@ -397,7 +397,6 @@ function genGlobals(key){
   bpm = B.bpm[0] + Math.round(Math.random()*(B.bpm[1]-B.bpm[0]));
   P.drive = B.drive; P.grit = B.grit; P.root = pickR([26,28,29,31,33]);
   if (busSh){ busSh.curve = curve(P.grit); busComp.gain.value = 1/(1+P.grit*0.6); }
-  const fx = Array.isArray(B.fx) ? pickR(B.fx) : B.fx; if (FX_MODES.includes(fx)) setFx(fx);
   const SW = { house:[0.12,0.22], minimal:[0.1,0.2], electro:[0.04,0.12], acid:[0,0.08], techno:[0,0.06], trance:[0,0.03], dark:[0,0.05] }[key] || [0,0];
   swing = Math.round((SW[0] + Math.random()*(SW[1]-SW[0]))*100)/100; if (typeof showSwing === 'function') showSwing();
 }
@@ -902,7 +901,6 @@ function resize(){
   RAD = W < 700 ? Math.max(80, Math.min(W*0.5-34, (H-top-bot)*0.5-38)) : Math.max(80, Math.min(W*0.5-56, (H-top-bot)*0.5-40));
   // кольцо времени: на телефоне крупнее, чтобы по точкам было легко попадать пальцем
   T_R = W < 700 ? Math.min(0.5, Math.max(0.38, 92/RAD)) : Math.min(0.4, Math.max(0.26, 70/RAD));
-  makeGrid(); makeFB();
 }
 addEventListener('resize', resize);
 
@@ -938,13 +936,8 @@ function easeAngles(){
 // ============================================================
 //  VISUAL FX
 // ============================================================
-let fbA = null, fbB = null, wave = null, bands = { b:0, m:0, h:0 }, roseK = 3, roseP = 0, kickPoly = 0;
-function makeFB(){
-  const w = Math.max(1, W|0), h = Math.max(1, H|0);
-  fbA = document.createElement('canvas'); fbA.width = w; fbA.height = h;
-  fbB = document.createElement('canvas'); fbB.width = w; fbB.height = h;
-}
-let vq = [], rings = [], parts = [], glowS = null, grid = null, level = 0, kickGlow = 0;
+let wave = null, bands = { b:0, m:0, h:0 };
+let vq = [], rings = [], parts = [], glowS = null, level = 0, kickGlow = 0;
 function makeSprites(){
   const mk = (r,gg,b) => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
     const gr = x.createRadialGradient(64,64,0,64,64,64);
@@ -953,14 +946,6 @@ function makeSprites(){
   const h = drawAcc();
   glowS = { acc: mk(parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)), white: mk(255,255,255) };
 }
-function makeGrid(){
-  grid = document.createElement('canvas'); grid.width = Math.max(1, W*DPR|0); grid.height = Math.max(1, H*DPR|0);
-  const x = grid.getContext('2d'); x.scale(DPR,DPR); const st = 26;
-  for (let yy = (C.y%st); yy < H; yy += st) for (let xx = (C.x%st); xx < W; xx += st){
-    const d = Math.hypot(xx-C.x, yy-C.y)/(RAD*1.4); const a = Math.max(0, 0.14 - d*0.09);
-    x.fillStyle = `rgba(255,255,255,${a})`; x.fillRect(xx, yy, 1, 1);
-  }
-}
 function makeGrain(){
   const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d'), im = x.createImageData(160,160);
   for (let i=0;i<im.data.length;i+=4){ const v = Math.random()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255; }
@@ -968,12 +953,9 @@ function makeGrain(){
 }
 
 // ---------- режимы фона ----------
-const FX_MODES = ['tunnel','rings','flow','warp','off'];
-let fxMode = 'tunnel', fxUser = false, kicks = [], hist = [], histTick = 0, flowP = [];
-function defaultFx(pr){
-  return pr.fx || ({ 'ACID TECHNO':'flow', 'HARD TECHNO':'tunnel', 'MINIMAL DARK':'warp' })[pr.name]
-    || ({ 'Acid':'flow', 'Techno':'rings', 'Minimal / Dub':'warp', 'Electro / EBM':'tunnel' })[pr.genre] || 'tunnel';
-}
+// фон экрана — один эффект: Warp (точечная сетка, рябь от бочки)
+const fxMode = 'warp';
+let kicks = [];
 // стиль сэмплера — основной: светлый корпус, тёмный экран, клавиши (css/skin.css); фоновые эффекты — на экране
 let lcdPat = null;
 function applySkin(on){
@@ -985,27 +967,15 @@ function applySkin(on){
   } catch (e) {}
   if (W) resize();
 }
-function setFx(m){
-  if (!FX_MODES.includes(m)) m = 'off';
-  fxMode = m; $('fxName').textContent = m[0].toUpperCase() + m.slice(1);
-  if (fbA){ for (const c of [fbA, fbB]) c.getContext('2d').clearRect(0,0,c.width,c.height); }
-  flowP = []; hist = []; tShapes = [];
-}
-$('fxBtn').onclick = ()=>{ fxUser = true; setFx(FX_MODES[(FX_MODES.indexOf(fxMode)+1) % FX_MODES.length]); toast('screen · ' + fxMode); };
 
 function runFX(pn){
   const dim = sel ? 0.45 : 1;
-  if (fxMode === 'tunnel'){ drawTunnel(pn, dim); }
-  else if (fxMode === 'flow'){ stepFlow(pn); g.globalAlpha = 0.85*dim; g.drawImage(fbA, 0, 0, W, H); g.globalAlpha = 1; }
-  else if (fxMode === 'rings'){ drawRings(pn, dim); }
-  else if (fxMode === 'warp'){ drawWarp(pn, dim); }
-
-  if (fxMode !== 'warp' && grid && grid.width){ g.globalAlpha = 0.7; g.drawImage(grid, 0, 0, W, H); g.globalAlpha = 1; }
+  drawWarp(pn, dim);
   // экран сэмплера: точки LCD-матрицы поверх любого эффекта
   if (!lcdPat){ const c = document.createElement('canvas'); c.width = c.height = 4; const x = c.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0.045)'; x.fillRect(1, 1, 2, 2); lcdPat = g.createPattern(c, 'repeat'); }
   g.fillStyle = lcdPat; g.fillRect(0, 0, W, H);
-  // эффекты не мешают интерфейсу: внутри круга мягко темнее, центр закрыт
-  if (fxMode !== 'off'){
+  // эффект не мешает интерфейсу: внутри круга мягко темнее, центр закрыт
+  {
     const rS = S_R*RAD, m1 = g.createRadialGradient(C.x, C.y, rS*0.3, C.x, C.y, rS*1.22);
     m1.addColorStop(0, 'rgba(5,5,5,0.5)'); m1.addColorStop(0.75, 'rgba(5,5,5,0.32)'); m1.addColorStop(1, 'rgba(5,5,5,0)');
     g.fillStyle = m1; g.beginPath(); g.arc(C.x, C.y, rS*1.22, 0, Math.PI*2); g.fill();
@@ -1013,90 +983,6 @@ function runFX(pn){
     m2.addColorStop(0, 'rgba(5,5,5,1)'); m2.addColorStop(0.55, 'rgba(5,5,5,0.92)'); m2.addColorStop(1, 'rgba(5,5,5,0)');
     g.fillStyle = m2; g.beginPath(); g.arc(C.x, C.y, r0 + 36, 0, Math.PI*2); g.fill();
   }
-}
-
-// FLOW: частицы рождаются у круга и разлетаются наружу по спирали
-function stepFlow(pn){
-  if (!fbA) return;
-  const x = fbA.getContext('2d'), w = fbA.width, h = fbA.height, cx = C.x, cy = C.y, T = pn/4000, acc = drawAcc();
-  const r0 = S_R*RAD + 36, rMax = Math.hypot(w, h)/2 + 40;
-  x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation = 'source-over';
-  x.fillStyle = 'rgba(5,5,5,0.12)'; x.fillRect(0,0,w,h);
-  const N = Math.min(380, (w*h/3200)|0);
-  const spawn = q => { const a = Math.random()*Math.PI*2, r = r0 + Math.random()*40; q.x = cx+Math.cos(a)*r; q.y = cy+Math.sin(a)*r; q.a = Math.random()<0.08; };
-  while (flowP.length < N){ const q = {}; spawn(q); const a = Math.random()*Math.PI*2, r = r0 + Math.random()*(rMax-r0); q.x = cx+Math.cos(a)*r; q.y = cy+Math.sin(a)*r; flowP.push(q); }
-  const kick = kicks.length ? Math.exp(-(pn - kicks[kicks.length-1])/250) : 0;
-  const sp = 0.6 + bands.b*1.8 + kick*1.5;
-  x.lineWidth = 1;
-  for (const q of flowP){
-    const rx = q.x - cx, ry = q.y - cy, rr = Math.hypot(rx, ry) || 1, ux = rx/rr, uy = ry/rr;
-    const wob = Math.sin(rr*0.015 - T*3 + Math.atan2(ry, rx)*3)*0.35;
-    const dx = ux*(1 + kick*0.5) + (-uy)*(0.8 + wob), dy = uy*(1 + kick*0.5) + ux*(0.8 + wob);
-    const nx = q.x + dx*sp, ny = q.y + dy*sp, fade = Math.min(1, (rr - r0)/120);
-    x.strokeStyle = q.a ? acc : '#fff'; x.globalAlpha = (q.a ? 0.35 : 0.1 + bands.h*0.12)*fade;
-    x.beginPath(); x.moveTo(q.x, q.y); x.lineTo(nx, ny); x.stroke();
-    q.x = nx; q.y = ny;
-    if (rr > rMax) spawn(q);
-  }
-  x.globalAlpha = 1;
-}
-
-// TUNNEL (векторный): формы рождаются у круга, увеличиваются и поворачиваются, оставаясь чёткими
-let tShapes = [], tTick = 0;
-function drawTunnel(pn, dim){
-  const acc = drawAcc(), maxR = Math.hypot(W, H)/2 + 60;
-  if ((tTick++ % 5) === 0){
-    roseK += ((3 + bands.m*7) - roseK)*0.06; roseP += 0.012 + bands.h*0.05;
-    const rose = [];
-    for (let k=0;k<=180;k++){ const th = k/180*Math.PI*2, r = RAD*(0.98 + 0.08*(0.5+0.5*Math.cos(roseK*th+roseP)) + bands.b*0.04);
-      rose.push(Math.cos(th)*r, Math.sin(th)*r); }
-    tShapes.unshift({ pts:rose, born:pn, col:'#fff', a:0.1 + bands.m*0.35, r:RAD*1.06 });
-    if (wave && playing){
-      const wv = [], N = wave.length;
-      for (let k=0;k<=N;k+=2){ const v = (wave[k%N]-128)/128, th = k/N*Math.PI*2, r = RAD*(1.02 + v*0.1); wv.push(Math.cos(th)*r, Math.sin(th)*r); }
-      tShapes.unshift({ pts:wv, born:pn, col:acc, a:0.2 + bands.b*0.4, r:RAD*1.12 });
-    }
-    if (tShapes.length > 40) tShapes.length = 40;
-  }
-  if (kickPoly > 0.9){
-    const n = Math.max(3, tracks.length), pl = [];
-    for (let k=0;k<=n;k++){ const th = -Math.PI/2 + k/n*Math.PI*2; pl.push(Math.cos(th)*RAD*0.98, Math.sin(th)*RAD*0.98); }
-    tShapes.unshift({ pts:pl, born:pn, col:acc, a:0.7, r:RAD*0.98, kick:true }); kickPoly = 0.5;
-  }
-  kickPoly *= 0.6;
-  const LIFE = 2600;
-  tShapes = tShapes.filter(sh => pn - sh.born < LIFE);
-  for (const sh of tShapes){
-    const age = (pn - sh.born)/1000, sc = Math.exp(age*(sh.kick ? 0.45 : 0.32)), k = (pn - sh.born)/LIFE;
-    if (sh.r*sc > maxR) continue;
-    g.save(); g.translate(C.x, C.y); g.rotate(age*0.22); g.scale(sc, sc);
-    g.lineWidth = 1/sc; g.strokeStyle = sh.col; g.globalAlpha = sh.a*(1-k)*(1-k)*dim;
-    g.beginPath(); const q = sh.pts;
-    g.moveTo(q[0], q[1]); for (let i=2;i<q.length;i+=2) g.lineTo(q[i], q[i+1]);
-    g.stroke(); g.restore();
-  }
-  g.globalAlpha = 1; g.lineWidth = 1;
-}
-
-// RINGS: спектральные кольца — свежее рождается у круга и расходится к краям экрана
-function drawRings(pn, dim){
-  if (spec && playing && (histTick++ % 3 === 0)){ hist.unshift(Array.from(spec.slice(0, 64))); if (hist.length > 28) hist.pop(); }
-  if (!hist.length) return;
-  const base = S_R*RAD + 64, maxR = Math.hypot(W, H)/2 + 40, n = 28, stp = (maxR - base)/n, acc = drawAcc(), M = 160;
-  for (let k = hist.length-1; k >= 0; k--){
-    const row = hist[k], r = base + k*stp, rot = pn/24000 + k*0.035;
-    g.beginPath();
-    for (let j = 0; j <= M; j++){
-      const th = j/M*Math.PI*2, u = Math.abs(((th/Math.PI) % 2) - 1);          // зеркально слева/справа
-      const v = row[2 + Math.floor(u*40)]/255, rr = r + Math.pow(v, 1.5)*stp*2.4;
-      const a = th + rot, px = C.x + Math.cos(a)*rr, py = C.y + Math.sin(a)*rr;
-      j ? g.lineTo(px, py) : g.moveTo(px, py);
-    }
-    g.strokeStyle = k === 0 ? acc : '#fff';
-    g.globalAlpha = (k === 0 ? 0.7 : 0.32*(1 - k/n)) * dim; g.lineWidth = k === 0 ? 1.4 : 1;
-    g.stroke();
-  }
-  g.globalAlpha = 1; g.lineWidth = 1;
 }
 
 // WARP: точечная сетка на весь экран, рябь от бочек и дыхание от баса
@@ -1122,7 +1008,7 @@ function spawnFx(ev){
   const n = isKick ? 10 : 5;
   for (let k=0;k<n;k++){ const a = Math.random()*Math.PI*2, sp = 0.6+Math.random()*1.8;
     parts.push({ tr, x:p.x, y:p.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1, s:1+Math.random()*2 }); }
-  if (isKick){ kickGlow = 1; kickPoly = 1; kicks.push(performance.now()); if (kicks.length > 6) kicks.shift(); }
+  if (isKick){ kickGlow = 1; kicks.push(performance.now()); if (kicks.length > 6) kicks.shift(); }
   if (parts.length > 260) parts.splice(0, parts.length-260);
 }
 
@@ -2021,7 +1907,7 @@ function deserialize(d){
     tr.scn = Array.from({length:SCENES}, (_,k) => decScene(x.s && x.s[k])); bindScene(tr); return tr; });
   d.tracks.forEach((x,k) => { if (tracks[k] && x.sc >= 0 && tracks[x.sc] && x.sc !== k) tracks[k].scSrc = tracks[x.sc]; });
   tracks.forEach(buildChain);
-  linkFlash = {}; makeSprites(); if (d.fx && FX_MODES.includes(d.fx)) setFx(d.fx); showSwing(); updateUI(); renderLib(); renderBlocks();
+  linkFlash = {}; makeSprites(); showSwing(); updateUI(); renderLib(); renderBlocks();
 }
 
 // ---------- хранилище: Telegram CloudStorage (если внутри Telegram) + localStorage ----------
