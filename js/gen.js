@@ -291,12 +291,19 @@ function partOf(t){
   const c = (LIBM[t.v] || {}).cat;
   if (c === 'FX' || t.v === 'crash') return 'fx';
   if (c === 'Bass') return 'bass';
-  if (CHORDY.includes(t.v)) return 'chords';
+  if (CHORDY.includes(t.v) || (SND_META[t.v] || {}).chord) return 'chords';
   if (MELODIC.includes(t.v) || c === 'Vocals') return 'lead';
   return 'drums';
 }
 const drumRole = v => { const r = roleOfGen(v); return DRUM_ROLES.includes(r) ? r : 'perc'; };
 const partTracks = p => tracks.filter(t => partOf(t) === p);
+// новые звуки библиотеки попадают в жанры по своим тегам (в конец списков: жанровая классика — первой)
+for (const [id, m] of Object.entries(SND_META)) for (const gid of m.g){
+  const G = GENM[gid]; if (!G) continue;
+  const part = partOf({ v:id });
+  if (part === 'drums'){ const r = drumRole(id); if (G.kit[r] && !G.kit[r].includes(id)) G.kit[r].push(id); }
+  else if (G.snd[part] && !G.snd[part].includes(id)) G.snd[part].push(id);
+}
 // звуки для партии: сначала жанровые, потом остальные того же типа
 function soundList(p, G){
   if (p === 'drums') return kitList(G).map((k, i) => 'kit' + i);
@@ -570,7 +577,9 @@ function genChords(G, S, bars, harm, sound, curP){
 // ---------- FX ----------
 function genFx(G, S, bars, v){
   const n = 16 * bars, p = Array(n).fill(false), vel = Array(n).fill(1);
-  if (/sweepup/.test(v)){ p[bars === 2 ? 24 : 8] = true; }
+  const meta = SND_META[v] || {};
+  if (meta.len && /rise|swell/.test(meta.m)){ p[Math.max(0, n - meta.len)] = true; }
+  else if (/sweepup/.test(v)){ p[bars === 2 ? 24 : 8] = true; }
   else if (/crackle|glitch|zap|laser|noiz/.test(v)){ p[0] = true; const k = [1, 2, 4][S.dens]; for (let j=0;j<k;j++){ const i = pickR([3, 6, 7, 11, 14, 15, 19, 22, 27, 30].filter(x => x < n)); p[i] = true; vel[i] = rnd(0.5, 0.85); } }
   else { p[0] = true; if (S.dens >= 1 && bars === 2) p[16] = Math.random() < 0.5; if (S.dens === 2) p[n - 2] = true; }
   return { p, vel };
