@@ -535,10 +535,11 @@ function buildArrangement(src){
   selBlk = 0; songBar = -1;
 }
 // сделать одну сцену из другой — остальные сцены и песня не меняются
-function makeScene(target, src, type){
+// v — номер варианта (SCENE_VARIANTS); не задан — случайный
+function makeScene(target, src, type, forceV){
   const L = STEPS, now = performance.now();
   const hasMusic = tracks.some(x => ['mel','pad'].includes(x.role || roleOfGen(x.v)) && x.scn[src].pat.slice(0, L).some(Boolean));
-  const v = pickVariant(type, { hasMusic }); lastVariants = { [type]: (SCENE_VARIANTS[type] || [])[v] };
+  const v = Number.isInteger(forceV) && (SCENE_VARIANTS[type] || [])[forceV] ? forceV : pickVariant(type, { hasMusic }); lastVariants = { [type]: (SCENE_VARIANTS[type] || [])[v] };
   tracks.forEach(t => { t.scn[target] = type === 'var' || type === 'copy' ? cloneScene(t.scn[src]) : deriveScene(t, t.scn[src], type, hasMusic, v); });
   sceneTypes[target] = type === 'copy' ? sceneTypes[src] : type === 'var' ? 'peak2' : type; if (!sceneTypes[src] && type !== 'copy') sceneTypes[src] = 'peak';
   const cur = scene;
@@ -1653,7 +1654,7 @@ const fmtTime = sec => Math.floor(sec/60) + ':' + String(Math.round(sec%60)).pad
 function setSongOn(on, quiet){
   songOn = on; songBar = -1; songEnded = false; queuedScene = -1;
   if (!on && ac) perfReset();
-  $('songOn').classList.toggle('on', on); $('songOn').textContent = on ? '■ Song mode on' : '▶ Song mode';
+  $('songOn').classList.toggle('on', on);
   $('songBtn').classList.toggle('on', on);
   if (!quiet){ toast(on ? 'song mode · scenes follow the arrangement' : 'song mode off'); haptic('medium'); }
   if (on && !playing && ac) applyScene(arr[0] ? arr[0].s : 0);
@@ -1722,46 +1723,17 @@ $('edRight').onclick = () => { if (selBlk < arr.length - 1){ [arr[selBlk+1], arr
 document.querySelectorAll('#edScene button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].s = +x.dataset.v; renderBlocks(); haptic('select'); } });
 document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { const loops = +x.dataset.v / barsPer(); if (arr[selBlk] && loops >= 1 && loops % 1 === 0){ arr[selBlk].b = loops; renderBlocks(); haptic('select'); } });
 document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { pushUndo(true); arr = [{ s:scene, b:1 }]; selBlk = 0; songBar = -1; renderBlocks(); toast('timeline reset · scene ' + 'ABCD'[scene] + ' loops'); });
-// ---------- вкладка Build: главная сцена → песня ----------
+// ---------- сборка песни и сцен — во вкладке GEN → Scenes (gen.js) ----------
 const ROLE_NAME = { intro:'intro', groove:'groove', build:'build-up', peak:'drop', peak2:'drop 2', break:'break' };
-let mainSc = 0;
 function buildPlanFor(m){ const [g, b, i] = [0,1,2,3].filter(k => k !== m); return [['intro', i], ['groove', g], ['drop', m], ['break', b], ['drop', m], ['groove', g], ['outro', i]]; }
-function updateBuild(){
-  if (sceneEmpty(mainSc)){ const f = [0,1,2,3].find(k => !sceneEmpty(k)); if (f !== undefined) mainSc = f; }
-  const L = 'ABCD', anyFull = [0,1,2,3].some(k => !sceneEmpty(k));
-  document.querySelectorAll('#bMain button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mainSc); b.disabled = sceneEmpty(k); });
-  $('bPlan').innerHTML = buildPlanFor(mainSc).map(([r, k]) => '<span class="' + (r === 'drop' ? 'pk' : '') + '"><b>' + L[k] + '</b>' + r + '</span>').join('<i>›</i>');
-  const others = [0,1,2,3].filter(k => k !== mainSc && !sceneEmpty(k));
-  $('bWarn').textContent = !anyFull ? 'make a pattern first' : others.length ? 'rewrites scene' + (others.length > 1 ? 's ' : ' ') + others.map(k => L[k]).join(', ') + ' · undo reverts' : 'scenes ' + [0,1,2,3].filter(k => k !== mainSc).map(k => L[k]).join(', ') + ' are empty — they will be filled';
-  $('bWarn').classList.toggle('hot', others.length > 0);
-  $('bBuild').disabled = !anyFull;
-  $('arrOnly').style.display = [0,1,2,3].filter(k => !sceneEmpty(k)).length >= 2 ? '' : 'none';
-  if (mkT === mainSc) mkT = [0,1,2,3].find(k => k !== mainSc);
-  document.querySelectorAll('#mkT button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mkT); b.disabled = k === mainSc; });
-}
-document.querySelectorAll('#bMain button').forEach(b => b.onclick = () => { mainSc = +b.dataset.s; updateBuild(); haptic('select'); });
-$('bBuild').onclick = () => {
-  if (sceneEmpty(mainSc)){ toast('make a pattern first'); return; }
-  pushUndo(true); buildArrangement(mainSc);
-  tracks.forEach(bindScene); renderBlocks(); updatePerform(); showSongTab('arr'); haptic('heavy');
-  toast('song built · intro: ' + lastVariants.intro + ' · groove: ' + lastVariants.groove + ' · break: ' + lastVariants.break + ' · build again for other versions');
-};
-let mkT = 1;
-document.querySelectorAll('#mkT button').forEach(b => b.onclick = () => { mkT = +b.dataset.s; updateBuild(); haptic('select'); });
-document.querySelectorAll('#mkType button').forEach(b => b.onclick = () => {
-  const L = 'ABCD';
-  if (sceneEmpty(mainSc)){ toast('main part is empty'); return; }
-  pushUndo(true); makeScene(mkT, mainSc, b.dataset.t); vState = null;
-  renderBlocks(); updatePerform(); updateBuild(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium');
-  const vn = lastVariants[b.dataset.t]; toast('scene ' + L[mkT] + ' = ' + b.textContent.toLowerCase() + (vn ? ' (' + vn + ')' : '') + ' · tap again for another');
-});
-$('arrOnly').onclick = () => { pushUndo(true); if (!arrangeExisting()){ undoStack.pop(); toast('all scenes are empty'); return; } renderBlocks(); showSongTab('arr'); haptic('medium'); toast('arranged your scenes · patterns unchanged'); };
-function updateSongGen(){ if ($('bMain')) updateBuild(); }
+function updateSongGen(){ if (typeof genRender === 'function' && document.body.classList.contains('gen-open')) genRender(); }
 // вкладки листа Song на телефоне: Arrange / Export
 function showSongTab(t){
   document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x.dataset.st === t));
-  $('song').dataset.tab = t; if (t === 'build'){ if (!sceneEmpty(scene)) mainSc = scene; updateBuild(); }
+  $('song').dataset.tab = t;
 }
+// со шкалы песни — к сборке песни/сцен в GEN
+$('songToGen').onclick = () => { setSongOpen(false); GEN.tab = 'scenes'; setGenOpen(true); haptic('select'); };
 document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => { showSongTab(b.dataset.st); haptic('select'); });
 $('song').dataset.tab = 'arr';
 const barsPer = () => STEPS / 16;   // сколько тактов в одном повторе сцены

@@ -622,3 +622,23 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
   body.pads-open .prow.pads{flex:1 1 auto;grid-auto-rows:1fr}
   body.pads-open .prow.pads .pad{height:100%;min-height:62px}
 }
+
+/* ---------- GEN → Scenes ---------- */
+#gen[data-tab="scenes"] #genScenes{display:flex}
+.gsec{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);padding-top:6px;border-top:1px solid var(--line);margin-top:4px}
+.gsec:first-child{border-top:none;margin-top:0;padding-top:0}
+.gact{justify-content:center;height:50px}
+.gact b{flex:none}
+.gseg.gtypes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.gseg[data-k="sc.var"]{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
+/* план песни: ровная сетка из 7 ячеек, без прокрутки */
+.plan{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:8px 4px;overflow:hidden;flex-wrap:nowrap}
+.plan span{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.plan span b{font-size:16px;line-height:1}
+.plan span small{font-size:7.5px;letter-spacing:.04em;text-transform:uppercase;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---------- Song: переключатели в шапке, нижняя строка действий ---------- */
+#song .shead .tg{height:36px;padding:0 10px;font-size:9px;flex:0 0 auto}
+#song .shead .st1{min-width:0}
+.sfoot{display:flex;gap:6px}
+.sfoot button{flex:1;height:44px;padding:0 8px;font-size:10px}
+.sfoot #songToGen{flex:1.3}

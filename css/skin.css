@@ -144,3 +144,9 @@ body.skin-ko *::-webkit-scrollbar{display:none;width:0;height:0}
 @media (min-width:701px){
   body.skin-ko #genBtn{min-width:92px;font-size:12px;background:linear-gradient(#ff7a3d,#f04f17);box-shadow:0 0 0 1px #c2420f,0 3px 0 #a8380c,0 4px 14px rgba(255,90,31,.45)}
 }
+/* GEN → Scenes: «собрать песню» — тёмная клавиша, главная (оранжевая) — сделать сцену */
+body.skin-ko .gact{background:linear-gradient(#3b3b3a,var(--dark));color:#fff;box-shadow:0 0 0 1px #121212,0 2px 0 #0e0e0e}
+body.skin-ko .gact b{color:#ff8a52}
+body.skin-ko .gseg.gtypes,body.skin-ko .gseg[data-k="sc.var"]{gap:5px}
+body.skin-ko #song .shead .tg{background:linear-gradient(var(--key),var(--key2))}
+body.skin-ko #song .shead .tg.on{background:linear-gradient(#3a3a39,var(--dark2));color:#ff8a52}
