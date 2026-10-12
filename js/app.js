@@ -70,7 +70,7 @@ function hit(tr, t, step = firstStep(tr), vel = 1){
 // ============================================================
 //  SEQUENCER
 // ============================================================
-let playing = false, step = 0, nextT = 0, stepLog = [], dlyBpm = 0, rollReq = 0, roll = null;
+let playing = false, step = 0, nextT = 0, stepLog = [], dlyBpm = 0;
 const stepDur = () => 60/bpm/4;
 
 // ---------- сайдчейн: источник глушит звук на каждом своём ударе ----------
@@ -105,9 +105,7 @@ function processStep(s, t){
   }
   if (songEnded) return;
   if (queuedScene >= 0 && s % STEPS === 0) applyScene(queuedScene);   // сцена меняется с начала такта
-  let i = s % STEPS;
-  if (rollReq && !roll) roll = { len:rollReq, s0:s, base:i - (i % rollReq) };
-  if (roll) i = (roll.base + ((s - roll.s0) % roll.len)) % STEPS;         // дробь: повтор куска такта
+  const i = s % STEPS;
   stepLog.push({s, t, i}); if (stepLog.length > 32) stepLog.shift();
   const sd = stepDur(), fired = [];
   for (const tr of tracks){
@@ -131,7 +129,7 @@ setInterval(scheduler, IS_MOBILE ? 25 : 20);
 
 function setPlaying(v){
   playing = v;
-  if (v){ ac.resume(); step = 0; stepLog = []; nextT = ac.currentTime+0.06; roll = null; songBar = -1; songEnded = false; }
+  if (v){ ac.resume(); step = 0; stepLog = []; nextT = ac.currentTime+0.06; songBar = -1; songEnded = false; }
   else { if (typeof releasePads === 'function') releasePads(); }
 }
 
@@ -1615,14 +1613,13 @@ function padSet(fx, on){
   if (!ac || PAD_ON[fx] === on) return;
   PAD_ON[fx] = on;
   document.querySelector('.pad[data-fx="'+fx+'"]').classList.toggle('on', on);
-  if (fx === 'roll4' || fx === 'roll8'){ rollReq = on ? (fx === 'roll4' ? 4 : 2) : 0; if (!on) roll = null; }
-  else perfSet(fx, on);
+  perfSet(fx, on);
   if (on) haptic('rigid');
 }
 // отпустить все кнопки эффектов (если палец «потерялся», окно свернули, остановили воспроизведение)
 function releasePads(){
   for (const fx in PAD_ON) if (PAD_ON[fx]){ PAD_ON[fx] = false; const b = document.querySelector('.pad[data-fx="'+fx+'"]'); if (b) b.classList.remove('on'); }
-  rollReq = 0; roll = null; perfReset();
+  perfReset();
 }
 addEventListener('blur', releasePads);
 document.querySelectorAll('.pad[data-fx]').forEach(b => {
@@ -2215,7 +2212,8 @@ function openClearMenu(btn){
 function closeClearMenu(){ const m = $('clearMenu'); if (m) m.classList.remove('open'); everythingArm = 0; updateBack(); }
 addEventListener('pointerdown', e => { const m = $('clearMenu'); if (m && m.classList.contains('open') && !m.contains(e.target) && !(clearAnchor && clearAnchor.contains(e.target))) closeClearMenu(); }, true);
 document.querySelectorAll('.clearBtn').forEach(b => b.onclick = () => { const m = $('clearMenu'); m && m.classList.contains('open') ? closeClearMenu() : openClearMenu(b); });
-const PAD_KEYS = { z:'lpf', x:'hpf', c:'kill', v:'wash', b:'roll4', n:'roll8' };
+// пэды 3×3 — физические клавиши (работают в любой раскладке): Q W E / A S D / Z X C
+const PAD_KEYS = { KeyQ:'lpf', KeyW:'hpf', KeyE:'kill', KeyA:'wash', KeyS:'gate', KeyD:'crush', KeyZ:'flange', KeyX:'space', KeyC:'build' };
 addEventListener('keydown', e=>{
   if (!ac || e.repeat) return;
   if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -2226,10 +2224,10 @@ addEventListener('keydown', e=>{
   if ('1234'.includes(e.key)) setScene(+e.key - 1);
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveProject(curProj ? curProj.name : ''); return; }
-  if (e.key.toLowerCase() === 'g') variate();
-  const fx = PAD_KEYS[e.key.toLowerCase()]; if (fx && !e.ctrlKey && !e.metaKey) padSet(fx, true);
+  if (e.code === 'KeyG') variate();
+  const fx = PAD_KEYS[e.code]; if (fx && !e.ctrlKey && !e.metaKey) padSet(fx, true);
 });
-addEventListener('keyup', e=>{ const fx = PAD_KEYS[e.key.toLowerCase()]; if (fx) padSet(fx, false); });
+addEventListener('keyup', e=>{ const fx = PAD_KEYS[e.code]; if (fx) padSet(fx, false); });
 
 // ============================================================
 //  TELEGRAM MINI APP
