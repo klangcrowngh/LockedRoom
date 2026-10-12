@@ -915,7 +915,7 @@ function genRender(){
 }
 let genGenresOpen = false;
 // ============================================================
-//  SCENES: отдельные сцены из другой сцены (вся песня собирается в Song → Build)
+//  SCENES: отдельные сцены из другой сцены (вся песня — GEN → Track → Make: Full song)
 // ============================================================
 const SC_TYPES = [['intro','Intro'],['groove','Groove'],['build','Build-up'],['break','Break'],['var','Drop 2'],['copy','Copy']];
 const SC_L = 'ABCD';
@@ -932,7 +932,15 @@ function renderScenesPane(){
     row('Make scene', sseg('sc.target', t, i => i === m)) +
     row('As', '<div class="gseg gtypes" data-k="sc.type">' + SC_TYPES.map(([v, n]) => '<button data-v="' + v + '"' + (v === GEN.scType ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') +
     (vars.length ? row('Variant', '<div class="gseg" data-k="sc.var">' + [['auto','Auto']].concat(vars.map((n, i) => [i, n])).map(([v, n]) => '<button data-v="' + v + '"' + (String(v) === String(GEN.scVar) ? ' class="on"' : '') + '>' + n + '</button>').join('') + '</div>') : '') +
-    '<div class="ehint">Scene ' + SC_L[t] + ' is made from scene ' + SC_L[m] + ' · Auto picks a new variant on every tap · whole song — <b>Song → Build</b></div>';
+    '<div class="ehint">Scene ' + SC_L[t] + ' is made from scene ' + SC_L[m] + ' · Auto picks a new variant on every tap</div>';
+}
+function genScene(){
+  const m = scMain(), t = scTarget(); if (sceneEmpty(m)){ toast('main part is empty'); return; }
+  const v = GEN.scVar === 'auto' ? undefined : +GEN.scVar;
+  makeScene(t, m, GEN.scType, v); vState = null;
+  renderBlocks(); updatePerform(); if (sel){ buildSteps(sel); buildNotes(sel); } haptic('medium'); genRender();
+  const vn = lastVariants[GEN.scType], tn = SC_TYPES.find(x => x[0] === GEN.scType)[1].toLowerCase();
+  toast('scene ' + SC_L[t] + ' = ' + tn + (vn ? ' (' + vn + ')' : '') + (GEN.scVar === 'auto' ? ' · tap again for another' : ''));
 }
 function genSet(k, v){
   if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }

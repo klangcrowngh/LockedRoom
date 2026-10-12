@@ -1766,32 +1766,11 @@ document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { con
 // ---------- сборка песни и сцен — во вкладке GEN → Scenes (gen.js) ----------
 const ROLE_NAME = { intro:'intro', groove:'groove', build:'build-up', peak:'drop', peak2:'drop 2', break:'break' };
 function buildPlanFor(m){ const [g, b, i] = [0,1,2,3].filter(k => k !== m); return [['intro', i], ['groove', g], ['drop', m], ['break', b], ['drop', m], ['groove', g], ['outro', i]]; }
-// ---------- вкладка Build: главная сцена → вся песня ----------
-let mainSc = 0;
-function updateBuild(){
-  if (sceneEmpty(mainSc)){ const f = [0,1,2,3].find(k => !sceneEmpty(k)); if (f !== undefined) mainSc = f; }
-  const L = 'ABCD', anyFull = [0,1,2,3].some(k => !sceneEmpty(k));
-  document.querySelectorAll('#bMain button').forEach(b => { const k = +b.dataset.s; b.classList.toggle('on', k === mainSc); b.disabled = sceneEmpty(k); });
-  $('bPlan').innerHTML = buildPlanFor(mainSc).map(([r, k]) => '<span class="' + (r === 'drop' ? 'pk' : '') + '"><b>' + L[k] + '</b><small>' + r + '</small></span>').join('');
-  const others = [0,1,2,3].filter(k => k !== mainSc && !sceneEmpty(k));
-  $('bWarn').textContent = !anyFull ? 'make a pattern first' : others.length ? 'rewrites scene' + (others.length > 1 ? 's ' : ' ') + others.map(k => L[k]).join(', ') + ' · undo reverts' : 'empty scenes will be filled';
-  $('bWarn').classList.toggle('hot', others.length > 0);
-  $('bBuild').disabled = !anyFull;
-  $('arrOnly').style.display = [0,1,2,3].filter(k => !sceneEmpty(k)).length >= 2 ? '' : 'none';
-}
-document.querySelectorAll('#bMain button').forEach(b => b.onclick = () => { mainSc = +b.dataset.s; updateBuild(); haptic('select'); });
-$('bBuild').onclick = () => {
-  if (sceneEmpty(mainSc)){ toast('make a pattern first'); return; }
-  buildArrangement(mainSc);
-  tracks.forEach(bindScene); renderBlocks(); updatePerform(); showSongTab('arr'); haptic('heavy');
-  toast('song built · intro: ' + lastVariants.intro + ' · groove: ' + lastVariants.groove + ' · break: ' + lastVariants.break + ' · build again for other versions');
-};
-$('arrOnly').onclick = () => { if (!arrangeExisting()){ toast('all scenes are empty'); return; } renderBlocks(); showSongTab('arr'); haptic('medium'); toast('arranged your scenes · patterns unchanged'); };
-function updateSongGen(){ if ($('bMain')) updateBuild(); if (typeof genRender === 'function' && document.body.classList.contains('gen-open')) genRender(); }
+function updateSongGen(){ if (typeof genRender === 'function' && document.body.classList.contains('gen-open')) genRender(); }
 // вкладки листа Song на телефоне: Arrange / Export
 function showSongTab(t){
   document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x.dataset.st === t));
-  $('song').dataset.tab = t; if (t === 'build'){ if (!sceneEmpty(scene)) mainSc = scene; updateBuild(); }
+  $('song').dataset.tab = t;
 }
 document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => { showSongTab(b.dataset.st); haptic('select'); });
 $('song').dataset.tab = 'arr';
