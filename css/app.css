@@ -549,7 +549,6 @@ details.more summary{cursor:pointer;color:var(--dim);font-size:10px;letter-spaci
 details.more summary::before{content:'▸ ';color:var(--acc)}
 details.more[open] summary::before{content:'▾ '}
 details.more[open]{display:flex;flex-direction:column;gap:8px}
-#song .spane[data-p="arr"] button.ghost{align-self:flex-start;padding:0 14px}
 
 
 /* ---------- GEN: генератор трека ---------- */

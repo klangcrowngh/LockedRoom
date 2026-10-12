@@ -1763,7 +1763,6 @@ $('edLeft').onclick = () => { if (selBlk > 0){ [arr[selBlk-1], arr[selBlk]] = [a
 $('edRight').onclick = () => { if (selBlk < arr.length - 1){ [arr[selBlk+1], arr[selBlk]] = [arr[selBlk], arr[selBlk+1]]; selBlk++; renderBlocks(); scrollToSel(); } };
 document.querySelectorAll('#edScene button').forEach(x => x.onclick = () => { if (arr[selBlk]){ arr[selBlk].s = +x.dataset.v; renderBlocks(); haptic('select'); } });
 document.querySelectorAll('#edBars button').forEach(x => x.onclick = () => { const loops = +x.dataset.v / barsPer(); if (arr[selBlk] && loops >= 1 && loops % 1 === 0){ arr[selBlk].b = loops; renderBlocks(); haptic('select'); } });
-document.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { pushUndo(true); arr = [{ s:scene, b:1 }]; selBlk = 0; songBar = -1; renderBlocks(); toast('timeline reset · scene ' + 'ABCD'[scene] + ' loops'); });
 // ---------- сборка песни и сцен — во вкладке GEN → Scenes (gen.js) ----------
 const ROLE_NAME = { intro:'intro', groove:'groove', build:'build-up', peak:'drop', peak2:'drop 2', break:'break' };
 function buildPlanFor(m){ const [g, b, i] = [0,1,2,3].filter(k => k !== m); return [['intro', i], ['groove', g], ['drop', m], ['break', b], ['drop', m], ['groove', g], ['outro', i]]; }
