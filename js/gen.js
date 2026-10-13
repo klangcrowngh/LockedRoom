@@ -158,11 +158,11 @@ const GENRES = [
   { id:'electropunk', name:'Electro Punk', bpm:[122,146], swing:[0,0], drive:8, grit:2.2, legacy:'dark',
     scales:{ dark:['phrygian'], mid:['phrygian','phrygian','harmonic'], bright:['phrygian','minor'] },
     kit:{ kick:['kick_punk','kick_fuzz','kick_tight','distkick','kick909'], snare:['sn_punk','cl_punk','sn_trash','sn_gated','cl_dirty2','snare909'], hat:['hat_fuzz','hat_trash','hat909','tick'], ohat:['ohat_trash','ohat909'], perc:['perc_clang','metal','indhit','rim707'] },
-    snd:{ bass:['bass_punk','bass_roll','bass_fuzz','bass_ebm2','buzz','ebm'], lead:['lead_fuzz','lead_buzzsaw','darksaw','acid','lead_scream','lead_punkriff','vox_megaphone'], chords:['stab_power','diststab','stab_punk'], fx:['noise_burst','vox_shout','vox_oi','impact'] },
+    snd:{ bass:['bass_punk','bass_roll','bass_fuzz','bass_ebm2','buzz','ebm'], lead:['lead_grind','lead_darksq','lead_fuzz','lead_buzzsaw','darksaw','acid'], chords:['stab_power','diststab'], fx:['noise_burst','impact','vox_shout'] },
     kick:L(GK4, '0000000000000001', [0,1]), snare:L([GBB, '......x.....x...'], '0000000000000012', [0,1]),
     hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '1111111111111111', [0,8]), ohat:L(GOFF), perc:L(['......x.......x.', '...x.......x....'], '1111111111111111', [0,2]),
     bass:L(['xx..xx..xx..xx..', 'xxxxxxxxxxxxxxxx', 'x...x...x...x...', 'x.xxx.xxx.xxx.xx'], '0000000000000000', [0,0], { kick:'follow', notes:'seq' }),
-    lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'punk', rate:1 },
+    lead:{ rhythm:'drive', range:1, riff:'hammer', oct:-12 }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'punk', rate:1, oct:-12 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
 
   { id:'breaks', name:'Breakbeat', bpm:[128,138], swing:[0,0.08], drive:4, grit:1, legacy:'electro',
@@ -499,6 +499,13 @@ function genBass(G, S, bars, harm, kickP, curP){
 
 // ---------- мелодия ----------
 function leadRhythm(kind, dens, cx){
+  if (kind === 'drive'){
+    const p = Array(16).fill(false); for (let i=0;i<16;i+=2) p[i] = true;
+    const rests = [2, 1, 0][dens] + (cx === 0 ? 1 : 0);
+    for (let k=0;k<rests;k++) p[pickR([2, 6, 10, 14])] = false;            // паузы — на слабых восьмых
+    if (dens === 2 || cx === 2) for (let k=0;k<rint(1, 2);k++) p[pickR([7, 11, 15, 3])] = true;   // подхваты 16-ми
+    return p;
+  }
   if (kind === 'arp'){
     const n = [8, 12, 16][dens], p = Array(16).fill(false);
     if (n === 16) p.fill(true); else if (n === 8) for (let i=0;i<16;i+=2) p[i] = true;
@@ -540,7 +547,7 @@ function genLead(G, S, bars, harm, curP, avoidP, up = 0, bassP = null){
     } else if (G.lead.riff && kind !== 'acid'){
       // тёмный рифф: тоника, ♭2, ♭3, кварта, квинта, ♭6, ♭7 снизу (ступени лада от корня аккорда), много повторов тоники;
       // мотив первого такта повторяется во втором — как гитарный рифф
-      const pool = [[0, 5], [1, 3], [2, 2], [4, 2], [5, 1.2], [-1, 0.8], [3, 0.8]];
+      const pool = G.lead.riff === 'hammer' ? [[0, 9], [1, 3.5], [2, 2], [4, 1.2], [-1, 1]] : [[0, 5], [1, 3], [2, 2], [4, 2], [5, 1.2], [-1, 0.8], [3, 0.8]];
       const first = on.filter(i => i < 16), motif = first.map((i, k) => k === 0 ? 0 : pool[weightedPick(pool.map(x => x[1]))][0]);
       on.forEach((i, k) => { deg[i] = clamp(harm[slotOf(i)] + motif[k % Math.max(1, motif.length)]); });
     } else if (kind === 'acid'){
@@ -601,9 +608,9 @@ function genChords(G, S, bars, harm, sound, curP, bassP){
   const clash = x => bassP && style !== 'pad' ? x.p.filter((on, i) => on && bassP[i]).length : 0;   // аккорд и бас — по очереди
   const c = best([...Array(12)].map(mk), x => x.fit + (curP ? Math.min(3, ham(x.p, curP)) * 0.4 : 0) - clash(x) * 0.7);
   const n = c.p.length, notes = Array(n).fill(0), vel = Array(n).fill(1);
-  for (let i=0;i<n;i++) if (c.p[i]){ let s = degSemi(harm[slotOf(i)]); if (s > 6) s -= 12; notes[i] = s; vel[i] = style === 'pad' ? 0.9 : i % 4 === 0 ? 0.95 : 0.85; }
+  for (let i=0;i<n;i++) if (c.p[i]){ let s = degSemi(harm[slotOf(i)]); if (s > 6) s -= 12; notes[i] = s + (G.chords.oct || 0); vel[i] = style === 'pad' ? 0.9 : i % 4 === 0 ? 0.95 : 0.85; }
   // сложность: иногда аккорд-предвосхищение на «и» перед сменой
-  if (S.cx === 2 && style !== 'pad') for (let s=1;s<2*bars;s++) if (harm[s] !== harm[s - 1] && Math.random() < 0.5){ const i = s * 8 - 1; c.p[i] = true; let x = degSemi(harm[s]); if (x > 6) x -= 12; notes[i] = x; vel[i] = 0.8; }
+  if (S.cx === 2 && style !== 'pad') for (let s=1;s<2*bars;s++) if (harm[s] !== harm[s - 1] && Math.random() < 0.5){ const i = s * 8 - 1; c.p[i] = true; let x = degSemi(harm[s]); if (x > 6) x -= 12; notes[i] = x + (G.chords.oct || 0); vel[i] = 0.8; }
   return { p: c.p, notes, vel, style };
 }
 
@@ -810,7 +817,7 @@ function densForSound(dens, v){ const occ = occOf(v); return occ <= 2 ? dens : M
 // у очень длинного звука из жанровых рисунков берём самый редкий
 const sparsest = spec => ({ ...spec, a: [spec.a.reduce((b, x) => hits(strPat(x)) < hits(strPat(b)) ? x : b, spec.a[0])] });
 // мелодическая партия: жанр + настроение + то, что уже звучит (кик, аккорды)
-const CUTE = /bell|kalimba|marimba|chip|toy|glass|harp|music|steelpan|whistle|flute|xylo|vibra|celest|glock|ocarina|digibell|mallet/;
+const CUTE = /bell|kalimba|marimba|chip|toy|glass|harp|music|steelpan|whistle|flute|xylo|vibra|celest|glock|ocarina|digibell|mallet|pluck|blip|sine|chime|vox_oi|vox_hey/;
 const DARK_G = new Set(['electropunk','ebm','hardtechno','dubstep','dark']);
 const NOISY = /crackle|vinyl|glitch|noiz|bitcrush|static|hiss/, NOISY_OK = new Set(['ambient','idm','dubtechno']);   // шумовые FX — к месту только в этих жанрах
 function pickPartSound(p, G){
@@ -823,6 +830,7 @@ function pickPartSound(p, G){
     let w = poolW(G, v) * mr(v);
     if (dark && (p === 'lead' || p === 'chords') && CUTE.test(v)) w *= 0.04;
     if (p === 'fx' && NOISY.test(v) && !NOISY_OK.has(G.id)) w *= 0.15;
+    if (p === 'lead' && G.lead.riff && (LIBM[v] || {}).cat === 'Vocals') w *= 0.08;   // рифф — инструментом; выкрики — в FX, не мелодией
     const pr = profOf(v);
     if (p === 'bass' && kick){
       // гулкий длинный кик + бас, весь в саб-басе, — каша внизу: такой бас реже
@@ -917,7 +925,8 @@ function applyPart(p, G, bars, whole){
     if (p === 'bass') r = genBass(Gx, S, bars, genHarm, kick ? kick.pat.slice(0, 16) : null, cur);
     else if (p === 'lead'){
       const ch = partTracks('chords').find(x => x.role !== 'pad'), chP = ch ? ch.pat.slice(0, n) : null;
-      const up = partTracks('chords').length && (BASE[t.v] ?? 36) <= 36 && !/acid/.test(t.v) && (S.range === 'auto' ? G.lead.range : +S.range) < 3 ? 12 : 0;   // лид — на октаву выше аккордов
+      const up = G.lead.oct !== undefined ? G.lead.oct   // жанровый регистр (электропанк — низко, без «игрушечного» верха)
+        : partTracks('chords').length && (BASE[t.v] ?? 36) <= 36 && !/acid/.test(t.v) && (S.range === 'auto' ? G.lead.range : +S.range) < 3 ? 12 : 0;   // лид — на октаву выше аккордов
       const bs = partTracks('bass')[0];
       r = genLead(G, S, bars, genHarm, cur, chP, up, bs ? bs.pat.slice(0, n) : null);
     }
@@ -959,7 +968,7 @@ function genreStyle(G){
   const rolls = id === 'trap' ? { 2: 0.7, 1: 0.3 } : ['idm','dnb','breaks'].includes(id) ? { 1: 0.6, 2: 0.2, 0: 0.2 }
     : ['electropunk','ebm','hardtechno','ambient','dubtechno'].includes(id) ? { 0: 0.55, 1: 0.45 } : { 1: 0.65, 0: 0.3, 2: 0.05 };
   const lr = G.lead.rhythm, riff = RIFF_DARK(G);
-  const rhythm = lr === 'acid' ? { acid: 0.8, synco: 0.2 } : lr === 'arp' ? { arp: 0.6, synco: 0.25, straight: 0.15 }
+  const rhythm = lr === 'drive' ? { drive: 0.7, straight: 0.2, synco: 0.1 } : lr === 'acid' ? { acid: 0.8, synco: 0.2 } : lr === 'arp' ? { arp: 0.6, synco: 0.25, straight: 0.15 }
     : lr === 'straight' ? (riff ? { straight: 0.7, synco: 0.3 } : { straight: 0.6, synco: 0.3, arp: 0.1 }) : (riff ? { synco: 0.65, straight: 0.35 } : { synco: 0.6, straight: 0.25, arp: 0.15 });
   const r0 = G.lead.range || 1, range = riff ? { 1: 0.85, 2: 0.15 } : { [r0]: 0.6, ...(r0 > 1 ? { [r0 - 1]: 0.2 } : {}), ...(r0 < 3 ? { [r0 + 1]: 0.2 } : {}) };
   const rate = { [G.chords.rate || 1]: 0.7, [(G.chords.rate || 1) === 1 ? 2 : 1]: 0.3 };
@@ -1079,7 +1088,7 @@ function genRender(){
   // вкладка Parts
   const extra = GEN.part === 'drums' ? row('Swing', seg('p.swing', [[0,'Straight'],[1,'Genre'],[2,'Heavy']], S.swing)) + row('Fills', seg('p.fills', [[0,'Off'],[1,'Light'],[2,'Busy']], S.fills)) + row('Rolls', seg('p.rolls', [[0,'Off'],[1,'Rare'],[2,'Many']], S.rolls ?? 1))
     : GEN.part === 'bass' ? row('Octave', seg('p.oct', [[0,'−1'],[1,'0'],[2,'+1']], S.oct))
-    : GEN.part === 'lead' ? row('Rhythm', seg('p.rhythm', [['auto','Auto'],['straight','Straight'],['synco','Synco'],['arp','Arp']].concat(G.lead.rhythm === 'acid' ? [['acid','Acid']] : []), S.rhythm)) + row('Range', seg('p.range', [['auto','Auto'],[1,'1 oct'],[2,'2 oct'],[3,'3 oct']], S.range))
+    : GEN.part === 'lead' ? row('Rhythm', seg('p.rhythm', [['auto','Auto'],['straight','Straight'],['synco','Synco'],['arp','Arp']].concat(G.lead.rhythm === 'acid' ? [['acid','Acid']] : []).concat(G.lead.rhythm === 'drive' ? [['drive','Drive']] : []), S.rhythm)) + row('Range', seg('p.range', [['auto','Auto'],[1,'1 oct'],[2,'2 oct'],[3,'3 oct']], S.range))
     : GEN.part === 'chords' ? row('Rhythm', seg('p.rhythm', [['auto','Auto'],['pad','Pad'],['stab','Stab'],['pump','Pump']], S.rhythm)) + row('Changes', seg('p.rate', [['auto','Auto'],[1,'1 / bar'],[2,'2 / bar']], S.rate))
     : '';
   $('genParts').innerHTML =

@@ -68,8 +68,17 @@ function buildGraph(offline){
 function engineSnapshot(){ return { ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, pCrush, flWet, flFb, pGate, gateLfo, spaceIn, tsDry, tsWet, tsDel, tsLp }; }
 function engineRestore(e){ ({ ac, master, bus, busSh, busComp, revIn, dlyIn, dly, NB, an, spec, wave, fxRet, pLP, pHP, pKill, washIn, washDly, washFb, pCrush, flWet, flFb, pGate, gateLfo, spaceIn, tsDry, tsWet, tsDel, tsLp } = e); }
 
+// бас (и эсид-линии) — монофонические: новая нота мягко (≈8 мс) глушит предыдущую на той же дорожке,
+// иначе длинные/грязные басовые ноты наслаиваются друг на друга и получается каша
+const MONO_V = new Set(['acid','acid303','lead_acid','lead_acidsq']);
+const isMono = tr => !!tr && !!tr.v && ((LIBM[tr.v] || {}).cat === 'Bass' || MONO_V.has(tr.v));
 function out(rev=0, del=0, life=1){
   const g = ac.createGain(); g.gain.value = VEL; g.connect(CUR && CUR.ch ? CUR.ch.in : bus);
+  if (isMono(CUR)){
+    const vs = (CUR._voices = (CUR._voices || []).filter(([, st]) => st > curT - 4));
+    for (const [pg, st] of vs) if (st < curT - 0.001){ try { pg.gain.cancelScheduledValues(curT); pg.gain.setTargetAtTime(0, curT, 0.003); } catch (e) {} }
+    vs.push([g, curT]);
+  }
   life *= DK;
   setTimeout(()=>g.disconnect(), (life+0.5)*1000 + Math.max(0,(curT-ac.currentTime))*1000);
   if (rev){ const s=ac.createGain(); s.gain.value=rev; g.connect(s); s.connect(revIn); }
@@ -498,12 +507,14 @@ const SYNTH = {
     decay(g,t,1,0.22,0.003); f.connect(s); s.connect(g); g.connect(l); l.connect(out(0,0,0.3));
     const o=osc(); o.type='sawtooth'; o.frequency.value=fr; o.connect(f); o.start(t); o.stop(t+0.28*DK);
     const sb=osc(); sb.frequency.value=fr/2; const sg=ac.createGain(); sg.gain.value=0.6; sb.connect(sg); sg.connect(f); sb.start(t); sb.stop(t+0.28*DK); },
-  growl(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('bandpass',500,4), s=shaper(12), lp=filt('lowpass',3500), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.3;
-    const lfo=osc(); lfo.detune.value=0; lfo.frequency.value=1/stepDur(); const lg=ac.createGain(); lg.gain.value=380; lfo.connect(lg); lg.connect(f.frequency);
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.01); g.gain.setValueAtTime(1,t+0.2); g.gain.exponentialRampToValueAtTime(0.0001,t+0.35*DK);
-    f.connect(s); s.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0,0,0.4)); lfo.start(t); lfo.stop(t+0.4*DK);
-    for (const [ty,dt] of [['sawtooth',-10],['sawtooth',10]]){ const o=osc(); o.type=ty; o.frequency.value=fr; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+0.4*DK); }
-    const sub=osc(); sub.frequency.value=fr; const sbg=ac.createGain(); decay(sbg,t,0.5,0.3,0.01); sub.connect(sbg); sbg.connect(l); sub.start(t); sub.stop(t+0.4*DK); },
+  // рычащий бас: длина ноты — под шаг сетки (не тянется на 3–4 шага), перегруз умеренный, верх ниже — без каши
+  growl(t,n){ const fr=mtof(P.root+12+noteOf(n)), f=filt('bandpass',500,3), s=shaper(5), lp=filt('lowpass',2200), g=ac.createGain(), l=ac.createGain(); l.gain.value=0.34;
+    const h=Math.min(0.18, stepDur()*1.6), L=(h+0.1)*DK;
+    const lfo=osc(); lfo.detune.value=0; lfo.frequency.value=1/stepDur(); const lg=ac.createGain(); lg.gain.value=320; lfo.connect(lg); lg.connect(f.frequency);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.008); g.gain.setValueAtTime(1,t+h); g.gain.exponentialRampToValueAtTime(0.0001,t+L);
+    f.connect(s); s.connect(lp); lp.connect(g); g.connect(l); l.connect(out(0,0,L+0.05)); lfo.start(t); lfo.stop(t+L+0.05);
+    for (const [ty,dt] of [['sawtooth',-8],['sawtooth',8]]){ const o=osc(); o.type=ty; o.frequency.value=fr; o.detune.value+=dt; o.connect(f); o.start(t); o.stop(t+L+0.05); }
+    const sub=osc(); sub.frequency.value=fr; const sbg=ac.createGain(); decay(sbg,t,0.55,Math.min(0.25,h+0.08),0.01); sub.connect(sbg); sbg.connect(l); sub.start(t); sub.stop(t+L+0.05); },
   bass808(t,n){ const fr=mtof(P.root+12+noteOf(n)), o=osc(), g=ac.createGain(), s=shaper(2.5), l=ac.createGain(); l.gain.value=0.7;
     o.frequency.setValueAtTime(fr*2.2,t); o.frequency.exponentialRampToValueAtTime(fr,t+0.04);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.002); g.gain.setValueAtTime(1,t+0.1); g.gain.exponentialRampToValueAtTime(0.0001,t+0.75*DK);

@@ -756,7 +756,7 @@ addSounds('FX', 'tone', [
 
 // ---------- электропанк (в духе Locked Club): грязные, короткие, напористые; низ — главный, верх — тёмный ----------
 Object.assign(TRIM, { hat_fuzz:7, hat_trash:8, ohat_trash:4, perc_clang:6, lead_fuzz:5, lead_scream:6, lead_buzzsaw:4, stab_power:6, stab_punk:6,
-  vox_megaphone:8, bass_ebm2:5, bass_roll:3, sn_trash:2, sn_gated:2 });   // выровнять к медиане своей категории (замер)
+  vox_megaphone:8, bass_ebm2:5, bass_roll:3, sn_trash:2, sn_gated:2, lead_grind:6, lead_darksq:4 });   // выровнять к медиане своей категории (замер)
 addSounds('Kicks', 'kick', [
   ['kick_punk', 'Punk Kick', { f0:210, f1:50, sw:0.035, h:0.04, d:0.22, k:6, c:0.35, lp:7000 }, 'electropunk ebm hardtechno'],
   ['kick_fuzz', 'Fuzz Kick', { f0:240, f1:46, sw:0.045, h:0.05, d:0.28, k:12, c:0.25, lp:5000, lvl:0.6 }, 'electropunk hardtechno'],
@@ -792,6 +792,10 @@ addSounds('Leads & Arps', 'tone', [
   ['lead_fuzz', 'Fuzz Lead', { w:'sawtooth', u:2, dt:14, d:0.22, h:0.05, f:3200, q:1, k:8, lvl:0.14 }, 'electropunk ebm hardtechno'],
   ['lead_scream', 'Scream Lead', { w:'square', u:2, dt:20, a:0.005, d:0.3, h:0.08, f:4000, k:6, vib:6, lvl:0.12 }, 'electropunk hardtechno'],
   ['lead_buzzsaw', 'Buzzsaw Riff', { w:'sawtooth', d:0.18, h:0.04, f:2400, q:4, fe:2, fd:0.06, k:10, lvl:0.13 }, 'electropunk electro'],
+]);
+addSounds('Leads & Arps', 'tone', [
+  ['lead_grind', 'Grind Lead', { w:'sawtooth', u:3, dt:18, d:0.2, h:0.06, f:1400, q:3, fe:1.5, fd:0.08, k:7, lvl:0.14 }, 'electropunk ebm hardtechno'],
+  ['lead_darksq', 'Dark Square Riff', { w:'square', u:2, dt:10, d:0.16, h:0.05, f:1100, q:2, k:6, sub:0.3, lvl:0.15 }, 'electropunk ebm'],
 ]);
 addSounds('Leads & Arps', 'pluck', [
   ['lead_punkriff', 'Punk Riff', { o:36, d:0.35, damp:0.99, bright:0.85, f:4000, k:10, lvl:0.35 }, 'electropunk breaks'],
