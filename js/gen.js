@@ -118,7 +118,7 @@ const GENRES = [
   { id:'minimal', name:'Minimal', bpm:[122,128], swing:[0.1,0.2], drive:2, grit:0.4, legacy:'minimal',
     scales:{ dark:['minor','phrygian'], mid:['dorian','minor'], bright:['dorian','mixolydian'] },
     kit:{ kick:['deepkick','clickkick','kick','lofikick'], snare:['rim','snap','tightclap','rim707'], hat:['shaker','tick','crisphat','pedalhat'], ohat:['ride','ohat909'], perc:['clave','wood','click','bongo','triangle'] },
-    snd:{ bass:['sub','dubbass','bass808'], lead:['marimba','kalimba','bell','blip','glock'], chords:['dubchord','deepchord','epiano'], fx:['crackle','glitch','zap'] },
+    snd:{ bass:['sub','dubbass','bass808'], lead:['blip','lead_ring','tpluck','lead_dark','marimba','kalimba'], chords:['dubchord','deepchord','epiano'], fx:['crackle','glitch','zap'] },
     kick:L(GK4, '0000000000100001', [0,1]), snare:L([GBB, '..x..x....x..x..', '.....x.......x..'], '0101010101010101', [0,2]),
     hat:L([GOFF, 'x.x.x.x.x.x.x.x.'], '1212121212121212', [0,6]), ohat:L(GOFF), perc:L(['.....x.......x..', '.x.x...x.x.x....', '..x....x.x....x.'], '2222222222222222', [1,5]),
     bass:L(['..x...x...x...x.', '..x.....x.x.....', '.x.....x.x......'], '1111111111111111', [0,2], { kick:'free', notes:'root' }),
@@ -154,16 +154,16 @@ const GENRES = [
     bass:L(['.xxx.xxx.xxx.xxx', '.x.x.x.x.x.x.x.x'], '0000000000000000', [0,0], { kick:'avoid', notes:'seq' }),
     lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'off' } },
-  // тёмное техно в духе Gesaffelstein: холодно и угрожающе, средний темп, тяжёлый, но не частый кик,
-  // большой грязный бас-секвенсор, холодные расстроенные пилы, гармонический минор, металлическая перкуссия с хвостом
-  { id:'darktechno', name:'Dark Techno', bpm:[118,128], swing:[0,0], drive:6, grit:1.6, legacy:'dark',
-    scales:{ dark:['harmonic','phrygian'], mid:['harmonic','minor'], bright:['minor','harmonic'] },
+  // тёмное техно в духе Gesaffelstein (замер трёх треков): две зоны темпа ~102 и ~134 BPM, прямой кик, бас — главный (73–94 % энергии),
+  // играет вместе с киком; хроматика вокруг тоники (полутон вверх/вниз, тритон), гармонический минор; очень тёмный верх
+  { id:'darktechno', name:'Dark Techno', bpm:[100,135], bpmZones:[[100,106],[126,135]], swing:[0,0], drive:6, grit:1.6, legacy:'dark',
+    scales:{ dark:['harmonic','phrygian'], mid:['harmonic','harmonic','phrygian'], bright:['harmonic','minor'] },
     kit:{ kick:['kick_cold','kick_menace','kick_industrial','kick_warehouse','distkick','kick909'], snare:['cl_cold','cl_metal','sn_whip','clap909','sn_industrial','darksnare'], hat:['hat_cold','hat909','tick','hat_metal'], ohat:['ride_cold','ohat909','ride_dark'], perc:['perc_chain','perc_hammer','metal','anvil','metal_ping'] },
     snd:{ bass:['bass_menace','bass_hornet','bass_brute','bass_coldseq','ebm','reese_dark','buzz'], lead:['lead_cold','lead_scythe','lead_baroque','lead_horn','darksaw','lead_dark','lead_grind','hoover'], chords:['stab_menace','stab_cathedral','pad_cold','diststab','stab_brass','pad_dark'], fx:['fx_rumblehit','fx_metalsweep','impact','metal_hit'] },
     kick:L(GK4, '0000000000000001', [0,1]), snare:L(GBB, '0000000000000012', [0,1]),
     hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '0101010101010101', [0,6]), ohat:L(GOFF), perc:L(['.......x.......x', '...x...........x'], '0001000100010001', [0,2]),
-    bass:L(['.xxx.xxx.xxx.xxx', 'x.x.x.x.x.x.x.x.', 'x..x..x...x..x..'], '0000000000000000', [0,0], { kick:'avoid', notes:'seq' }),
-    lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'stab', m:'0030020030020030', n:[1,2], prog:'menace', rate:1 },
+    bass:L(['x...x...x...x...', 'xxxxxxxxxxxxxxxx', 'x.xxx.xxx.xxx.xx', 'x.x.x.x.x.x.x.x.'], '0000000000000000', [0,0], { kick:'follow', notes:'chroma' }),
+    lead:{ rhythm:'straight', range:1, riff:'menace' }, chords:{ style:'stab', m:'0030020030020030', n:[1,2], prog:'menace', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
   // электропанк (в духе Locked Club; замер трёх треков: 123–145 BPM, прямой кик на четверти, бас вместе с киком —
   // четвертями, парами 16-х или катящимися 16-ми, фригийская полутоновая краска, низ громкий, верх тёмный)
@@ -386,8 +386,17 @@ function makeHarm(G, mood, rate){
   const p = rate === 2 ? pickR(fams.p4).slice() : (x => [x[0], x[0], x[1], x[1]])(pickR(fams.p2));
   // уменьшённые и увеличенные аккорды (квинта не чистая) меняем на соседние «чистые» ступени
   const sc = scaleOf(), pure = d => ((sc[(d + 4) % 7] + (d + 4 >= 7 ? 12 : 0)) - sc[d]) === 7;
-  if (G.chords.prog === 'punk') return p.map(d => pure(d) ? d : 0);   // ♭II нет в ладу (не фригийский) — остаёмся на тонике, а не уходим в мажорную VI
-  return p.map(d => pure(d) ? d : [5, 3, 0, 4, 6].find(x => x !== d && pure(x)) ?? 0);
+  if (G.chords.prog === 'punk') return p.map(d => pure(d) ? d : 0);
+  // мажорные аккорды (III, VI, VII натурального минора) звучат «эпично-радостно»: их доля ограничена,
+  // лишние заменяются тёмными ступенями (III→i, VI→iv, VII→v); тёмные авторские прогрессии не трогаем
+  if (G.chords.prog !== 'menace'){
+    const isMaj = d => { const k = ((d % 7) + 7) % 7; return (sc[(k + 2) % 7] + (k + 2 >= 7 ? 12 : 0)) - sc[k] === 4; };
+    const cap = mood === 2 ? 0.6 : (mood === 0 || DARK_G.has(G.id)) ? 0.2 : 0.35, swap = { 2: 0, 5: 3, 6: 4, 3: 0, 4: 0, 1: 0 };
+    let maj = p.filter(isMaj).length;
+    const order = [...p.keys()].sort(() => Math.random() - 0.5);
+    for (const k of order){ if (maj / p.length <= cap) break; if (isMaj(p[k])){ const nd = swap[((p[k] % 7) + 7) % 7] ?? 0; if (!isMaj(nd) && pure(nd)){ p[k] = nd; maj--; } } }
+  }   // ♭II нет в ладу (не фригийский) — остаёмся на тонике, а не уходим в мажорную VI
+  return p.map(d => pure(d) ? d : (mood === 2 ? [5, 3, 0, 4, 6] : [3, 0, 4, 5, 6]).find(x => x !== d && pure(x)) ?? 0);   // замена «нечистого» аккорда — сперва минорные ступени
 }
 // гармонию берём из уже стоящих аккордов (если аккорды «оставить»)
 function harmFromTracks(){
@@ -495,6 +504,10 @@ function genBass(G, S, bars, harm, kickP, curP){
     const r = rootSemi(harm[slotOf(i)]); let nn = r;
     const weak = i % 4 !== 0, next = on[k + 1], nextSlotChange = next !== undefined && slotOf(next) !== slotOf(i);
     if (spec.notes === 'octave'){ nn = r + (k % 2 ? 12 : 0) * (S.cx >= 1 ? 1 : 0); }
+    else if (spec.notes === 'chroma'){
+      // «сжатие» вокруг тоники: полутон вверх и вниз, октава, редкий тритон — на слабых долях; сильные — тоника
+      if (weak && Math.random() < [0.15, 0.3, 0.45][S.cx]){ const pool = [[1, 3], [-1, 3], [12, 2], [6, 0.6], [7, 1]]; nn = r + pool[weightedPick(pool.map(x => x[1]))][0]; }
+    }
     else if (spec.notes === 'seq'){ const seq = [0, 0, 1, 0, 0, 0, 3, 1]; nn = r + (S.cx >= 1 ? degSemi(seq[k % 8] + harm[slotOf(i)]) - degSemi(harm[slotOf(i)]) : 0); }
     else if (S.cx >= 1 && weak){
       const roll = Math.random();
@@ -559,7 +572,7 @@ function genLead(G, S, bars, harm, curP, avoidP, up = 0, bassP = null){
     } else if (G.lead.riff && kind !== 'acid'){
       // тёмный рифф: тоника, ♭2, ♭3, кварта, квинта, ♭6, ♭7 снизу (ступени лада от корня аккорда), много повторов тоники;
       // мотив первого такта повторяется во втором — как гитарный рифф
-      const pool = G.lead.riff === 'hammer' ? [[0, 9], [1, 3.5], [2, 2], [4, 1.2], [-1, 1]] : [[0, 5], [1, 3], [2, 2], [4, 2], [5, 1.2], [-1, 0.8], [3, 0.8]];
+      const pool = G.lead.riff === 'hammer' ? [[0, 9], [1, 3.5], [2, 2], [4, 1.2], [-1, 1]] : G.lead.riff === 'menace' ? [[0, 8], [-1, 3.5], [1, 2.5], [4, 1.5], [2, 1.2], [5, 0.8]] : [[0, 5], [1, 3], [2, 2], [4, 2], [5, 1.2], [-1, 0.8], [3, 0.8]];
       const first = on.filter(i => i < 16), motif = first.map((i, k) => k === 0 ? 0 : pool[weightedPick(pool.map(x => x[1]))][0]);
       on.forEach((i, k) => { deg[i] = clamp(harm[slotOf(i)] + motif[k % Math.max(1, motif.length)]); });
     } else if (kind === 'acid'){
@@ -674,7 +687,7 @@ const MIX_GENRE = {
   hardtechno:{ kick:1, rev:0.6, duck:1.1 }, melodic:{ pad:1, lead:1, rev:1.2, dly:1.2 }, deephouse:{ chords:1, hat:-1, rev:1.1, duck:0.7 },
   house:{ chords:1, duck:0.8 }, techhouse:{ perc:1, bass:1, duck:0.8 }, proghouse:{ lead:1, pad:1, rev:1.2 }, trance:{ lead:1.5, pad:1, rev:1.3, dly:1.2, duck:1.1 },
   acid:{ lead:1, rev:0.8 }, minimal:{ perc:1, rev:0.9, dly:1.2 }, dubtechno:{ chords:1.5, hat:-2, rev:1.4, dly:2 }, electro:{ bass:1, rev:0.7 },
-  ebm:{ bass:1, rev:0.7 }, darktechno:{ bass:1, snare:1, hat:-2, rev:1.15, dly:0.7, duck:0.6 }, electropunk:{ bass:1.5, snare:2, hat:-3, ohat:-3, perc:-3, chords:-1, rev:0.4, dly:0.4, duck:0.5 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
+  ebm:{ bass:1, rev:0.7 }, darktechno:{ bass:2.5, snare:1, hat:-3, ohat:-3, perc:-1, chords:-1, rev:1.1, dly:0.6, duck:0.5 }, electropunk:{ bass:1.5, snare:2, hat:-3, ohat:-3, perc:-3, chords:-1, rev:0.4, dly:0.4, duck:0.5 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
   ukg:{ bass:1, duck:0.7 }, trap:{ bass:2, hat:-1, duck:0.3 }, synthwave:{ snare:1, lead:1, rev:1.4 }, idm:{ rev:1.1, width:1.3 },
   ambient:{ kick:-3, pad:2, rev:1.8, dly:1.5, duck:0.3, width:1.3 },
 };
@@ -840,7 +853,7 @@ function pickPartSound(p, G){
   const dark = GEN.mood < 0.5 || DARK_G.has(G.id);
   return wPick(list, v => {
     let w = poolW(G, v) * mr(v);
-    if (dark && (p === 'lead' || p === 'chords') && CUTE.test(v)) w *= 0.04;
+    if ((p === 'lead' || p === 'chords') && CUTE.test(v)) w *= dark ? 0.04 : GEN.mood >= 2 ? 1 : ['idm','ambient'].includes(G.id) ? 0.5 : 0.15;
     if (p === 'fx' && NOISY.test(v) && !NOISY_OK.has(G.id)) w *= 0.15;
     if (p === 'lead' && G.lead.riff && (LIBM[v] || {}).cat === 'Vocals') w *= 0.08;   // рифф — инструментом; выкрики — в FX, не мелодией
     const pr = profOf(v);
@@ -881,11 +894,21 @@ function ensure32(){
   for (const tr of tracks) for (const sc of tr.scn){ if (sc.pat.slice(16).some(Boolean)) continue; for (let i=0;i<16;i++) for (const k of STEP_KEYS) sc[k][i+16] = sc[k][i]; }
   STEPS = 32; stepLog = [];
 }
+// тёмная палитра по умолчанию: мажор/лидийский/миксолидийский — только при явно ярком Mood;
+// дорийский (минор с «светлой» большой секстой) — только в хаусовых жанрах и не при тёмном Mood
+const HOUSEY = new Set(['house','deephouse','techhouse','ukg','proghouse']);
+function darkenScale(sc, G, mood){
+  if (mood >= 2) return sc;
+  if (sc === 'major' || sc === 'lydian') return 'minor';
+  if (sc === 'mixolydian') return HOUSEY.has(G.id) ? 'dorian' : 'minor';
+  if (sc === 'dorian' && (!HOUSEY.has(G.id) || mood === 0)) return 'minor';
+  return sc;
+}
 function setGlobals(G, whole){
   const S = GEN;
   if (whole){
     const mood = ['dark','mid','bright'][S.mood];
-    P.scale = S.scale !== 'auto' && SCALES[S.scale] ? S.scale : pickR(G.scales[mood]);
+    P.scale = S.scale !== 'auto' && SCALES[S.scale] ? S.scale : darkenScale(pickR(G.scales[mood]), G, S.mood);
     P.root = S.key >= 0 ? 24 + S.key : 24 + rint(0, 11);
   } else if (!P.scale) P.scale = S.scale !== 'auto' && SCALES[S.scale] ? S.scale : 'minor';   // пресет без лада: тональность не трогаем
   if (whole){
@@ -1014,7 +1037,7 @@ function genRun(only){
   autoTune(GENM[GEN.genre] || GENRES[0], only);
   const keep = { mood:GEN.mood, energy:GEN.energy, cx:GEN.cx, parts:PARTS.map(p => [GEN.parts[p].dens, GEN.parts[p].cx]), rolls:GEN.parts.drums.rolls };
   const G0 = GENM[GEN.genre] || GENRES[0];
-  if (!only && !GEN.bpm) GEN._bpm = rint(G0.bpm[0], G0.bpm[1]);   // темп выбираем заранее, чтобы плотность считалась под него
+  if (!only && !GEN.bpm){ const z = G0.bpmZones ? pickR(G0.bpmZones) : G0.bpm; GEN._bpm = rint(z[0], z[1]); }   // зоны темпа (например, медленная и быстрая)   // темп выбираем заранее, чтобы плотность считалась под него
   tempoFitDens(G0, only ? bpm : (GEN.bpm || GEN._bpm));
   GEN.mood = qz(GEN.mood); GEN.energy = qz(GEN.energy); GEN.cx = qz(GEN.cx);
   PARTS.forEach(p => { GEN.parts[p].dens = qz(GEN.parts[p].dens); GEN.parts[p].cx = qz(GEN.parts[p].cx); });
@@ -1233,29 +1256,29 @@ function previewSound(p){
 // типичные значения ползунков для жанра (0…2 = 0…100 %): E/M/C — энергия, настроение, сложность;
 // d — ударные [плотность, сложность, свинг 0/1/2, сбивки 0/1/2], b/l/c — бас, лид, аккорды [плотность, сложность]
 const GENRE_KNOBS = {
-  techno:     { E:1.3, M:0.6, C:0.9, d:[1.3,0.9,1,1], b:[1.2,0.8], l:[0.8,0.9], c:[0.8,0.7] },
+  techno:     { E:1.3, M:0.45, C:0.9, d:[1.3,0.9,1,1], b:[1.2,0.8], l:[0.8,0.9], c:[0.8,0.7] },
   hardtechno: { E:1.8, M:0.3, C:0.8, d:[1.6,0.8,0,1], b:[1.6,0.6], l:[1.0,0.8], c:[0.6,0.6] },
-  melodic:    { E:1.1, M:0.9, C:1.2, d:[1.0,0.8,1,1], b:[1.1,0.9], l:[1.2,1.3], c:[1.0,1.0] },
-  deephouse:  { E:0.8, M:1.1, C:1.1, d:[1.0,1.1,1,1], b:[0.9,1.1], l:[0.7,1.0], c:[1.1,1.2] },
-  house:      { E:1.2, M:1.4, C:1.0, d:[1.2,1.0,1,1], b:[1.1,1.0], l:[0.9,1.0], c:[1.2,1.0] },
-  techhouse:  { E:1.3, M:1.0, C:1.0, d:[1.4,1.1,1,1], b:[1.3,1.1], l:[0.6,0.8], c:[0.6,0.8] },
-  proghouse:  { E:1.1, M:1.1, C:1.1, d:[1.1,0.9,1,1], b:[1.1,0.9], l:[1.1,1.1], c:[1.0,1.0] },
-  trance:     { E:1.6, M:1.3, C:1.1, d:[1.3,0.9,0,1], b:[1.6,0.6], l:[1.5,1.1], c:[1.0,0.9] },
-  acid:       { E:1.4, M:0.7, C:1.2, d:[1.2,1.0,1,1], b:[1.2,1.2], l:[1.5,1.4], c:[0.5,0.6] },
-  minimal:    { E:0.7, M:0.9, C:1.3, d:[0.9,1.4,1,1], b:[0.8,1.2], l:[0.5,1.2], c:[0.5,1.0] },
+  melodic:    { E:1.1, M:0.65, C:1.2, d:[1.0,0.8,1,1], b:[1.1,0.9], l:[1.2,1.3], c:[1.0,1.0] },
+  deephouse:  { E:0.8, M:0.8, C:1.1, d:[1.0,1.1,1,1], b:[0.9,1.1], l:[0.7,1.0], c:[1.1,1.2] },
+  house:      { E:1.2, M:1.0, C:1.0, d:[1.2,1.0,1,1], b:[1.1,1.0], l:[0.9,1.0], c:[1.2,1.0] },
+  techhouse:  { E:1.3, M:0.7, C:1.0, d:[1.4,1.1,1,1], b:[1.3,1.1], l:[0.6,0.8], c:[0.6,0.8] },
+  proghouse:  { E:1.1, M:0.8, C:1.1, d:[1.1,0.9,1,1], b:[1.1,0.9], l:[1.1,1.1], c:[1.0,1.0] },
+  trance:     { E:1.6, M:0.95, C:1.1, d:[1.3,0.9,0,1], b:[1.6,0.6], l:[1.5,1.1], c:[1.0,0.9] },
+  acid:       { E:1.4, M:0.5, C:1.2, d:[1.2,1.0,1,1], b:[1.2,1.2], l:[1.5,1.4], c:[0.5,0.6] },
+  minimal:    { E:0.7, M:0.6, C:1.3, d:[0.9,1.4,1,1], b:[0.8,1.2], l:[0.5,1.2], c:[0.5,1.0] },
   dubtechno:  { E:0.6, M:0.6, C:0.8, d:[0.8,0.8,1,0], b:[0.8,0.6], l:[0.4,0.6], c:[1.0,0.8] },
-  electro:    { E:1.3, M:0.8, C:1.4, d:[1.3,1.4,0,1], b:[1.3,1.3], l:[1.1,1.2], c:[0.7,0.8] },
+  electro:    { E:1.3, M:0.55, C:1.4, d:[1.3,1.4,0,1], b:[1.3,1.3], l:[1.1,1.2], c:[0.7,0.8] },
   ebm:        { E:1.5, M:0.4, C:0.8, d:[1.3,0.8,0,1], b:[1.7,0.6], l:[0.9,0.8], c:[0.5,0.6] },
   electropunk:{ E:1.9, M:0.1, C:0.9, d:[1.5,0.9,0,1], b:[1.6,0.8], l:[1.0,0.8], c:[0.6,0.6] },
   darktechno: { E:1.3, M:0.2, C:1.0, d:[1.0,0.9,0,1], b:[1.4,0.8], l:[0.8,0.9], c:[0.6,0.7] },
-  breaks:     { E:1.4, M:1.1, C:1.5, d:[1.4,1.6,1,1], b:[1.2,1.2], l:[0.9,1.1], c:[0.9,1.0] },
-  dnb:        { E:1.7, M:0.9, C:1.5, d:[1.5,1.6,1,1], b:[1.3,1.3], l:[0.8,1.0], c:[0.9,1.0] },
+  breaks:     { E:1.4, M:0.75, C:1.5, d:[1.4,1.6,1,1], b:[1.2,1.2], l:[0.9,1.1], c:[0.9,1.0] },
+  dnb:        { E:1.7, M:0.6, C:1.5, d:[1.5,1.6,1,1], b:[1.3,1.3], l:[0.8,1.0], c:[0.9,1.0] },
   dubstep:    { E:1.5, M:0.4, C:1.3, d:[0.9,1.2,1,1], b:[1.5,1.5], l:[0.6,1.0], c:[0.6,0.8] },
-  ukg:        { E:1.2, M:1.3, C:1.5, d:[1.3,1.5,1,1], b:[1.2,1.3], l:[0.8,1.1], c:[1.1,1.2] },
-  trap:       { E:1.2, M:0.6, C:1.4, d:[1.4,1.5,1,1], b:[1.0,1.2], l:[0.9,1.0], c:[0.7,0.8] },
-  synthwave:  { E:1.1, M:1.4, C:0.9, d:[1.0,0.8,0,1], b:[1.5,0.7], l:[1.2,1.0], c:[1.1,0.9] },
-  idm:        { E:1.0, M:1.0, C:1.9, d:[1.3,1.9,1,1], b:[1.0,1.6], l:[1.1,1.7], c:[0.9,1.4] },
-  ambient:    { E:0.4, M:1.2, C:0.8, d:[0.3,0.6,1,0], b:[0.6,0.6], l:[0.6,0.9], c:[1.2,0.9] },
+  ukg:        { E:1.2, M:0.95, C:1.5, d:[1.3,1.5,1,1], b:[1.2,1.3], l:[0.8,1.1], c:[1.1,1.2] },
+  trap:       { E:1.2, M:0.4, C:1.4, d:[1.4,1.5,1,1], b:[1.0,1.2], l:[0.9,1.0], c:[0.7,0.8] },
+  synthwave:  { E:1.1, M:1.05, C:0.9, d:[1.0,0.8,0,1], b:[1.5,0.7], l:[1.2,1.0], c:[1.1,0.9] },
+  idm:        { E:1.0, M:0.75, C:1.9, d:[1.3,1.9,1,1], b:[1.0,1.6], l:[1.1,1.7], c:[0.9,1.4] },
+  ambient:    { E:0.4, M:0.85, C:0.8, d:[0.3,0.6,1,0], b:[0.6,0.6], l:[0.6,0.9], c:[1.2,0.9] },
 };
 function applyGenreKnobs(id){
   const K = GENRE_KNOBS[id]; if (!K) return;
