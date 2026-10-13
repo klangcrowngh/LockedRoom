@@ -20,7 +20,8 @@ const PROGS = {
   pop:       { p2:[[0,4],[5,3],[0,5]],           p4:[[0,4,5,3],[5,3,0,4],[0,5,3,4]] },
   dark:      { p2:[[0,1],[0,5],[0,0],[0,6]],     p4:[[0,1,0,5],[0,5,1,0],[0,6,5,1]] },
   dreamy:    { p2:[[0,3],[3,0],[0,1]],           p4:[[0,3,4,1],[0,4,3,1],[0,1,3,4]] },
-  punk:      { p2:[[0,0],[0,1],[0,0],[1,0]],     p4:[[0,0,1,0],[0,1,0,0],[0,0,0,1]] },   // тоника ↔ ♭II: тёмный полутон, без мажорных VI/VII
+  punk:      { p2:[[0,0],[0,1],[0,0],[1,0]],     p4:[[0,0,1,0],[0,1,0,0],[0,0,0,1]] },
+  menace:    { p2:[[0,5],[0,1],[0,4],[0,0]],     p4:[[0,5,1,4],[0,0,5,4],[0,1,0,4]] },   // i–♭VI–♭II–V, всегда от тоники   // тоника ↔ ♭II: тёмный полутон, без мажорных VI/VII
 };
 
 const GENRES = [
@@ -153,6 +154,17 @@ const GENRES = [
     bass:L(['.xxx.xxx.xxx.xxx', '.x.x.x.x.x.x.x.x'], '0000000000000000', [0,0], { kick:'avoid', notes:'seq' }),
     lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'off' } },
+  // тёмное техно в духе Gesaffelstein: холодно и угрожающе, средний темп, тяжёлый, но не частый кик,
+  // большой грязный бас-секвенсор, холодные расстроенные пилы, гармонический минор, металлическая перкуссия с хвостом
+  { id:'darktechno', name:'Dark Techno', bpm:[118,128], swing:[0,0], drive:6, grit:1.6, legacy:'dark',
+    scales:{ dark:['harmonic','phrygian'], mid:['harmonic','minor'], bright:['minor','harmonic'] },
+    kit:{ kick:['kick_cold','kick_menace','kick_industrial','kick_warehouse','distkick','kick909'], snare:['cl_cold','cl_metal','sn_whip','clap909','sn_industrial','darksnare'], hat:['hat_cold','hat909','tick','hat_metal'], ohat:['ride_cold','ohat909','ride_dark'], perc:['perc_chain','perc_hammer','metal','anvil','metal_ping'] },
+    snd:{ bass:['bass_menace','bass_hornet','bass_brute','bass_coldseq','ebm','reese_dark','buzz'], lead:['lead_cold','lead_scythe','lead_baroque','lead_horn','darksaw','lead_dark','lead_grind','hoover'], chords:['stab_menace','stab_cathedral','pad_cold','diststab','stab_brass','pad_dark'], fx:['fx_rumblehit','fx_metalsweep','impact','metal_hit'] },
+    kick:L(GK4, '0000000000000001', [0,1]), snare:L(GBB, '0000000000000012', [0,1]),
+    hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '0101010101010101', [0,6]), ohat:L(GOFF), perc:L(['.......x.......x', '...x...........x'], '0001000100010001', [0,2]),
+    bass:L(['.xxx.xxx.xxx.xxx', 'x.x.x.x.x.x.x.x.', 'x..x..x...x..x..'], '0000000000000000', [0,0], { kick:'avoid', notes:'seq' }),
+    lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'stab', m:'0030020030020030', n:[1,2], prog:'menace', rate:1 },
+    parts:{ lead:'new', chords:'new', fx:'new' } },
   // электропанк (в духе Locked Club; замер трёх треков: 123–145 BPM, прямой кик на четверти, бас вместе с киком —
   // четвертями, парами 16-х или катящимися 16-ми, фригийская полутоновая краска, низ громкий, верх тёмный)
   { id:'electropunk', name:'Electro Punk', bpm:[122,146], swing:[0,0], drive:8, grit:2.2, legacy:'dark',
@@ -258,7 +270,7 @@ const HATS = {
   idm:    { 0:['x..x.x..x..x.x..'], 1:['x.x..x.x..x.x..x', 'xx.x.xx.x.xx.x.x'], 2:['xxxxxxxxxxxxxxxx', 'xx.xxx.xx.xxx.xx'] },
 };
 const HAT_STYLE = { techno:'techno', hardtechno:'hard', melodic:'minimal', deephouse:'house', house:'house', techhouse:'house', proghouse:'techno', trance:'techno',
-  acid:'techno', minimal:'minimal', dubtechno:'dub', electro:'broken', ebm:'techno', electropunk:'techno', breaks:'broken', dnb:'broken', dubstep:'half', ukg:'ukg', trap:'half',
+  acid:'techno', minimal:'minimal', dubtechno:'dub', electro:'broken', ebm:'techno', electropunk:'techno', darktechno:'techno', breaks:'broken', dnb:'broken', dubstep:'half', ukg:'ukg', trap:'half',
   synthwave:'broken', idm:'idm', ambient:'minimal' };
 for (const g of GENRES){ g.hat.h = HATS[HAT_STYLE[g.id]] || HATS.techno; g.hat.n = [0, 2]; }
 const GENM = Object.fromEntries(GENRES.map(g => [g.id, g]));
@@ -370,7 +382,7 @@ function twoBars(bar1, knob, spec, minKnob = 1){
 function makeHarm(G, mood, rate){
   const fam = PROGS[G.chords.prog] || PROGS.static, mi = ['dark','mid','bright'][mood];
   let fams = fam;
-  if (mi === 'dark' && G.chords.prog !== 'dark' && G.chords.prog !== 'punk' && Math.random() < 0.3) fams = PROGS.dark;   // у панка своя тёмная гармония — без мажорных VI/VII
+  if (mi === 'dark' && !['dark','punk','menace'].includes(G.chords.prog) && Math.random() < 0.3) fams = PROGS.dark;   // у панка своя тёмная гармония — без мажорных VI/VII
   const p = rate === 2 ? pickR(fams.p4).slice() : (x => [x[0], x[0], x[1], x[1]])(pickR(fams.p2));
   // уменьшённые и увеличенные аккорды (квинта не чистая) меняем на соседние «чистые» ступени
   const sc = scaleOf(), pure = d => ((sc[(d + 4) % 7] + (d + 4 >= 7 ? 12 : 0)) - sc[d]) === 7;
@@ -662,7 +674,7 @@ const MIX_GENRE = {
   hardtechno:{ kick:1, rev:0.6, duck:1.1 }, melodic:{ pad:1, lead:1, rev:1.2, dly:1.2 }, deephouse:{ chords:1, hat:-1, rev:1.1, duck:0.7 },
   house:{ chords:1, duck:0.8 }, techhouse:{ perc:1, bass:1, duck:0.8 }, proghouse:{ lead:1, pad:1, rev:1.2 }, trance:{ lead:1.5, pad:1, rev:1.3, dly:1.2, duck:1.1 },
   acid:{ lead:1, rev:0.8 }, minimal:{ perc:1, rev:0.9, dly:1.2 }, dubtechno:{ chords:1.5, hat:-2, rev:1.4, dly:2 }, electro:{ bass:1, rev:0.7 },
-  ebm:{ bass:1, rev:0.7 }, electropunk:{ bass:1.5, snare:2, hat:-3, ohat:-3, perc:-3, chords:-1, rev:0.4, dly:0.4, duck:0.5 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
+  ebm:{ bass:1, rev:0.7 }, darktechno:{ bass:1, snare:1, hat:-2, rev:1.15, dly:0.7, duck:0.6 }, electropunk:{ bass:1.5, snare:2, hat:-3, ohat:-3, perc:-3, chords:-1, rev:0.4, dly:0.4, duck:0.5 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
   ukg:{ bass:1, duck:0.7 }, trap:{ bass:2, hat:-1, duck:0.3 }, synthwave:{ snare:1, lead:1, rev:1.4 }, idm:{ rev:1.1, width:1.3 },
   ambient:{ kick:-3, pad:2, rev:1.8, dly:1.5, duck:0.3, width:1.3 },
 };
@@ -818,7 +830,7 @@ function densForSound(dens, v){ const occ = occOf(v); return occ <= 2 ? dens : M
 const sparsest = spec => ({ ...spec, a: [spec.a.reduce((b, x) => hits(strPat(x)) < hits(strPat(b)) ? x : b, spec.a[0])] });
 // мелодическая партия: жанр + настроение + то, что уже звучит (кик, аккорды)
 const CUTE = /bell|kalimba|marimba|chip|toy|glass|harp|music|steelpan|whistle|flute|xylo|vibra|celest|glock|ocarina|digibell|mallet|pluck|blip|sine|chime|vox_oi|vox_hey/;
-const DARK_G = new Set(['electropunk','ebm','hardtechno','dubstep','dark']);
+const DARK_G = new Set(['electropunk','ebm','hardtechno','dubstep','darktechno','dark']);
 const NOISY = /crackle|vinyl|glitch|noiz|bitcrush|static|hiss/, NOISY_OK = new Set(['ambient','idm','dubtechno']);   // шумовые FX — к месту только в этих жанрах
 function pickPartSound(p, G){
   const own = (G.snd[p] || []).filter(v => SYNTH[v]), list = own.length ? own : soundList(p, G);
@@ -966,7 +978,7 @@ function genreStyle(G){
   const id = G.id, sw = G.swing || [0, 0];
   const swing = sw[1] === 0 ? { 0: 0.85, 1: 0.15 } : sw[1] >= 0.15 ? { 1: 0.6, 2: 0.3, 0: 0.1 } : { 1: 0.7, 0: 0.15, 2: 0.15 };
   const rolls = id === 'trap' ? { 2: 0.7, 1: 0.3 } : ['idm','dnb','breaks'].includes(id) ? { 1: 0.6, 2: 0.2, 0: 0.2 }
-    : ['electropunk','ebm','hardtechno','ambient','dubtechno'].includes(id) ? { 0: 0.55, 1: 0.45 } : { 1: 0.65, 0: 0.3, 2: 0.05 };
+    : ['electropunk','ebm','hardtechno','darktechno','ambient','dubtechno'].includes(id) ? { 0: 0.55, 1: 0.45 } : { 1: 0.65, 0: 0.3, 2: 0.05 };
   const lr = G.lead.rhythm, riff = RIFF_DARK(G);
   const rhythm = lr === 'drive' ? { drive: 0.7, straight: 0.2, synco: 0.1 } : lr === 'acid' ? { acid: 0.8, synco: 0.2 } : lr === 'arp' ? { arp: 0.6, synco: 0.25, straight: 0.15 }
     : lr === 'straight' ? (riff ? { straight: 0.7, synco: 0.3 } : { straight: 0.6, synco: 0.3, arp: 0.1 }) : (riff ? { synco: 0.65, straight: 0.35 } : { synco: 0.6, straight: 0.25, arp: 0.15 });
@@ -1235,6 +1247,7 @@ const GENRE_KNOBS = {
   electro:    { E:1.3, M:0.8, C:1.4, d:[1.3,1.4,0,1], b:[1.3,1.3], l:[1.1,1.2], c:[0.7,0.8] },
   ebm:        { E:1.5, M:0.4, C:0.8, d:[1.3,0.8,0,1], b:[1.7,0.6], l:[0.9,0.8], c:[0.5,0.6] },
   electropunk:{ E:1.9, M:0.1, C:0.9, d:[1.5,0.9,0,1], b:[1.6,0.8], l:[1.0,0.8], c:[0.6,0.6] },
+  darktechno: { E:1.3, M:0.2, C:1.0, d:[1.0,0.9,0,1], b:[1.4,0.8], l:[0.8,0.9], c:[0.6,0.7] },
   breaks:     { E:1.4, M:1.1, C:1.5, d:[1.4,1.6,1,1], b:[1.2,1.2], l:[0.9,1.1], c:[0.9,1.0] },
   dnb:        { E:1.7, M:0.9, C:1.5, d:[1.5,1.6,1,1], b:[1.3,1.3], l:[0.8,1.0], c:[0.9,1.0] },
   dubstep:    { E:1.5, M:0.4, C:1.3, d:[0.9,1.2,1,1], b:[1.5,1.5], l:[0.6,1.0], c:[0.6,0.8] },

@@ -308,7 +308,7 @@ const ENG = {
 // ---------- теги жанров: короткие группы ----------
 const TAG_GROUPS = {
   '4x4': 'techno melodic deephouse house techhouse proghouse trance acid minimal dubtechno',
-  house4: 'deephouse house techhouse ukg', dark: 'hardtechno ebm electropunk dubstep trap', brk: 'breaks dnb electro', chill: 'ambient dubtechno idm deephouse',
+  house4: 'deephouse house techhouse ukg', dark: 'hardtechno ebm electropunk darktechno dubstep trap', brk: 'breaks dnb electro', chill: 'ambient dubtechno idm deephouse',
 };
 const expandTags = s => [...new Set((s || '').split(/\s+/).filter(Boolean).flatMap(x => (TAG_GROUPS[x] || x).split(/\s+/)))];
 
@@ -756,7 +756,7 @@ addSounds('FX', 'tone', [
 
 // ---------- электропанк (в духе Locked Club): грязные, короткие, напористые; низ — главный, верх — тёмный ----------
 Object.assign(TRIM, { hat_fuzz:7, hat_trash:8, ohat_trash:4, perc_clang:6, lead_fuzz:5, lead_scream:6, lead_buzzsaw:4, stab_power:6, stab_punk:6,
-  vox_megaphone:8, bass_ebm2:5, bass_roll:3, sn_trash:2, sn_gated:2, lead_grind:6, lead_darksq:4 });   // выровнять к медиане своей категории (замер)
+  vox_megaphone:8, bass_ebm2:5, bass_roll:3, sn_trash:2, sn_gated:2, lead_grind:6, lead_darksq:4, bass_menace:3, lead_cold:6, stab_menace:7 });   // выровнять к медиане своей категории (замер)
 addSounds('Kicks', 'kick', [
   ['kick_punk', 'Punk Kick', { f0:210, f1:50, sw:0.035, h:0.04, d:0.22, k:6, c:0.35, lp:7000 }, 'electropunk ebm hardtechno'],
   ['kick_fuzz', 'Fuzz Kick', { f0:240, f1:46, sw:0.045, h:0.05, d:0.28, k:12, c:0.25, lp:5000, lvl:0.6 }, 'electropunk hardtechno'],
@@ -813,5 +813,59 @@ addSounds('FX', 'fx', [
   ['noise_burst', 'Noise Burst', { m:'impact', d:0.4, f:900, lvl:0.3, rev:0.15 }, 'electropunk hardtechno ebm'],
 ]);
 
+// ---------- тёмное техно (в духе Gesaffelstein): холодные, большие, угрожающие ----------
+addSounds('Bass', 'tone', [
+  ['bass_menace', 'Menace Bass', { w:'sawtooth', u:3, dt:15, o:12, d:0.25, h:0.04, f:600, q:3, fe:3, fd:0.12, k:4, sub:0.5, lvl:0.32 }, 'darktechno ebm techno'],
+]);
+addSounds('Leads & Arps', 'tone', [
+  ['lead_cold', 'Cold Lead', { w:'sawtooth', u:2, dt:12, a:0.004, d:0.35, h:0.1, f:2000, q:4, fe:2, fd:0.15, k:3, lvl:0.14, rev:0.3 }, 'darktechno ebm melodic'],
+]);
+addSounds('Chords & Stabs', 'tone', [
+  ['stab_menace', 'Menace Stab', { ch:[0,3,7], w:'sawtooth', u:2, dt:10, d:0.3, h:0.03, f:1500, q:2, fe:3, fd:0.1, k:5, lvl:0.17, rev:0.35 }, 'darktechno ebm hardtechno'],
+]);
+// ---------- тёмное техно, пакет 2: холодный металл, большие басы, «барочные» и духовые тёмные линии ----------
+Object.assign(TRIM, { kick_cold:-0.5, kick_menace:-1, cl_cold:-7.5, cl_metal:-8, sn_whip:-0.5, ride_cold:-8, perc_chain:-2, perc_hammer:-4, bass_hornet:-0.5,
+  bass_brute:-0.5, bass_coldseq:6, lead_horn:1, lead_scythe:3, stab_cathedral:-2.5, pad_cold:1.5, fx_rumblehit:-8, fx_metalsweep:8 });   // к медиане категории (замер)
+addSounds('Kicks', 'kick', [
+  ['kick_cold', 'Cold Kick', { f0:160, f1:44, sw:0.05, h:0.06, d:0.34, k:2.5, c:0.2, lp:5000 }, 'darktechno techno ebm'],
+  ['kick_menace', 'Menace Kick', { f0:230, f1:42, sw:0.06, h:0.07, d:0.38, k:8, c:0.25, lp:4200, rev:0.06 }, 'darktechno hardtechno ebm'],
+]);
+addSounds('Claps', 'clap', [
+  ['cl_cold', 'Cold Clap', { n:4, sp:0.011, d:0.32, f:1300, q:0.9, k:2, rev:0.55 }, 'darktechno techno ebm'],
+  ['cl_metal', 'Metal Clap', { n:3, sp:0.01, d:0.22, f:2200, q:1.5, k:4, ring:2.3, rev:0.35 }, 'darktechno hardtechno'],
+]);
+addSounds('Snares', 'snare', [
+  ['sn_whip', 'Whip Snare', { ft:260, ta:0.4, td:0.05, nf:4200, nq:1.2, na:1, nd:0.2, k:4, rev:0.4 }, 'darktechno ebm'],
+]);
+addSounds('Hats & Cymbals', 'perc', [
+  ['hat_cold', 'Cold Hat', { w:'square', f:3600, pd:1, d:0.04, ring:1.53, hp:7000, lvl:0.3 }, 'darktechno techno'],
+]);
+addSounds('Hats & Cymbals', 'modal', [
+  ['ride_cold', 'Cold Ride', { m:'plate', f:2900, d:0.9, br:0.85, nz:0.2, nd:0.01, nr:2, lvl:0.11, rev:0.25 }, 'darktechno techno'],
+]);
+addSounds('Toms & Perc', 'modal', [
+  ['perc_chain', 'Chain Hit', { m:'plate', f:900, d:0.25, br:0.7, nz:0.8, nd:0.06, nr:6, lvl:0.3, rev:0.3 }, 'darktechno hardtechno ebm'],
+  ['perc_hammer', 'Hammer on Metal', { m:'bar', f:310, d:0.4, br:0.75, nz:0.5, nd:0.02, nr:3, lvl:0.35, rev:0.3 }, 'darktechno ebm industrial'],
+]);
+addSounds('Bass', 'tone', [
+  ['bass_hornet', 'Hornet Bass', { w:'square', u:2, dt:14, o:12, d:0.18, h:0.03, f:900, q:4, fe:2.5, fd:0.06, k:3, sub:0.5, lvl:0.32 }, 'darktechno ebm electro'],
+  ['bass_brute', 'Brute Bass', { w:'sawtooth', o:12, d:0.22, h:0.05, f:700, q:1.5, fe:1.5, fd:0.1, k:6, sub:0.65, lvl:0.33 }, 'darktechno hardtechno electropunk'],
+  ['bass_coldseq', 'Cold Seq Bass', { w:'sawtooth', o:12, d:0.08, f:800, q:5, fe:3, fd:0.03, k:2, sub:0.4, lvl:0.36 }, 'darktechno ebm techno'],
+]);
+addSounds('Leads & Arps', 'tone', [
+  ['lead_baroque', 'Baroque Dark', { w:['sawtooth','square'], d:0.16, h:0.02, f:2600, q:2, fe:1.5, fd:0.05, k:2, lvl:0.15, rev:0.25 }, 'darktechno melodic'],
+  ['lead_horn', 'Dark Synth Horn', { w:'sawtooth', u:2, dt:8, a:0.03, h:0.2, d:0.35, f:1100, fe:2, fd:0.25, k:2, lvl:0.15, rev:0.35 }, 'darktechno synthwave'],
+  ['lead_scythe', 'Scythe Lead', { w:'sawtooth', u:3, dt:16, d:0.28, h:0.06, f:1800, q:8, fe:3, fd:0.18, k:4, lvl:0.13, rev:0.25 }, 'darktechno hardtechno ebm'],
+]);
+addSounds('Chords & Stabs', 'tone', [
+  ['stab_cathedral', 'Cathedral Chord', { ch:[0,3,7,12], w:['square','sawtooth'], a:0.01, h:0.15, d:0.6, f:1800, lvl:0.13, rev:0.6 }, 'darktechno ebm ambient'],
+]);
+addSounds('Pads', 'tone', [
+  ['pad_cold', 'Cold Strings', { ch:[0,3,7], w:'sawtooth', u:2, dt:14, a:0.5, h:0.8, d:1.4, f:900, q:1.5, vib:4, lvl:0.13, rev:0.5 }, 'darktechno ebm melodic'],
+]);
+addSounds('FX', 'fx', [
+  ['fx_rumblehit', 'Rumble Hit', { m:'impact', d:1.8, f:48, k:3, lvl:0.4, rev:0.5 }, 'darktechno hardtechno'],
+  ['fx_metalsweep', 'Metal Sweep', { m:'down', L:8, f0:6000, f1:300, lvl:0.22 }, 'darktechno techno'],
+]);
 // библиотека: категории по порядку, внутри — как добавлены
 LIB.sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
