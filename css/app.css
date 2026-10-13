@@ -784,3 +784,10 @@ body.skin-ko #gen[data-fit] .gsl input[type=range]::-moz-range-thumb{width:26px;
   #gate h1{font-size:33px}
   body.skin-ko #gateCv{width:min(300px,40vh);height:min(300px,40vh)}
 }
+/* прокручиваемые области не обрезают контур и тень клавиш: внутренний запас + такой же отрицательный отступ (раскладка не сдвигается) */
+#song .spane{padding:3px 5px 7px;margin:-3px -5px -7px}
+#gen .gbody{padding:3px 5px 7px;margin:-3px -5px 0}
+#song .tl .blocks{padding:3px;margin:-3px}
+#song .tl{padding:0 3px 0 0}
+.stepsWrap{padding:3px 3px 6px;margin:-3px -3px -6px}
+#libList{padding-bottom:12px}
