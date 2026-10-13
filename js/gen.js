@@ -37,7 +37,7 @@ const GENRES = [
 
   { id:'hardtechno', name:'Hard Techno', bpm:[145,155], swing:[0,0], drive:7.5, grit:2.2, legacy:'techno',
     scales:{ dark:['phrygian','harmonic'], mid:['minor','phrygian'], bright:['minor'] },
-    kit:{ kick:['hardkick','distkick','gabber','rumblekick'], snare:['clap909','bigclap','steel'], hat:['hat909','hat','tick'], ohat:['ohat909','ride'], perc:['metal','indhit','tom909'] },
+    kit:{ kick:['hardkick','distkick','gabber','rumblekick'], snare:['clap909','bigclap','steel'], hat:['hat909','hat','tick'], ohat:['ohat909','ohat_phase'], perc:['metal','indhit','tom909'] },
     snd:{ bass:['rumble','reese','buzz','growl'], lead:['hoover','darksaw','siren','acid'], chords:['ravestab','diststab','stab'], fx:['impact','sweepup','boom','crash'] },
     kick:L(GK4, '0000000000000025', [0,1]), snare:L(GBB, '0000000200020013', [0,2]),
     hat:L(GOFF, '3232323232323232', [2,12]), ohat:L(GOFF), perc:L(['..x.......x.....', '......x.......x.'], '0101010101010101', [0,2]),   // на 150 BPM перкуссия — редкие акценты, иначе каша
@@ -158,7 +158,7 @@ const GENRES = [
   // играет вместе с киком; хроматика вокруг тоники (полутон вверх/вниз, тритон), гармонический минор; очень тёмный верх
   { id:'darktechno', name:'Dark Techno', bpm:[100,135], bpmZones:[[100,106],[126,135]], swing:[0,0], drive:6, grit:1.6, legacy:'dark',
     scales:{ dark:['harmonic','phrygian'], mid:['harmonic','harmonic','phrygian'], bright:['harmonic','minor'] },
-    kit:{ kick:['kick_cold','kick_menace','kick_industrial','kick_warehouse','distkick','kick909'], snare:['cl_cold','cl_metal','sn_whip','clap909','sn_industrial','darksnare'], hat:['hat_cold','hat909','tick','hat_metal'], ohat:['ride_cold','ohat909','ride_dark'], perc:['perc_chain','perc_hammer','metal','anvil','metal_ping'] },
+    kit:{ kick:['kick_cold','kick_menace','kick_industrial','kick_warehouse','distkick','kick909'], snare:['cl_cold','cl_metal','sn_whip','clap909','sn_industrial','darksnare'], hat:['hat_cold','hat909','tick','hat_metal'], ohat:['ohat909','ohat_phase','ohat_trash'], perc:['perc_chain','metal','indhit','cl_metal'] },
     snd:{ bass:['bass_menace','bass_hornet','bass_brute','bass_coldseq','ebm','reese_dark','buzz'], lead:['lead_abyss','lead_dread','lead_tar','lead_wraith','lead_bend','lead_dark','hoover','darksaw'], chords:['stab_abyss','stab_tritone','stab_cluster','stab_menace','pad_dark','pad_cold'], fx:['fx_rumblehit','fx_metalsweep','impact','metal_hit'] },
     kick:L(GK4, '0000000000000001', [0,1]), snare:L(GBB, '0000000000000012', [0,1]),
     hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '0101010101010101', [0,6]), ohat:L(GOFF), perc:L(['.......x.......x', '...x...........x'], '0001000100010001', [0,2]),
@@ -339,8 +339,10 @@ function soundList(p, G){
 }
 // наборы ударных: kick/snare/hat/… по очереди из жанровых списков
 function kitList(G){
-  const n = Math.max(...DRUM_ROLES.map(r => G.kit[r].length)), out = [];
-  for (let k=0;k<n;k++) out.push(Object.fromEntries(DRUM_ROLES.map(r => [r, G.kit[r][k % G.kit[r].length]])));
+  // в тёмных жанрах в готовые наборы «настроенный» металл не попадает
+  const L = r => { const l = G.kit[r].filter(v => SYNTH[v]); const c = DARK_G.has(G.id) ? l.filter(v => !RINGING.test(v)) : l; return c.length ? c : l; };
+  const n = Math.max(...DRUM_ROLES.map(r => L(r).length)), out = [];
+  for (let k=0;k<n;k++) out.push(Object.fromEntries(DRUM_ROLES.map(r => [r, L(r)[k % L(r).length]])));
   return out;
 }
 const kitName = kit => label(kit.kick) + ' · ' + label(kit.snare);
@@ -821,6 +823,9 @@ function moodRank(list){
 // взвешенный выбор (веса заострены — хорошие варианты выпадают заметно чаще, но не всегда)
 function wPick(list, wf){ const ws = list.map(v => Math.pow(Math.max(0, wf(v)), 1.6)); const i = weightedPick(ws); return i < 0 ? pickR(list) : list[i]; }
 // набор ударных вокруг кика (свой кик можно передать — тогда остальные подбираются к нему)
+// «настроенный» металл (райды, треугольники, гонг, наковальня, стекло, колокол…): звенит долго и с высотой,
+// которая не следует тональности трека, — в тёмных жанрах почти никогда, в остальных реже
+const RINGING = /ride|triangle|gong|anvil|glass|steelpan|logdrum|bell|ping|hammer|kalimba|sizzle|tube_hit|metal_hit|chime|cowbell|agogo/;
 function pickKit(G, fixed = {}){
   const kit = { ...fixed };
   for (const r of DRUM_ROLES){
@@ -829,7 +834,8 @@ function pickKit(G, fixed = {}){
     const mr = moodRank(list), fk = kit.kick ? famOf(kit.kick) : null, fh = kit.hat ? famOf(kit.hat) : null;
     // перкуссия (конги, шейкеры…) — из любого семейства, если она жанровая: правило семейства для неё мягче
     const ff = v => { const f = fk ? famFit(fk, famOf(v)) : 1; return r === 'perc' ? 0.6 + 0.4 * f : f; };
-    kit[r] = wPick(list, v => poolW(G, v) * mr(v) * ff(v) * (r === 'ohat' && fh ? famFit(fh, famOf(v)) : 1));
+    const ring = v => RINGING.test(v) ? (DARK_G.has(G.id) || GEN.mood < 0.5 ? 0.04 : 0.4) : 1;
+    kit[r] = wPick(list, v => poolW(G, v) * mr(v) * ff(v) * ring(v) * (r === 'ohat' && fh ? famFit(fh, famOf(v)) : 1));
   }
   return kit;
 }
