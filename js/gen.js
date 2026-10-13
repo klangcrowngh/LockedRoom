@@ -20,6 +20,7 @@ const PROGS = {
   pop:       { p2:[[0,4],[5,3],[0,5]],           p4:[[0,4,5,3],[5,3,0,4],[0,5,3,4]] },
   dark:      { p2:[[0,1],[0,5],[0,0],[0,6]],     p4:[[0,1,0,5],[0,5,1,0],[0,6,5,1]] },
   dreamy:    { p2:[[0,3],[3,0],[0,1]],           p4:[[0,3,4,1],[0,4,3,1],[0,1,3,4]] },
+  punk:      { p2:[[0,0],[0,1],[0,0],[1,0]],     p4:[[0,0,1,0],[0,1,0,0],[0,0,0,1]] },   // тоника ↔ ♭II: тёмный полутон, без мажорных VI/VII
 };
 
 const GENRES = [
@@ -33,14 +34,14 @@ const GENRES = [
     lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0040300403004030', n:[1,4], prog:'static', rate:1 },
     parts:{ lead:'new', chords:'new', fx:'off' } },
 
-  { id:'hardtechno', name:'Hard Techno', bpm:[145,155], swing:[0,0], drive:9, grit:3, legacy:'techno',
+  { id:'hardtechno', name:'Hard Techno', bpm:[145,155], swing:[0,0], drive:7.5, grit:2.2, legacy:'techno',
     scales:{ dark:['phrygian','harmonic'], mid:['minor','phrygian'], bright:['minor'] },
     kit:{ kick:['hardkick','distkick','gabber','rumblekick'], snare:['clap909','bigclap','steel'], hat:['hat909','hat','tick'], ohat:['ohat909','ride'], perc:['metal','indhit','tom909'] },
     snd:{ bass:['rumble','reese','buzz','growl'], lead:['hoover','darksaw','siren','acid'], chords:['ravestab','diststab','stab'], fx:['impact','sweepup','boom','crash'] },
     kick:L(GK4, '0000000000000025', [0,1]), snare:L(GBB, '0000000200020013', [0,2]),
-    hat:L(GOFF, '3232323232323232', [2,12]), ohat:L(GOFF), perc:L(['..x..x....x..x..', '...x..x....x..x.'], '1111111111111111', [0,3]),
+    hat:L(GOFF, '3232323232323232', [2,12]), ohat:L(GOFF), perc:L(['..x.......x.....', '......x.......x.'], '0101010101010101', [0,2]),   // на 150 BPM перкуссия — редкие акценты, иначе каша
     bass:L(['.xxx.xxx.xxx.xxx', '.x.x.x.x.x.x.x.x'], '0000000000000000', [0,0], { kick:'avoid', notes:'root' }),
-    lead:{ rhythm:'synco', range:1 }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'dark', rate:1 },
+    lead:{ rhythm:'synco', range:1, riff:true }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'new' } },
 
   { id:'melodic', name:'Melodic Techno', bpm:[120,126], swing:[0,0.04], drive:3, grit:0.8, legacy:'techno',
@@ -150,8 +151,19 @@ const GENRES = [
     kick:L(GK4, '0000000000000020', [0,1]), snare:L(GBB, '0000000000000013', [0,1]),
     hat:L([GOFF, 'x.x.x.x.x.x.x.x.'], '1111111111111111', [0,6]), ohat:L(GOFF), perc:L(['..x.......x..x..', '.......x.......x'], '1111111111111111', [0,2]),
     bass:L(['.xxx.xxx.xxx.xxx', '.x.x.x.x.x.x.x.x'], '0000000000000000', [0,0], { kick:'avoid', notes:'seq' }),
-    lead:{ rhythm:'straight', range:1 }, chords:{ style:'pad', prog:'dark', rate:1 },
+    lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'pad', prog:'dark', rate:1 },
     parts:{ lead:'new', chords:'off', fx:'off' } },
+  // электропанк (в духе Locked Club; замер трёх треков: 123–145 BPM, прямой кик на четверти, бас вместе с киком —
+  // четвертями, парами 16-х или катящимися 16-ми, фригийская полутоновая краска, низ громкий, верх тёмный)
+  { id:'electropunk', name:'Electro Punk', bpm:[122,146], swing:[0,0], drive:8, grit:2.2, legacy:'dark',
+    scales:{ dark:['phrygian'], mid:['phrygian','phrygian','harmonic'], bright:['phrygian','minor'] },
+    kit:{ kick:['kick_punk','kick_fuzz','kick_tight','distkick','kick909'], snare:['sn_punk','cl_punk','sn_trash','sn_gated','cl_dirty2','snare909'], hat:['hat_fuzz','hat_trash','hat909','tick'], ohat:['ohat_trash','ohat909'], perc:['perc_clang','metal','indhit','rim707'] },
+    snd:{ bass:['bass_punk','bass_roll','bass_fuzz','bass_ebm2','buzz','ebm'], lead:['lead_fuzz','lead_buzzsaw','darksaw','acid','lead_scream','lead_punkriff','vox_megaphone'], chords:['stab_power','diststab','stab_punk'], fx:['noise_burst','vox_shout','vox_oi','impact'] },
+    kick:L(GK4, '0000000000000001', [0,1]), snare:L([GBB, '......x.....x...'], '0000000000000012', [0,1]),
+    hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '1111111111111111', [0,8]), ohat:L(GOFF), perc:L(['......x.......x.', '...x.......x....'], '1111111111111111', [0,2]),
+    bass:L(['xx..xx..xx..xx..', 'xxxxxxxxxxxxxxxx', 'x...x...x...x...', 'x.xxx.xxx.xxx.xx'], '0000000000000000', [0,0], { kick:'follow', notes:'seq' }),
+    lead:{ rhythm:'straight', range:1, riff:true }, chords:{ style:'stab', m:'0030300303003030', n:[1,3], prog:'punk', rate:1 },
+    parts:{ lead:'new', chords:'new', fx:'new' } },
 
   { id:'breaks', name:'Breakbeat', bpm:[128,138], swing:[0,0.08], drive:4, grit:1, legacy:'electro',
     scales:{ dark:['minor','phrygian'], mid:['minor','dorian'], bright:['dorian'] },
@@ -246,7 +258,7 @@ const HATS = {
   idm:    { 0:['x..x.x..x..x.x..'], 1:['x.x..x.x..x.x..x', 'xx.x.xx.x.xx.x.x'], 2:['xxxxxxxxxxxxxxxx', 'xx.xxx.xx.xxx.xx'] },
 };
 const HAT_STYLE = { techno:'techno', hardtechno:'hard', melodic:'minimal', deephouse:'house', house:'house', techhouse:'house', proghouse:'techno', trance:'techno',
-  acid:'techno', minimal:'minimal', dubtechno:'dub', electro:'broken', ebm:'techno', breaks:'broken', dnb:'broken', dubstep:'half', ukg:'ukg', trap:'half',
+  acid:'techno', minimal:'minimal', dubtechno:'dub', electro:'broken', ebm:'techno', electropunk:'techno', breaks:'broken', dnb:'broken', dubstep:'half', ukg:'ukg', trap:'half',
   synthwave:'broken', idm:'idm', ambient:'minimal' };
 for (const g of GENRES){ g.hat.h = HATS[HAT_STYLE[g.id]] || HATS.techno; g.hat.n = [0, 2]; }
 const GENM = Object.fromEntries(GENRES.map(g => [g.id, g]));
@@ -258,7 +270,7 @@ const CHORDY = ['stab','diststab','chord','organ','polysynth','ravestab','dubcho
 const PADLIKE = /pad|strings|choir/;
 
 // ---------- настройки GEN (запоминаются на устройстве) ----------
-const GEN_DEF = () => ({ genre:'techno', bpm:0, key:-1, scale:'auto', energy:1, mood:1, cx:1, make:'scene', tab:'track', part:'drums', scMain:-1, scTarget:-1, scType:'break', scVar:1, scEnergy:1, scChange:1,
+const GEN_DEF = () => ({ genre:'techno', bpm:0, key:-1, scale:'auto', energy:1, mood:1, cx:1, make:'scene', tab:'track', part:'drums', scMain:-1, scTarget:-1, scType:'break', scVar:1, scEnergy:1, scChange:1, touched:{},
   parts:{ drums:{ mode:'new', sound:'auto', dens:1, cx:1, swing:1, fills:1, rolls:1 }, bass:{ mode:'new', sound:'auto', dens:1, cx:1, oct:1 },
           lead:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', range:'auto' }, chords:{ mode:'new', sound:'auto', dens:1, cx:1, rhythm:'auto', rate:'auto' },
           fx:{ mode:'off', sound:'auto', dens:0, cx:1 } } });
@@ -297,6 +309,8 @@ function partOf(t){
 }
 const drumRole = v => { const r = roleOfGen(v); return DRUM_ROLES.includes(r) ? r : 'perc'; };
 const partTracks = p => tracks.filter(t => partOf(t) === p);
+// классика жанра (то, что прописано в GENRES) — у неё выше приоритет при автоподборе, чем у звуков, добавленных по тегам
+for (const G of GENRES) G.core = new Set([...Object.values(G.kit).flat(), ...Object.values(G.snd).flat()]);
 // новые звуки библиотеки попадают в жанры по своим тегам (в конец списков: жанровая классика — первой)
 for (const [id, m] of Object.entries(SND_META)) for (const gid of m.g){
   const G = GENM[gid]; if (!G) continue;
@@ -341,10 +355,10 @@ function laneBar(spec, knob, opt = {}){
   return { p, fit, anchors };
 }
 // два такта: второй — копия первого с небольшой разницей (на сложности выше)
-function twoBars(bar1, knob, spec){
+function twoBars(bar1, knob, spec, minKnob = 1){
   const p = bar1.concat(bar1);
-  if (knob >= 1 && spec && Math.random() < 0.6){
-    const extra = [...Array(16).keys()].filter(i => !bar1[i] && W9(spec.m, i) > 0);
+  if (knob >= minKnob && spec && Math.random() < 0.6){
+    const extra = [...Array(16).keys()].filter(i => i >= 12 && !bar1[i] && W9(spec.m, i) > 0);   // подхват перед следующим «раз»
     if (extra.length){ const i = pickR(extra); p[16 + i] = true; }
   }
   return p;
@@ -356,10 +370,11 @@ function twoBars(bar1, knob, spec){
 function makeHarm(G, mood, rate){
   const fam = PROGS[G.chords.prog] || PROGS.static, mi = ['dark','mid','bright'][mood];
   let fams = fam;
-  if (mi === 'dark' && G.chords.prog !== 'dark' && Math.random() < 0.3) fams = PROGS.dark;
+  if (mi === 'dark' && G.chords.prog !== 'dark' && G.chords.prog !== 'punk' && Math.random() < 0.3) fams = PROGS.dark;   // у панка своя тёмная гармония — без мажорных VI/VII
   const p = rate === 2 ? pickR(fams.p4).slice() : (x => [x[0], x[0], x[1], x[1]])(pickR(fams.p2));
   // уменьшённые и увеличенные аккорды (квинта не чистая) меняем на соседние «чистые» ступени
   const sc = scaleOf(), pure = d => ((sc[(d + 4) % 7] + (d + 4 >= 7 ? 12 : 0)) - sc[d]) === 7;
+  if (G.chords.prog === 'punk') return p.map(d => pure(d) ? d : 0);   // ♭II нет в ладу (не фригийский) — остаёмся на тонике, а не уходим в мажорную VI
   return p.map(d => pure(d) ? d : [5, 3, 0, 4, 6].find(x => x !== d && pure(x)) ?? 0);
 }
 // гармонию берём из уже стоящих аккордов (если аккорды «оставить»)
@@ -388,7 +403,7 @@ function genDrums(G, S, bars, cur){
   if (cur) for (const r of Object.keys(cur)) if (!roles.includes(r) && DRUM_ROLES.includes(r)) roles.push(r);   // уже стоящие звуки тоже получают рисунок
   // кик
   const kick = best([...Array(10)].map(() => laneBar(G.kick, cx)), c => c.fit + (cur && cur.kick ? Math.min(3, ham(c.p, cur.kick.slice(0, 16))) * 0.6 : 0));
-  out.kick = twoBars(kick.p, cx, G.kick);
+  out.kick = twoBars(kick.p, cx, G.kick, 2);
   // снейр/клэп: призрачные удары не на кике
   const snare = best([...Array(10)].map(() => laneBar(G.snare, cx, { avoid: kick.p })), c => c.fit - hits(c.p.map((x, i) => x && kick.p[i])) * 3 + (cur && cur.snare ? Math.min(3, ham(c.p, cur.snare.slice(0, 16))) * 0.5 : 0));
   out.snare = twoBars(snare.p, cx, G.snare);
@@ -401,7 +416,9 @@ function genDrums(G, S, bars, cur){
   out.hat = twoBars(hat.p, cx, G.hat);
   if (roles.includes('ohat')) out.ohat = twoBars(laneBar(G.ohat, 0).p, 0);
   if (roles.includes('perc')){
-    const perc = best([...Array(10)].map(() => laneBar(G.perc, Math.max(dens, cx), { avoid: snare.p })), c => c.fit - hits(c.p.map((x, i) => x && snare.p[i])) * 2 + (cur && cur.perc ? Math.min(3, ham(c.p, cur.perc.slice(0, 16))) * 0.5 : 0));
+    const ks = snare.p.map((x, i) => x || kick.p[i]);   // перкуссия не бьёт вместе с киком и снейром
+    // перкуссия — по меньшему из плотности и сложности: не забивает ритм
+    const perc = best([...Array(10)].map(() => laneBar(G.perc, Math.min(dens, cx), { avoid: ks })), c => c.fit - hits(c.p.map((x, i) => x && ks[i])) * 2 + (cur && cur.perc ? Math.min(3, ham(c.p, cur.perc.slice(0, 16))) * 0.5 : 0));
     out.perc = twoBars(perc.p, cx, G.perc);
   }
   // открытый хэт глушит закрытый на своих долях (если у закрытого что-то остаётся)
@@ -500,7 +517,7 @@ function leadRhythm(kind, dens, cx){
   while (hits(p) < n){ const i = weightedPick(ws.map((w, j) => p[j] ? 0 : w)); if (i < 0) break; p[i] = true; }
   return p;
 }
-function genLead(G, S, bars, harm, curP, avoidP, up = 0){
+function genLead(G, S, bars, harm, curP, avoidP, up = 0, bassP = null){
   const kind = S.rhythm !== 'auto' ? S.rhythm : G.lead.rhythm, range = S.range !== 'auto' ? +S.range : G.lead.range;
   const lo = [0, -2, -4][range - 1], hi = [7, 11, 16][range - 1];
   const steps = { 0:[[0, 0.3], [1, 0.5], [2, 0.2]], 1:[[0, 0.2], [1, 0.45], [2, 0.2], [3, 0.1], [4, 0.05]], 2:[[0, 0.1], [1, 0.35], [2, 0.25], [3, 0.15], [4, 0.1], [5, 0.05]] }[S.cx];
@@ -520,6 +537,12 @@ function genLead(G, S, bars, harm, curP, avoidP, up = 0){
         const L2 = seq.length, idx = dir === 'up' ? k % L2 : dir === 'down' ? L2 - 1 - (k % L2) : dir === 'updown' ? (L2 > 1 ? [...Array(L2).keys()].concat([...Array(L2 - 2).keys()].map(x => L2 - 2 - x))[k % (2 * L2 - 2)] : 0) : Math.random() * L2 | 0;
         deg[i] = clamp(seq[idx]);
       });
+    } else if (G.lead.riff && kind !== 'acid'){
+      // тёмный рифф: тоника, ♭2, ♭3, кварта, квинта, ♭6, ♭7 снизу (ступени лада от корня аккорда), много повторов тоники;
+      // мотив первого такта повторяется во втором — как гитарный рифф
+      const pool = [[0, 5], [1, 3], [2, 2], [4, 2], [5, 1.2], [-1, 0.8], [3, 0.8]];
+      const first = on.filter(i => i < 16), motif = first.map((i, k) => k === 0 ? 0 : pool[weightedPick(pool.map(x => x[1]))][0]);
+      on.forEach((i, k) => { deg[i] = clamp(harm[slotOf(i)] + motif[k % Math.max(1, motif.length)]); });
     } else if (kind === 'acid'){
       const pool = [0, 0, 0, 2, 3, 4, 6, 7, -1];
       on.forEach(i => { let d = harm[slotOf(i)] + pickR(pool); if (Math.random() < [0.12, 0.22, 0.32][S.cx]) d += 7; deg[i] = clamp(d); });
@@ -552,6 +575,7 @@ function genLead(G, S, bars, harm, curP, avoidP, up = 0){
     for (const i of on) if (i % 4 === 0 && [harm[slotOf(i)], harm[slotOf(i)] + 2, harm[slotOf(i)] + 4].some(x => ((x - c.deg[i]) % 7 + 7) % 7 === 0)) s += 0.6;
     if (curP) s += Math.min(3, ham(c.p, curP)) * 0.3;
     if (avoidP && kind !== 'arp' && kind !== 'acid') s -= on.filter(i => avoidP[i]).length * 0.4;   // не бить туда же, где аккорды
+    if (bassP && kind !== 'arp') s -= on.filter(i => bassP[i]).length * (kind === 'acid' ? 0.15 : 0.35);   // и туда же, где бас
     return s;
   };
   const c = best([...Array(16)].map(make), score), n = c.p.length;
@@ -631,7 +655,7 @@ const MIX_GENRE = {
   hardtechno:{ kick:1, rev:0.6, duck:1.1 }, melodic:{ pad:1, lead:1, rev:1.2, dly:1.2 }, deephouse:{ chords:1, hat:-1, rev:1.1, duck:0.7 },
   house:{ chords:1, duck:0.8 }, techhouse:{ perc:1, bass:1, duck:0.8 }, proghouse:{ lead:1, pad:1, rev:1.2 }, trance:{ lead:1.5, pad:1, rev:1.3, dly:1.2, duck:1.1 },
   acid:{ lead:1, rev:0.8 }, minimal:{ perc:1, rev:0.9, dly:1.2 }, dubtechno:{ chords:1.5, hat:-2, rev:1.4, dly:2 }, electro:{ bass:1, rev:0.7 },
-  ebm:{ bass:1, rev:0.7 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
+  ebm:{ bass:1, rev:0.7 }, electropunk:{ bass:1.5, snare:2, hat:-3, ohat:-3, perc:-3, chords:-1, rev:0.4, dly:0.4, duck:0.5 }, breaks:{ snare:1, rev:0.9 }, dnb:{ snare:1.5, bass:1, kick:-1, duck:0.5 }, dubstep:{ bass:2, snare:1, duck:0.6 },
   ukg:{ bass:1, duck:0.7 }, trap:{ bass:2, hat:-1, duck:0.3 }, synthwave:{ snare:1, lead:1, rev:1.4 }, idm:{ rev:1.1, width:1.3 },
   ambient:{ kick:-3, pad:2, rev:1.8, dly:1.5, duck:0.3, width:1.3 },
 };
@@ -693,6 +717,28 @@ function specBalance(auto){
   }
 }
 let LOUD_TARGET = -7.5;   // по estLoud; калибруется замером готовых треков (tools/analyze.js)
+// композиционная иерархия: целевой уровень роли относительно кика (дБ, по реальной энергии в сцене).
+// Ритм-основа (кик, бас) — громче всех; ведущие партии — следом; фон (пэды, перкуссия, хэты, FX) — заметно тише.
+const ROLE_LEVEL = { kick:0, bass:-3, snare:-9, lead:-9, chords:-12, pad:-15, perc:-17, hat:-19, ohat:-19, fx:-20 };
+// поправка модели к реальному рендеру (замер tools: соло каждого звука → RMS), дБ
+const ROLE_CAL = { kick:0, bass:0, snare:-1, lead:0, chords:0, pad:1.4, perc:1.1, hat:0, ohat:0, fx:0 };   // замер 8 жанров × 2 трека
+// энергия звука «на единицу громкости» — среднее по сценам, где он играет (а не только по текущей)
+function unitEnergy(t){
+  const g2 = Math.pow(gainOf(t), 2) || 1, keep = scene; let sum = 0, k = 0;
+  for (let s = 0; s < SCENES; s++){ if (!t.scn[s].pat.some((x, i) => x && i < STEPS)) continue; scene = s; bindScene(t); sum += trackEnergy({ ...t, mute:false }); k++; }
+  scene = keep; bindScene(t);
+  return k ? sum / k / g2 : 0;
+}
+// громкость каждого звука — по его роли в композиции: доля энергии роли делится между звуками этой роли
+function roleLevels(auto){
+  const G = GENM[GEN.genre] || {}, gm = MIX_GENRE[G.id] || {}, n = {};
+  for (const t of auto) n[mixRoleOf(t)] = (n[mixRoleOf(t)] || 0) + 1;
+  for (const t of auto){
+    const r = mixRoleOf(t), u = unitEnergy(t); if (!u) continue;
+    const dB = (ROLE_LEVEL[r] ?? -12) + (gm[r] || 0) - (ROLE_CAL[r] || 0) - 10 * Math.log10(n[r]);
+    setGain(t, Math.sqrt(Math.pow(10, dB / 10) / u) * 0.05);
+  }
+}
 // свести все «нетронутые» звуки и выровнять общую громкость сцены
 function autoMix(){
   const count = {};
@@ -703,8 +749,9 @@ function autoMix(){
   }
   const auto = tracks.filter(t => t.mixSig && t.mixSig === mixSig(t));
   if (!auto.length) return;
-  specBalance(auto);
-  const g = Math.pow(10, Math.max(-6, Math.min(6, LOUD_TARGET - estLoud())) / 20);
+  roleLevels(auto);   // уровни — по роли в композиции (спектральный «подтяг» больше не поднимает фон)
+  const gl = (MIX_GENRE[(GENM[GEN.genre] || {}).id] || {}).loud || 0;   // жанровая «плотность»: сильнее в компрессор и лимитер мастера
+  const g = Math.pow(10, Math.max(-18, Math.min(18, LOUD_TARGET + gl - estLoud())) / 20);   // уровни ролей заданы относительно — общий уровень выравнивается здесь
   for (const t of auto){ setGain(t, gainOf(t) * g); applyParams(t); t.mixSig = mixSig(t); }
 }
 function newPartTrack(v, part, role){
@@ -725,10 +772,78 @@ function pickMood(list){
   const s = list.slice().sort((a, b) => brightOf(a) - brightOf(b)), half = Math.ceil(s.length * 0.6);
   return pickR(GEN.mood === 0 ? s.slice(0, half) : s.slice(s.length - half));
 }
+// ---------- подбор звуков, которые сочетаются друг с другом ----------
+// семейство ударных: набор собирается вокруг кика из одного «семейства» (808, 909, живые, грязные…)
+const FAMS = [['808', /808/], ['909', /909/], ['707', /707|606|cr78|linn/], ['hard', /hard|dist|indust|metal|steel|anvil|gabber|rave|indhit|warehouse/],
+  ['acoustic', /conga|bongo|shaker|wood|clave|tabla|djembe|udu|cabasa|brush|room|snap|finger|cowbell|tamb|guiro|timbale|logdrum|kalimba/], ['lofi', /lofi|dusty|vinyl|crackle|tape|bit/]];
+const famOf = v => (FAMS.find(([, re]) => re.test(v)) || ['synth'])[0];
+const FAM_NEAR = { '808':['707','lofi'], '909':['707','synth','hard'], '707':['808','909','synth'], hard:['909','synth'], acoustic:['lofi','808'], lofi:['808','acoustic'], synth:['909','707','hard'] };
+const famFit = (a, b) => a === b ? 1 : (FAM_NEAR[a] || []).includes(b) ? 0.5 : 0.15;
+const poolW = (G, v) => G.core && G.core.has(v) ? 1 : 0.35;
+// настроение: Dark — вес у более тёмных, Bright — у более ярких (ранг яркости внутри списка)
+function moodRank(list){
+  if (GEN.mood === 1 || list.length < 3) return () => 1;
+  const s = list.slice().sort((a, b) => brightOf(a) - brightOf(b)), rk = new Map(s.map((v, i) => [v, i / (s.length - 1)]));
+  return v => GEN.mood === 0 ? 1.5 - rk.get(v) : 0.5 + rk.get(v);
+}
+// взвешенный выбор (веса заострены — хорошие варианты выпадают заметно чаще, но не всегда)
+function wPick(list, wf){ const ws = list.map(v => Math.pow(Math.max(0, wf(v)), 1.6)); const i = weightedPick(ws); return i < 0 ? pickR(list) : list[i]; }
+// набор ударных вокруг кика (свой кик можно передать — тогда остальные подбираются к нему)
+function pickKit(G, fixed = {}){
+  const kit = { ...fixed };
+  for (const r of DRUM_ROLES){
+    if (kit[r]) continue;
+    const list = G.kit[r].filter(v => SYNTH[v]); if (!list.length) continue;
+    const mr = moodRank(list), fk = kit.kick ? famOf(kit.kick) : null, fh = kit.hat ? famOf(kit.hat) : null;
+    // перкуссия (конги, шейкеры…) — из любого семейства, если она жанровая: правило семейства для неё мягче
+    const ff = v => { const f = fk ? famFit(fk, famOf(v)) : 1; return r === 'perc' ? 0.6 + 0.4 * f : f; };
+    kit[r] = wPick(list, v => poolW(G, v) * mr(v) * ff(v) * (r === 'ohat' && fh ? famFit(fh, famOf(v)) : 1));
+  }
+  return kit;
+}
+const profOf = v => SND_PROF[v] || [0, 0.2, 0.5, 0.4, 0.1];
+// длина звучания (с, до −24 дБ от пика; замер) и «занятость»: на сколько шагов сетки растягивается одна нота
+const lenOf = v => (typeof SND_LEN !== 'undefined' && SND_LEN[v]) || 0.25;
+const occOf = v => lenOf(v) / stepDur();
+// длинный звук сам заполняет место — нот меньше (иначе каша); короткий — как есть
+function densForSound(dens, v){ const occ = occOf(v); return occ <= 2 ? dens : Math.max(0, dens - Math.min(1.3, Math.log2(occ / 2) * 0.5)); }
+// у очень длинного звука из жанровых рисунков берём самый редкий
+const sparsest = spec => ({ ...spec, a: [spec.a.reduce((b, x) => hits(strPat(x)) < hits(strPat(b)) ? x : b, spec.a[0])] });
+// мелодическая партия: жанр + настроение + то, что уже звучит (кик, аккорды)
+const CUTE = /bell|kalimba|marimba|chip|toy|glass|harp|music|steelpan|whistle|flute|xylo|vibra|celest|glock|ocarina|digibell|mallet/;
+const DARK_G = new Set(['electropunk','ebm','hardtechno','dubstep','dark']);
+const NOISY = /crackle|vinyl|glitch|noiz|bitcrush|static|hiss/, NOISY_OK = new Set(['ambient','idm','dubtechno']);   // шумовые FX — к месту только в этих жанрах
+function pickPartSound(p, G){
+  const own = (G.snd[p] || []).filter(v => SYNTH[v]), list = own.length ? own : soundList(p, G);
+  const mr = moodRank(list);
+  const kick = tracks.find(t => partOf(t) === 'drums' && (t.role === 'kick' || drumRole(t.v) === 'kick'));
+  const chords = partTracks('chords')[0], bass = partTracks('bass')[0];
+  const dark = GEN.mood < 0.5 || DARK_G.has(G.id);
+  return wPick(list, v => {
+    let w = poolW(G, v) * mr(v);
+    if (dark && (p === 'lead' || p === 'chords') && CUTE.test(v)) w *= 0.04;
+    if (p === 'fx' && NOISY.test(v) && !NOISY_OK.has(G.id)) w *= 0.15;
+    const pr = profOf(v);
+    if (p === 'bass' && kick){
+      // гулкий длинный кик + бас, весь в саб-басе, — каша внизу: такой бас реже
+      const kp = profOf(kick.v), boom = Math.max(0, Math.min(1, (kp[1] - 0.08) / 0.15)) * kp[2];
+      w *= 1 - 0.65 * boom * Math.max(0, (pr[2] - 0.6) / 0.4);
+    }
+    if (p === 'lead' && chords){
+      if (v === chords.v) return 0;
+      const bc = brightOf(chords.v), bl = brightOf(v);
+      w *= bl >= bc - 0.03 ? 1 : 0.35;                                   // лид — над аккордами, а не под ними
+      if (PADLIKE.test(v) && PADLIKE.test(chords.v)) w *= 0.25;          // два пэда — сливаются
+    }
+    if (p === 'lead' && bass && v === bass.v) return 0;
+    if (p === 'chords' && bass && pr[2] > 0.75) w *= 0.4;                 // аккорды не должны сидеть в басу
+    return w;
+  });
+}
 const resolveSound = (p, G, S) => {
   const list = soundList(p, G);
   if (S.sound !== 'auto' && list.includes(S.sound)) return S.sound;
-  return pickMood(G.snd[p].filter(v => SYNTH[v]).length ? G.snd[p].filter(v => SYNTH[v]) : list);
+  return pickPartSound(p, G);
 };
 // снимок для Undo: звуки, все сцены, темп, лад, свинг, песня
 function genUndo(){}   // история (Undo) снимается автоматически — см. ИСТОРИЯ в app.js
@@ -754,17 +869,17 @@ function setGlobals(G, whole){
     P.root = S.key >= 0 ? 24 + S.key : 24 + rint(0, 11);
   } else if (!P.scale) P.scale = S.scale !== 'auto' && SCALES[S.scale] ? S.scale : 'minor';   // пресет без лада: тональность не трогаем
   if (whole){
-    bpm = S.bpm || rint(G.bpm[0], G.bpm[1]);
+    bpm = S.bpm || S._bpm || rint(G.bpm[0], G.bpm[1]);
     const sw = G.swing, d = GEN.parts.drums.swing;
     swing = d === 0 ? 0 : Math.round((d === 2 ? Math.min(0.4, sw[1] + 0.12) : rnd(sw[0], sw[1])) * 100) / 100;
-    P.drive = Math.max(0, G.drive + (S.energy - 1)); P.grit = G.grit; P.genKey = G.legacy; P.genre = G.name; P.genName = G.name;
+    P.drive = Math.max(0, G.drive + (S.energy - 1) * (S._eDrive ?? 1)); P.grit = G.grit; P.genKey = G.legacy; P.genre = G.name; P.genName = G.name;
     if (busSh){ busSh.curve = curve(P.grit); busComp.gain.value = 1/(1+P.grit*0.6); }
     $('bpm').innerHTML = '<b>'+bpm+'</b> BPM'; showSwing();
   }
 }
 // одна партия → звуки и рисунки в текущей сцене
 function applyPart(p, G, bars, whole){
-  const S = GEN.parts[p], n = 16 * bars, have = partTracks(p);
+  let S = GEN.parts[p]; const n = 16 * bars, have = partTracks(p);
   if (S.mode === 'off'){ have.forEach(dropTrack); return; }
   if (p === 'drums'){
     const kits = kitList(G), kit = S.sound !== 'auto' && /^kit\d+$/.test(S.sound) ? kits[+S.sound.slice(3) % kits.length] : null;
@@ -773,11 +888,13 @@ function applyPart(p, G, bars, whole){
     if (whole && S.sound === 'auto'){ have.forEach(dropTrack); for (const r in byRole) delete byRole[r]; }
     const cur = {}; for (const r in byRole) cur[r] = byRole[r][0].pat.slice(0, n);
     const res = genDrums(G, S, bars, Object.keys(cur).length ? cur : null);
+    const fixed = {}; for (const r in byRole) fixed[r] = byRole[r][0].v;
+    const autoKit = kit || pickKit(G, fixed);   // недостающие роли подбираются к уже стоящим звукам
     for (const r of DRUM_ROLES){
       if (!res[r]) { (byRole[r] || []).forEach(t => writeRow(t, { p:[] }, n)); continue; }
       let ts = byRole[r];
       if ((!ts || !ts.length) && !hits(res[r].p)) continue;   // пустая партия — звук не добавляем
-      if (!ts || !ts.length){ const v = kit ? kit[r] : pickMood(G.kit[r]); const t = newPartTrack(v, 'drums', r); if (!t) continue; ts = [t]; }
+      if (!ts || !ts.length){ const v = autoKit[r] || pickMood(G.kit[r]); const t = newPartTrack(v, 'drums', r); if (!t) continue; ts = [t]; }
       else if (kit) ts.forEach(t => replaceSound(t, kit[r]));
       ts.forEach((t, k) => { t.role = r; t.part = 'drums'; writeRow(t, k === 0 ? res[r] : { p: res[r].p.map((x, i) => x && i % 4 === 2), vel: res[r].vel }, n); });
     }
@@ -794,16 +911,21 @@ function applyPart(p, G, bars, whole){
     const cur = t.pat.slice(0, n);
     t.part = p; if (!t.role) t.role = p === 'bass' ? 'bass' : p === 'fx' ? 'perc' : 'mel';
     let r;
-    if (p === 'bass') r = genBass(G, S, bars, genHarm, kick ? kick.pat.slice(0, 16) : null, cur);
+    // плотность под звук: длинные звуки — меньше нот; очень длинные — ещё и самый редкий жанровый рисунок
+    const S0 = S; S = Object.assign({}, S0, { dens: qz(densForSound(S0.dens, t.v)) });
+    const Gx = occOf(t.v) > 4 && p === 'bass' ? Object.assign({}, G, { bass: sparsest(G.bass) }) : G;
+    if (p === 'bass') r = genBass(Gx, S, bars, genHarm, kick ? kick.pat.slice(0, 16) : null, cur);
     else if (p === 'lead'){
       const ch = partTracks('chords').find(x => x.role !== 'pad'), chP = ch ? ch.pat.slice(0, n) : null;
       const up = partTracks('chords').length && (BASE[t.v] ?? 36) <= 36 && !/acid/.test(t.v) && (S.range === 'auto' ? G.lead.range : +S.range) < 3 ? 12 : 0;   // лид — на октаву выше аккордов
-      r = genLead(G, S, bars, genHarm, cur, chP, up);
+      const bs = partTracks('bass')[0];
+      r = genLead(G, S, bars, genHarm, cur, chP, up, bs ? bs.pat.slice(0, n) : null);
     }
     else if (p === 'chords'){ const bs = partTracks('bass')[0]; r = genChords(G, S, bars, genHarm, t.v, cur, bs ? bs.pat.slice(0, n) : null); t.role = r.style === 'pad' ? 'pad' : 'mel'; }
     else r = genFx(G, S, bars, t.v);
     if (!MELODIC.includes(t.v)) r.notes = null;
     writeRow(t, r, n);
+    S = S0;
   }
 }
 const PART_ORDER = ['drums','bass','chords','lead','fx'];
@@ -811,13 +933,73 @@ const PART_ORDER = ['drums','bass','chords','lead','fx'];
 // ползунки дают дробные значения 0…2; каждый прогон берёт соседний уровень с нужной вероятностью
 // (70 % между Mid и High → чаще High, иногда Mid), а количества ударов считаются по точному значению
 const qz = v => { v = Math.max(0, Math.min(2, +v || 0)); const f = Math.floor(v); return Math.min(2, f + (Math.random() < v - f ? 1 : 0)); };
+// плотность и темп: чем быстрее трек, тем меньше нот на такт (иначе каша), на медленном — чуть плотнее.
+// 1) относительно обычного темпа жанра; 2) потолок нот в секунду для мелодических партий; 3) дроби хэтов — не на быстром темпе
+function tempoFitDens(G, bpmEff){
+  // Energy задаёт «напор», а сколько нот реально поместится — решает темп: чем быстрее, тем меньше нот на такт
+  // (число ударов в секунду остаётся разумным). 128 BPM — опорный темп; ниже 105 — чуть плотнее.
+  const f = Math.min(1.15, 128 / bpmEff), kp = { drums: 1.3, bass: 1.6, lead: 2.2, chords: 2 };
+  const cap = { drums: 2 - Math.max(0, bpmEff - 135) / 30, lead: 2 - Math.max(0, bpmEff - 128) / 28, bass: 2 - Math.max(0, bpmEff - 132) / 32, chords: 2 - Math.max(0, bpmEff - 135) / 35 };
+  for (const p of PARTS){
+    const S = GEN.parts[p]; let d = +S.dens || 0;
+    if (kp[p]) d *= Math.pow(f, kp[p]);
+    if (bpmEff < 105 && p !== 'chords') d += (105 - bpmEff) / 70;
+    if (cap[p] !== undefined) d = Math.min(d, Math.max(0.3, cap[p]));
+    S.dens = Math.max(0, Math.min(2, d));
+  }
+  GEN._eDrive = Math.min(1, Math.pow(f, 1.5));   // драйв от Energy на быстром темпе слабее (иначе грязь)
+  if (bpmEff >= 150 && G.id !== 'trap' && (GEN.parts.drums.rolls ?? 1) > 1) GEN.parts.drums.rolls = 1;
+}
+// ---------- подстройка параметров под жанр — на каждую генерацию ----------
+// нетронутые ползунки: около жанрового значения (±); нетронутые кнопки: выбор с жанровыми вероятностями
+const RIFF_DARK = g => !!(g.lead && g.lead.riff);
+function genreStyle(G){
+  const id = G.id, sw = G.swing || [0, 0];
+  const swing = sw[1] === 0 ? { 0: 0.85, 1: 0.15 } : sw[1] >= 0.15 ? { 1: 0.6, 2: 0.3, 0: 0.1 } : { 1: 0.7, 0: 0.15, 2: 0.15 };
+  const rolls = id === 'trap' ? { 2: 0.7, 1: 0.3 } : ['idm','dnb','breaks'].includes(id) ? { 1: 0.6, 2: 0.2, 0: 0.2 }
+    : ['electropunk','ebm','hardtechno','ambient','dubtechno'].includes(id) ? { 0: 0.55, 1: 0.45 } : { 1: 0.65, 0: 0.3, 2: 0.05 };
+  const lr = G.lead.rhythm, riff = RIFF_DARK(G);
+  const rhythm = lr === 'acid' ? { acid: 0.8, synco: 0.2 } : lr === 'arp' ? { arp: 0.6, synco: 0.25, straight: 0.15 }
+    : lr === 'straight' ? (riff ? { straight: 0.7, synco: 0.3 } : { straight: 0.6, synco: 0.3, arp: 0.1 }) : (riff ? { synco: 0.65, straight: 0.35 } : { synco: 0.6, straight: 0.25, arp: 0.15 });
+  const r0 = G.lead.range || 1, range = riff ? { 1: 0.85, 2: 0.15 } : { [r0]: 0.6, ...(r0 > 1 ? { [r0 - 1]: 0.2 } : {}), ...(r0 < 3 ? { [r0 + 1]: 0.2 } : {}) };
+  const rate = { [G.chords.rate || 1]: 0.7, [(G.chords.rate || 1) === 1 ? 2 : 1]: 0.3 };
+  const oct = ['acid','dubstep','electropunk'].includes(id) ? { 1: 0.65, 0: 0.3, 2: 0.05 } : { 1: 0.8, 0: 0.15, 2: 0.05 };
+  return { swing, rolls, rhythm, range, rate, oct };
+}
+const pickW = w => { const ks = Object.keys(w), i = weightedPick(ks.map(k => w[k])); const k = ks[Math.max(0, i)]; return isNaN(+k) ? k : +k; };
+const near = (v, d) => Math.round(Math.max(0, Math.min(2, v + rnd(-d, d))) * 20) / 20;   // шаг 5 %, как у ползунка
+function autoTune(G, only){
+  const K = GENRE_KNOBS[G.id]; if (!K) return;
+  const T = GEN.touched || {}, st = genreStyle(G), free = k => !T[k], doPart = p => !only || only === p;
+  if (!only){ if (free('energy')) GEN.energy = near(K.E, 0.15); if (free('mood')) GEN.mood = near(K.M, 0.15); if (free('cx')) GEN.cx = near(K.C, 0.15); }
+  const base = { drums: K.d, bass: K.b, lead: K.l, chords: K.c };
+  for (const p of ['drums','bass','lead','chords']) if (doPart(p)){
+    const S = GEN.parts[p], b = base[p];
+    if (free(p + '.dens')) S.dens = near(b[0], 0.2);
+    if (free(p + '.cx')) S.cx = near(b[1], 0.2);
+  }
+  if (doPart('drums')){
+    const D = GEN.parts.drums;
+    if (free('drums.swing')) D.swing = pickW(st.swing);
+    if (free('drums.fills')){ const f = K.d[3]; D.fills = pickW(f === 0 ? { 0: 0.8, 1: 0.2 } : { [f]: 0.6, ...(f > 0 ? { [f - 1]: 0.25 } : {}), ...(f < 2 ? { [f + 1]: 0.15 } : {}) }); }
+    if (free('drums.rolls')) D.rolls = pickW(st.rolls);
+  }
+  if (doPart('bass') && free('bass.oct')) GEN.parts.bass.oct = pickW(st.oct);
+  if (doPart('lead')){ if (free('lead.rhythm')) GEN.parts.lead.rhythm = pickW(st.rhythm); if (free('lead.range')) GEN.parts.lead.range = pickW(st.range); }
+  if (doPart('chords') && free('chords.rate')) GEN.parts.chords.rate = pickW(st.rate);
+  genSave();
+}
 function genRun(only){
-  const keep = { mood:GEN.mood, energy:GEN.energy, cx:GEN.cx, parts:PARTS.map(p => [GEN.parts[p].dens, GEN.parts[p].cx]) };
+  autoTune(GENM[GEN.genre] || GENRES[0], only);
+  const keep = { mood:GEN.mood, energy:GEN.energy, cx:GEN.cx, parts:PARTS.map(p => [GEN.parts[p].dens, GEN.parts[p].cx]), rolls:GEN.parts.drums.rolls };
+  const G0 = GENM[GEN.genre] || GENRES[0];
+  if (!only && !GEN.bpm) GEN._bpm = rint(G0.bpm[0], G0.bpm[1]);   // темп выбираем заранее, чтобы плотность считалась под него
+  tempoFitDens(G0, only ? bpm : (GEN.bpm || GEN._bpm));
   GEN.mood = qz(GEN.mood); GEN.energy = qz(GEN.energy); GEN.cx = qz(GEN.cx);
   PARTS.forEach(p => { GEN.parts[p].dens = qz(GEN.parts[p].dens); GEN.parts[p].cx = qz(GEN.parts[p].cx); });
   try { genRunCore(only); }
   finally {
-    GEN.mood = keep.mood; GEN.energy = keep.energy; GEN.cx = keep.cx;
+    GEN.mood = keep.mood; GEN.energy = keep.energy; GEN.cx = keep.cx; GEN.parts.drums.rolls = keep.rolls; delete GEN._bpm; delete GEN._eDrive;
     PARTS.forEach((p, k) => { GEN.parts[p].dens = keep.parts[k][0]; GEN.parts[p].cx = keep.parts[k][1]; });
     genRender();
   }
@@ -976,7 +1158,13 @@ function genScene(){
   haptic('medium'); genRender();
   toast('scene ' + SC_L[t] + ' · ' + x.name.toLowerCase() + ' · ' + x.sub + ' · tap again for another');
 }
+// что пользователь задал руками — генерация это не трогает (остальное подстраивается под жанр и меняется от раза к разу)
+function touch(...keys){ GEN.touched = GEN.touched || {}; for (const k of keys) GEN.touched[k] = 1; }
 function genSet(k, v){
+  if (k === 'energy') touch('energy', ...PARTS.map(p => p + '.dens'));
+  else if (k === 'cx') touch('cx', ...PARTS.map(p => p + '.cx'), 'drums.fills');
+  else if (k === 'mood') touch('mood');
+  else if (k.startsWith('p.') && k !== 'p.mode' && k !== 'p.sound') touch(GEN.part + '.' + k.slice(2));
   if (k === 'energy'){ GEN.energy = +v; for (const p of PARTS) GEN.parts[p].dens = +v; }
   else if (k === 'cx'){ GEN.cx = +v; for (const p of PARTS) GEN.parts[p].cx = +v; GEN.parts.drums.fills = +v < 0.5 ? 0 : Math.min(1, GEN.parts.drums.fills || 1); }   // Busy — только вручную
   else if (k === 'mood') GEN.mood = +v;
@@ -1021,13 +1209,46 @@ function previewSound(p){
   if (t){ if (p === 'chords') t.role = PADLIKE.test(S.sound) ? 'pad' : 'mel'; replaceSound(t, S.sound); hit(t, ac.currentTime + 0.02); renderLib(); updateUI(); }
   else { const tmp = makeTrack(S.sound); hit(tmp, ac.currentTime + 0.02); }
 }
-// жанр: подставляем его обычные режимы партий (например, у Acid нет аккордов)
+// типичные значения ползунков для жанра (0…2 = 0…100 %): E/M/C — энергия, настроение, сложность;
+// d — ударные [плотность, сложность, свинг 0/1/2, сбивки 0/1/2], b/l/c — бас, лид, аккорды [плотность, сложность]
+const GENRE_KNOBS = {
+  techno:     { E:1.3, M:0.6, C:0.9, d:[1.3,0.9,1,1], b:[1.2,0.8], l:[0.8,0.9], c:[0.8,0.7] },
+  hardtechno: { E:1.8, M:0.3, C:0.8, d:[1.6,0.8,0,1], b:[1.6,0.6], l:[1.0,0.8], c:[0.6,0.6] },
+  melodic:    { E:1.1, M:0.9, C:1.2, d:[1.0,0.8,1,1], b:[1.1,0.9], l:[1.2,1.3], c:[1.0,1.0] },
+  deephouse:  { E:0.8, M:1.1, C:1.1, d:[1.0,1.1,1,1], b:[0.9,1.1], l:[0.7,1.0], c:[1.1,1.2] },
+  house:      { E:1.2, M:1.4, C:1.0, d:[1.2,1.0,1,1], b:[1.1,1.0], l:[0.9,1.0], c:[1.2,1.0] },
+  techhouse:  { E:1.3, M:1.0, C:1.0, d:[1.4,1.1,1,1], b:[1.3,1.1], l:[0.6,0.8], c:[0.6,0.8] },
+  proghouse:  { E:1.1, M:1.1, C:1.1, d:[1.1,0.9,1,1], b:[1.1,0.9], l:[1.1,1.1], c:[1.0,1.0] },
+  trance:     { E:1.6, M:1.3, C:1.1, d:[1.3,0.9,0,1], b:[1.6,0.6], l:[1.5,1.1], c:[1.0,0.9] },
+  acid:       { E:1.4, M:0.7, C:1.2, d:[1.2,1.0,1,1], b:[1.2,1.2], l:[1.5,1.4], c:[0.5,0.6] },
+  minimal:    { E:0.7, M:0.9, C:1.3, d:[0.9,1.4,1,1], b:[0.8,1.2], l:[0.5,1.2], c:[0.5,1.0] },
+  dubtechno:  { E:0.6, M:0.6, C:0.8, d:[0.8,0.8,1,0], b:[0.8,0.6], l:[0.4,0.6], c:[1.0,0.8] },
+  electro:    { E:1.3, M:0.8, C:1.4, d:[1.3,1.4,0,1], b:[1.3,1.3], l:[1.1,1.2], c:[0.7,0.8] },
+  ebm:        { E:1.5, M:0.4, C:0.8, d:[1.3,0.8,0,1], b:[1.7,0.6], l:[0.9,0.8], c:[0.5,0.6] },
+  electropunk:{ E:1.9, M:0.1, C:0.9, d:[1.5,0.9,0,1], b:[1.6,0.8], l:[1.0,0.8], c:[0.6,0.6] },
+  breaks:     { E:1.4, M:1.1, C:1.5, d:[1.4,1.6,1,1], b:[1.2,1.2], l:[0.9,1.1], c:[0.9,1.0] },
+  dnb:        { E:1.7, M:0.9, C:1.5, d:[1.5,1.6,1,1], b:[1.3,1.3], l:[0.8,1.0], c:[0.9,1.0] },
+  dubstep:    { E:1.5, M:0.4, C:1.3, d:[0.9,1.2,1,1], b:[1.5,1.5], l:[0.6,1.0], c:[0.6,0.8] },
+  ukg:        { E:1.2, M:1.3, C:1.5, d:[1.3,1.5,1,1], b:[1.2,1.3], l:[0.8,1.1], c:[1.1,1.2] },
+  trap:       { E:1.2, M:0.6, C:1.4, d:[1.4,1.5,1,1], b:[1.0,1.2], l:[0.9,1.0], c:[0.7,0.8] },
+  synthwave:  { E:1.1, M:1.4, C:0.9, d:[1.0,0.8,0,1], b:[1.5,0.7], l:[1.2,1.0], c:[1.1,0.9] },
+  idm:        { E:1.0, M:1.0, C:1.9, d:[1.3,1.9,1,1], b:[1.0,1.6], l:[1.1,1.7], c:[0.9,1.4] },
+  ambient:    { E:0.4, M:1.2, C:0.8, d:[0.3,0.6,1,0], b:[0.6,0.6], l:[0.6,0.9], c:[1.2,0.9] },
+};
+function applyGenreKnobs(id){
+  const K = GENRE_KNOBS[id]; if (!K) return;
+  GEN.energy = K.E; GEN.mood = K.M; GEN.cx = K.C;
+  const D = GEN.parts.drums; [D.dens, D.cx, D.swing, D.fills] = K.d;
+  [GEN.parts.bass.dens, GEN.parts.bass.cx] = K.b; [GEN.parts.lead.dens, GEN.parts.lead.cx] = K.l; [GEN.parts.chords.dens, GEN.parts.chords.cx] = K.c;
+}
+// жанр: подставляем его обычные режимы партий (например, у Acid нет аккордов) и типичные значения ползунков
 function genGenre(id){
   const G = GENM[id]; if (!G) return;
-  GEN.genre = id; GEN.bpm = 0;
+  GEN.genre = id; GEN.bpm = 0; GEN.scale = 'auto'; GEN.touched = {};   // темп и лад — жанровые (лад можно снова выбрать вручную)
   for (const p of PARTS){ const m = (G.parts || {})[p]; if (m) GEN.parts[p].mode = m; else if (p === 'drums' || p === 'bass') GEN.parts[p].mode = 'new'; GEN.parts[p].sound = 'auto'; }
   GEN.parts.lead.rhythm = 'auto'; GEN.parts.chords.rhythm = 'auto';
   GEN.parts.drums.rolls = id === 'trap' ? 2 : 1;   // трэп-роллы — часть жанра, в остальных дробь редкая
+  applyGenreKnobs(id);
   genGenresOpen = false; genSave(); genRender(); haptic('select');
 }
 function setGenOpen(on){

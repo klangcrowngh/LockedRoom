@@ -224,6 +224,7 @@ const ENG = {
       src.connect(b); b.connect(bg); bg.connect(g);
     });
     let node = g; if (p.k){ const s = shaper(p.k); g.connect(s); node = s; }
+    node = procChain(node, p, t, L, mtof(base));   // общая обработка (полоса «мегафона», дробление и т. п.)
     node.connect(l); l.connect(out(p.rev ?? 0.25, p.del ?? 0, L + 0.2));
     if (p.m === 'noise'){ const nn = loopNoise(t, L); nn.connect(src); return; }
     let vib = null;
@@ -307,7 +308,7 @@ const ENG = {
 // ---------- теги жанров: короткие группы ----------
 const TAG_GROUPS = {
   '4x4': 'techno melodic deephouse house techhouse proghouse trance acid minimal dubtechno',
-  house4: 'deephouse house techhouse ukg', dark: 'hardtechno ebm dubstep trap', brk: 'breaks dnb electro', chill: 'ambient dubtechno idm deephouse',
+  house4: 'deephouse house techhouse ukg', dark: 'hardtechno ebm electropunk dubstep trap', brk: 'breaks dnb electro', chill: 'ambient dubtechno idm deephouse',
 };
 const expandTags = s => [...new Set((s || '').split(/\s+/).filter(Boolean).flatMap(x => (TAG_GROUPS[x] || x).split(/\s+/)))];
 
@@ -751,6 +752,61 @@ addSounds('FX', 'modal', [
 ]);
 addSounds('FX', 'tone', [
   ['bit_glitch', 'Bit Glitch', { w:'square', o:48, d:0.15, gl:24, glt:0.1, crush:2, lvl:0.2 }, 'idm electro'],
+]);
+
+// ---------- электропанк (в духе Locked Club): грязные, короткие, напористые; низ — главный, верх — тёмный ----------
+Object.assign(TRIM, { hat_fuzz:7, hat_trash:8, ohat_trash:4, perc_clang:6, lead_fuzz:5, lead_scream:6, lead_buzzsaw:4, stab_power:6, stab_punk:6,
+  vox_megaphone:8, bass_ebm2:5, bass_roll:3, sn_trash:2, sn_gated:2 });   // выровнять к медиане своей категории (замер)
+addSounds('Kicks', 'kick', [
+  ['kick_punk', 'Punk Kick', { f0:210, f1:50, sw:0.035, h:0.04, d:0.22, k:6, c:0.35, lp:7000 }, 'electropunk ebm hardtechno'],
+  ['kick_fuzz', 'Fuzz Kick', { f0:240, f1:46, sw:0.045, h:0.05, d:0.28, k:12, c:0.25, lp:5000, lvl:0.6 }, 'electropunk hardtechno'],
+  ['kick_tight', 'Tight Drive Kick', { f0:180, f1:55, sw:0.03, h:0.03, d:0.16, k:4, c:0.45, drv:1 }, 'electropunk electro ebm'],
+]);
+addSounds('Snares', 'snare', [
+  ['sn_punk', 'Punk Snare', { ft:210, ta:0.7, td:0.07, nf:3200, nq:0.7, na:1, nd:0.17, k:8, rev:0.08 }, 'electropunk ebm'],
+  ['sn_trash', 'Trash Snare', { ft:240, ta:0.5, td:0.05, nf:2600, na:1, nd:0.13, k:5, crush:3, rev:0.05 }, 'electropunk hardtechno'],
+  ['sn_gated', 'Gated Noise Snare', { ft:190, ta:0.6, td:0.06, nf:2000, nq:0.5, na:1, nd:0.09, k:10, rev:0.12 }, 'electropunk ebm synthwave'],
+]);
+addSounds('Claps', 'clap', [
+  ['cl_punk', 'Punk Clap', { n:4, sp:0.009, d:0.18, f:1400, q:0.8, k:6, rev:0.1 }, 'electropunk ebm'],
+  ['cl_dirty2', 'Dirty Clap', { n:3, sp:0.011, d:0.24, f:1100, q:0.6, k:10, rev:0.08 }, 'electropunk hardtechno'],
+]);
+addSounds('Hats & Cymbals', 'hat', [
+  ['hat_fuzz', 'Fuzz Hat', { m:'noise', f:6000, d:0.04, crush:2, lvl:0.18 }, 'electropunk ebm'],
+  ['hat_trash', 'Trash Hat', { m:'noise', f:4500, bp:6000, d:0.05, crush:3, lvl:0.16 }, 'electropunk hardtechno'],
+  ['ohat_trash', 'Trash Open Hat', { m:'noise', f:5000, d:0.22, crush:2.5, lvl:0.12 }, 'electropunk'],
+]);
+addSounds('Toms & Perc', 'perc', [
+  ['perc_clang', 'Clang', { w:'square', f:420, pd:1, d:0.12, fm:2.7, fi:3, bp:1800, q:2, k:4, lvl:0.2, rev:0.1 }, 'electropunk ebm hardtechno'],
+]);
+addSounds('Bass', 'tone', [
+  ['bass_punk', 'Punk Bass', { w:'sawtooth', o:12, d:0.14, h:0.03, f:850, q:1.2, fe:1.6, fd:0.05, k:2.5, sub:0.6, lvl:0.4 }, 'electropunk ebm'],
+  ['bass_fuzz', 'Fuzz Bass', { w:'square', o:12, d:0.16, h:0.04, f:1000, k:5, sub:0.7, lvl:0.32 }, 'electropunk hardtechno'],
+  ['bass_ebm2', 'Gritty Seq Bass', { w:'sawtooth', u:2, dt:8, o:12, d:0.11, f:750, q:2.5, fe:2.5, fd:0.04, k:2, sub:0.5, lvl:0.36 }, 'electropunk ebm electro'],
+  ['bass_roll', 'Rolling Drive Bass', { w:['sawtooth','square'], o:12, d:0.09, f:900, q:1.8, fe:2, fd:0.03, k:3.5, sub:0.6, lvl:0.36 }, 'electropunk hardtechno techno'],
+]);
+addSounds('Bass', 'pluck', [
+  ['bass_chug', 'Chug Bass', { o:12, d:0.25, damp:0.985, bright:0.6, f:1800, k:6, lvl:0.6 }, 'electropunk breaks'],
+]);
+addSounds('Leads & Arps', 'tone', [
+  ['lead_fuzz', 'Fuzz Lead', { w:'sawtooth', u:2, dt:14, d:0.22, h:0.05, f:3200, q:1, k:8, lvl:0.14 }, 'electropunk ebm hardtechno'],
+  ['lead_scream', 'Scream Lead', { w:'square', u:2, dt:20, a:0.005, d:0.3, h:0.08, f:4000, k:6, vib:6, lvl:0.12 }, 'electropunk hardtechno'],
+  ['lead_buzzsaw', 'Buzzsaw Riff', { w:'sawtooth', d:0.18, h:0.04, f:2400, q:4, fe:2, fd:0.06, k:10, lvl:0.13 }, 'electropunk electro'],
+]);
+addSounds('Leads & Arps', 'pluck', [
+  ['lead_punkriff', 'Punk Riff', { o:36, d:0.35, damp:0.99, bright:0.85, f:4000, k:10, lvl:0.35 }, 'electropunk breaks'],
+]);
+addSounds('Chords & Stabs', 'tone', [
+  ['stab_power', 'Power Chord', { ch:[0,7,12], w:'sawtooth', u:2, dt:10, d:0.22, h:0.04, f:2600, k:9, lvl:0.18 }, 'electropunk ebm hardtechno'],
+  ['stab_punk', 'Punk Stab', { ch:[0,3,7], w:['sawtooth','square'], d:0.16, f:2000, fe:2, fd:0.05, k:7, lvl:0.18 }, 'electropunk'],
+]);
+addSounds('Vocals', 'vox', [
+  ['vox_shout', 'Shout', { v:'a', v2:'o', a:0.004, h:0.06, d:0.16, k:6, lvl:0.8 }, 'electropunk ebm'],
+  ['vox_oi', 'Oi!', { v:'o', v2:'i', a:0.003, h:0.04, d:0.14, k:5, lvl:0.8 }, 'electropunk'],
+  ['vox_megaphone', 'Megaphone Vox', { v:'e', v2:'a', w:'square', d:0.22, k:4, vib:0, bp2:1500, bq:2, lvl:0.9 }, 'electropunk ebm electro'],
+]);
+addSounds('FX', 'fx', [
+  ['noise_burst', 'Noise Burst', { m:'impact', d:0.4, f:900, lvl:0.3, rev:0.15 }, 'electropunk hardtechno ebm'],
 ]);
 
 // библиотека: категории по порядку, внутри — как добавлены

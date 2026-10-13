@@ -1259,7 +1259,7 @@ function drawFrame(){
   if (sel && hover && hover.type==='t' && !drag){ const p = tPt(hover.idx), a = tAng(hover.idx);
     tag(sel.pat[hover.idx] ? '× UNLINK' : '+ LINK', p.x+Math.cos(a)*34, p.y+Math.sin(a)*34, acc); }
   // подсказка удаления связи
-  if (hover && hover.type==='l' && !drag) tag('× REMOVE', hover.p.x+46, hover.p.y-14, acc);
+
 
   if (sel) renderSteps(cur);
   if (noteCells.length && sel){ noteCells.forEach((c,i)=>{ c.classList.toggle('cur', i===cur); if (c.classList.contains('off') === sel.pat[i]) c.render(); }); }
@@ -1275,7 +1275,8 @@ function tag(txt, x, y, col){
 //  INPUT
 // ============================================================
 function pick(x, y){
-  for (const tr of tracks){ const p=sPt(tr); if (Math.hypot(x-p.x,y-p.y) < 24) return {type:'s', tr}; }
+  const sr = TOUCH ? 32 : 24;   // пальцем — зона попадания по звуку больше
+  for (const tr of tracks){ const p=sPt(tr); if (Math.hypot(x-p.x,y-p.y) < sr) return {type:'s', tr}; }
   let best=null, bd=Math.min(W < 700 ? 22 : 16, Math.PI*T_R*RAD/STEPS);   // зона попадания ≈ половина шага между точками
   for (let i=0;i<STEPS;i++){ const p=tPt(i), d=Math.hypot(x-p.x,y-p.y); if (d<bd){bd=d; best={type:'t', idx:i};} }
   return best;
@@ -1299,22 +1300,23 @@ function toggle(i, tr){
   hit(tr, ac.currentTime+0.01, i); linkFlash[tr.id+':'+i] = ac.currentTime; haptic('light');
 }
 
+let TOUCH = matchMedia('(pointer:coarse)').matches;
 cv.addEventListener('pointerdown', e=>{
   if (!ac || performance.now()-gateT < 400) return;
+  TOUCH = e.pointerType === 'touch' || e.pointerType === 'pen';
   cv.setPointerCapture(e.pointerId);
   const x = e.clientX - appX(), y = e.clientY;
   if (Math.hypot(x-C.x, y-C.y) < T_R*RAD-22){ setPlaying(!playing); haptic('medium'); return; }
-  const h = pick(x,y) || pickLink(x, y, e.pointerType==='touch' ? 14 : 8);
+  const h = pick(x,y);   // линии связей не нажимаются: связи меняются точками времени и в панели звука
   if (!h){ closePanel(); closeLib(); closeDrawer(); if (document.body.classList.contains('pads-open')) setPadsOpen(false); if (document.body.classList.contains('song-open')) setSongOpen(false); }
   if (h) drag = { ...h, x, y, p:{x,y}, moved:false, target:null };
 });
 cv.addEventListener('pointermove', e=>{
   const x = e.clientX - appX(), y = e.clientY;
-  hover = pick(x,y) || (!drag && pickLink(x, y, 8));
-  if (hover && hover.type==='l') hover.p = {x,y};
+  hover = pick(x,y);
   cv.style.cursor = drag ? 'grabbing' : (hover || Math.hypot(x-C.x,y-C.y) < T_R*RAD-22) ? 'pointer' : 'default';
   if (!drag) return;
-  if (!drag.moved && Math.hypot(x-drag.x, y-drag.y) > 6) drag.moved = true;
+  if (!drag.moved && Math.hypot(x-drag.x, y-drag.y) > (TOUCH ? 14 : 6)) drag.moved = true;   // дрожание пальца — ещё не перетаскивание
   drag.p = {x,y};
   if (drag.type==='l') return;
   drag.target = hover && hover.type !== 'l' && hover.type !== drag.type ? hover : null;
@@ -1325,13 +1327,15 @@ cv.addEventListener('pointerup', e=>{
       const [i,tr] = drag.type==='t' ? [drag.idx, drag.target.tr] : [drag.target.idx, drag.tr];
       toggle(i, tr);
     } else if (!drag.moved && drag.type==='t' && sel){ toggle(drag.idx, sel);
-    } else if (!drag.moved && drag.type==='l'){ removeLink(drag.i, drag.tr); hover = null;
-    } else if (!drag.moved && drag.type==='s'){ openPanel(drag.tr); hit(drag.tr, ac.currentTime+0.01); }
+    } else if (drag.type==='s' && (!drag.moved || (!drag.target && Math.hypot(drag.p.x-sPt(drag.tr).x, drag.p.y-sPt(drag.tr).y) < 40))){
+      openPanel(drag.tr); hit(drag.tr, ac.currentTime+0.01);   // нажатие на звук (и «смазанное» нажатие, отпущенное на нём же) — открыть
+    }
   }
   drag = null;
   if (e.pointerType === 'touch') hover = null;     // на телефоне нет наведения
 });
 cv.addEventListener('pointerleave', ()=>{ hover = null; });
+cv.addEventListener('pointercancel', ()=>{ drag = null; hover = null; });
 
 // ============================================================
 //  ПАНЕЛЬ ЗВУКА
