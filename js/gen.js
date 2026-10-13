@@ -159,11 +159,11 @@ const GENRES = [
   { id:'darktechno', name:'Dark Techno', bpm:[100,135], bpmZones:[[100,106],[126,135]], swing:[0,0], drive:6, grit:1.6, legacy:'dark',
     scales:{ dark:['harmonic','phrygian'], mid:['harmonic','harmonic','phrygian'], bright:['harmonic','minor'] },
     kit:{ kick:['kick_cold','kick_menace','kick_industrial','kick_warehouse','distkick','kick909'], snare:['cl_cold','cl_metal','sn_whip','clap909','sn_industrial','darksnare'], hat:['hat_cold','hat909','tick','hat_metal'], ohat:['ride_cold','ohat909','ride_dark'], perc:['perc_chain','perc_hammer','metal','anvil','metal_ping'] },
-    snd:{ bass:['bass_menace','bass_hornet','bass_brute','bass_coldseq','ebm','reese_dark','buzz'], lead:['lead_cold','lead_scythe','lead_baroque','lead_horn','darksaw','lead_dark','lead_grind','hoover'], chords:['stab_menace','stab_cathedral','pad_cold','diststab','stab_brass','pad_dark'], fx:['fx_rumblehit','fx_metalsweep','impact','metal_hit'] },
+    snd:{ bass:['bass_menace','bass_hornet','bass_brute','bass_coldseq','ebm','reese_dark','buzz'], lead:['lead_abyss','lead_dread','lead_tar','lead_wraith','lead_bend','lead_dark','hoover','darksaw'], chords:['stab_abyss','stab_tritone','stab_cluster','stab_menace','pad_dark','pad_cold'], fx:['fx_rumblehit','fx_metalsweep','impact','metal_hit'] },
     kick:L(GK4, '0000000000000001', [0,1]), snare:L(GBB, '0000000000000012', [0,1]),
     hat:L(['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], '0101010101010101', [0,6]), ohat:L(GOFF), perc:L(['.......x.......x', '...x...........x'], '0001000100010001', [0,2]),
     bass:L(['x...x...x...x...', 'xxxxxxxxxxxxxxxx', 'x.xxx.xxx.xxx.xx', 'x.x.x.x.x.x.x.x.'], '0000000000000000', [0,0], { kick:'follow', notes:'chroma' }),
-    lead:{ rhythm:'straight', range:1, riff:'menace' }, chords:{ style:'stab', m:'0030020030020030', n:[1,2], prog:'menace', rate:1 },
+    lead:{ rhythm:'straight', range:1, riff:'menace', oct:-12 }, chords:{ style:'stab', m:'0030020030020030', n:[1,2], prog:'menace', rate:1, oct:-12 },
     parts:{ lead:'new', chords:'new', fx:'new' } },
   // электропанк (в духе Locked Club; замер трёх треков: 123–145 BPM, прямой кик на четверти, бас вместе с киком —
   // четвертями, парами 16-х или катящимися 16-ми, фригийская полутоновая краска, низ громкий, верх тёмный)

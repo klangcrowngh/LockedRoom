@@ -867,5 +867,20 @@ addSounds('FX', 'fx', [
   ['fx_rumblehit', 'Rumble Hit', { m:'impact', d:1.8, f:48, k:3, lvl:0.4, rev:0.5 }, 'darktechno hardtechno'],
   ['fx_metalsweep', 'Metal Sweep', { m:'down', L:8, f0:6000, f1:300, lvl:0.22 }, 'darktechno techno'],
 ]);
+Object.assign(TRIM, { lead_abyss:2, lead_dread:6.5, lead_tar:-1.5, lead_wraith:3, lead_bend:1, stab_abyss:7.5, stab_tritone:4, stab_cluster:5 });   // к медиане категории (замер)
+// ---------- тёмное техно, пакет 3: мрачная мелодика — «кислая» расстройка, перегруз в нижней середине, металл, медленное «рычание» фильтра,
+// подъезд в ноту сверху, диссонансные аккорды (тритон, полутоновый кластер) ----------
+addSounds('Leads & Arps', 'tone', [
+  ['lead_abyss', 'Abyss Lead', { w:'sawtooth', u:3, dt:28, d:0.4, h:0.12, f:700, q:2, fe:0.45, fd:0.3, k:8, sub:0.35, lvl:0.14, rev:0.3 }, 'darktechno ebm'],
+  ['lead_dread', 'Dread Lead', { w:['sawtooth','square'], u:2, dt:32, d:0.35, h:0.1, f:900, q:3, k:6, ring:0.5, lvl:0.13, rev:0.35 }, 'darktechno hardtechno'],
+  ['lead_tar', 'Tar Lead', { w:'square', u:2, dt:15, d:0.25, h:0.06, f:520, q:6, fe:1.5, fd:0.12, k:12, sub:0.3, lvl:0.16 }, 'darktechno electropunk ebm'],
+  ['lead_wraith', 'Wraith Lead', { w:'sawtooth', u:3, dt:22, a:0.06, h:0.25, d:0.6, f:800, q:1.5, fe:0.4, fd:0.5, vib:3, vr:4, k:4, lvl:0.12, rev:0.55 }, 'darktechno melodic'],
+  ['lead_bend', 'Bend Lead', { w:'sawtooth', u:2, dt:20, d:0.3, h:0.08, f:1000, q:2, gl:2, glt:0.12, k:7, lvl:0.14, rev:0.25 }, 'darktechno electropunk'],
+]);
+addSounds('Chords & Stabs', 'tone', [
+  ['stab_abyss', 'Abyss Chord', { ch:[0,3,7,12], w:'sawtooth', u:3, dt:24, d:0.4, h:0.06, f:650, q:2, fe:0.5, fd:0.25, k:8, lvl:0.14, rev:0.4 }, 'darktechno ebm'],
+  ['stab_tritone', 'Tritone Stab', { ch:[0,6,12], w:'sawtooth', u:2, dt:18, d:0.3, h:0.05, f:900, q:2, k:7, lvl:0.16, rev:0.35 }, 'darktechno hardtechno electropunk'],
+  ['stab_cluster', 'Cluster Stab', { ch:[0,1,7], w:'sawtooth', u:2, dt:14, d:0.35, f:800, q:1.5, k:6, lvl:0.15, rev:0.4 }, 'darktechno ebm'],
+]);
 // библиотека: категории по порядку, внутри — как добавлены
 LIB.sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
