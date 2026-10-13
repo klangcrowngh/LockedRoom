@@ -1633,7 +1633,10 @@ function showSwing(){
   document.querySelectorAll('.swingV').forEach(b => b.textContent = Math.round(swing*100)+'%');
 }
 // телефон: выдвижная панель с эффектами
-function setPadsOpen(on){ if (on && document.body.classList.contains('gen-open')) setGenOpen(false); document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
+function setPadsOpen(on){   // панели взаимоисключающие: FX закрывает GEN и Song
+  if (on && document.body.classList.contains('gen-open')) setGenOpen(false);
+  if (on && document.body.classList.contains('song-open')) setSongOpen(false);
+  document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
 $('padsBtn').onclick = () => setPadsOpen(!document.body.classList.contains('pads-open'));
 $('padsClose').onclick = () => setPadsOpen(false);
 // телефон: вкладки панели звука
