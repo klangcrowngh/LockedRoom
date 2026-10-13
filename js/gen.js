@@ -911,6 +911,7 @@ function genRender(){
     : GEN.tab === 'scenes' ? '✦ Generate scene ' + 'ABCD'[scTarget()] + ' · ' + scVarOf().name.toLowerCase()
     : '✦ Generate ' + PART_NAMES[GEN.part].toLowerCase();
   if (genGenresOpen) $('genGenres').classList.add('open');
+  if (typeof scheduleFit === 'function') scheduleFit();
 }
 let genGenresOpen = false;
 // ============================================================

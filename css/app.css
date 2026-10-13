@@ -289,9 +289,9 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
 @keyframes blink{50%{border-color:var(--acc);color:var(--acc)}}
 @keyframes flick{0%,92%,100%{opacity:1;transform:none}93%{opacity:.4;transform:translateX(3px)}95%{opacity:1;transform:translateX(-2px)}97%{opacity:.7}}
 
-@media (max-width:760px){.knobs{grid-template-columns:repeat(2,1fr);gap:8px 16px}}
+@media all{.knobs{grid-template-columns:repeat(2,1fr);gap:8px 16px}}
 /* ---------- телефон / Telegram ---------- */
-@media (max-width:700px){
+@media all{
   .mo{display:flex !important}
   .dk{display:none !important}
   .mt{display:inline}
@@ -438,7 +438,7 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
   .dhead{display:flex !important}
 }
 /* крупнее для пальца */
-@media (pointer:coarse){
+@media all{
   input[type=range]{height:30px}
   input[type=range]::-webkit-slider-runnable-track{height:3px}
   input[type=range]::-webkit-slider-thumb{width:20px;height:22px;margin-top:-10px}
@@ -504,10 +504,10 @@ input[type=range]::-moz-range-thumb{width:10px;height:14px;background:var(--fg);
 #edBars button:disabled{opacity:.25}
 
 body.song-open #song{background:rgba(5,5,5,.96);border:1px solid var(--line);padding:4px 14px 14px;max-height:62vh;overflow:auto;overscroll-behavior:contain}
-@media (max-width:700px){body.song-open #song{max-height:none;overflow:visible;padding:0 12px 12px}}
+@media all{body.song-open #song{max-height:none;overflow:visible;padding:0 12px 12px}}
 
 /* телефон: все кнопки не меньше ~40px под палец */
-@media (pointer:coarse), (max-width:700px){
+@media all{
   .pact input{height:40px;font-size:14px}
   .pact button{min-height:40px;padding:0 12px}
   .item{padding:6px 14px 6px 8px !important}
@@ -591,7 +591,7 @@ body.panel-open #gen{display:none !important}
 .gmodes span.keep i{color:var(--fg)}
 .gmodes span.off{color:var(--dim)}.gmodes span.off i{color:var(--dim)}
 #genGo{height:56px;flex:0 0 auto;font-size:12px;letter-spacing:.2em;background:var(--acc);color:var(--bg)}
-@media (max-width:700px){
+@media all{
   body.gen-open #gen{padding:0 12px 12px;margin:0 -10px;width:auto;max-width:none;max-height:calc(64vh - var(--sab))}
   body.gen-open #gen .grab{display:block !important}
   body.gen-open .prow.main{border-top:none}
@@ -612,7 +612,7 @@ body.panel-open #gen{display:none !important}
 body.song-open #song{height:var(--sheetH);max-height:none;display:flex;flex-direction:column;overflow:hidden}
 #song .spane{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 body.gen-open #gen{height:var(--sheetH);max-height:none}
-@media (max-width:700px){
+@media all{
   body.gen-open #gen{height:var(--sheetH);max-height:none}
   #panel{height:calc(var(--sheetH) + var(--mainRowH,64px))}   /* строка сцен скрыта, пока открыта панель звука — её место отдаём панели */
   /* эффекты: пэды растягиваются на всю высоту (вместе со строкой сцен — как у остальных панелей) */
@@ -646,7 +646,7 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 
 /* ---------- компактная вёрстка панелей: всё помещается без прокрутки ---------- */
 :root{--sheetH:max(260px,min(62vh,560px,calc(100vh - 250px - var(--actRowH,70px))))}
-@media (max-width:700px){
+@media all{
   /* пока открыта панель Song или GEN — ряд сцен прячется (выбор сцены есть внутри панелей) */
   body.song-open .prow.main .scenes,body.gen-open .prow.main .scenes{display:none !important}
   #panel{height:calc(var(--sheetH) + var(--actRowH,70px))}
@@ -677,7 +677,7 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 #song .shead .st1{flex-direction:column;align-items:flex-start;gap:3px}
 #song .shead .st1 span{font-size:9px}
 /* панель звука: шапка (имя, кнопки, вкладки) стоит на месте — прокручиваются только настройки */
-@media (max-width:700px){
+@media all{
   #panel{overflow:hidden !important;display:none}
   #panel.show{display:flex}
   #panel .head,#panel .ptabs{flex:0 0 auto;position:static}
@@ -685,13 +685,13 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 }
 
 /* панель звука: Solo / Mute / Swap / Reset / Remove — ровная сетка из 5 клавиш */
-@media (max-width:700px){
+@media all{
   #panel .chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}
   #panel .chips button{height:40px;padding:0 2px;font-size:9.5px;letter-spacing:.08em;justify-content:center;white-space:nowrap}
 }
 #gen .gseg button{height:36px}
 /* Song: крупнее блоки шкалы и клавиши редактора (место есть — панель фиксированной высоты) */
-@media (max-width:700px){
+@media all{
   #song .blk .sc{height:68px;font-size:22px}
   #song #blkAdd{min-height:70px}
   #song .blkEd{gap:9px;padding-top:10px}
@@ -718,7 +718,7 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 .xfoot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
 .xfoot .msg{color:var(--dim);font-size:9px;letter-spacing:.06em;text-align:center;text-transform:none}
 #renderBtn.big{height:52px;width:100%;justify-content:center;font-size:12px}
-@media (max-width:700px){
+@media all{
   #song .spane[data-p="arr"],#song .spane[data-p="exp"]{gap:12px}
   #song .blkEd .bseg button,#song .blkEd .acts button{height:50px}
 }
@@ -735,28 +735,47 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 #song .tl .blocks{height:100%;align-items:stretch}
 #song .tl .blk .sc{height:auto !important;flex:1}
 #song #blkAdd{min-height:0 !important}
-/* низкие экраны: панели компактнее, крупные элементы — только если есть место */
-@media (max-height:700px){
-  #gen .gpane{justify-content:flex-start;gap:5px;padding-bottom:4px}
-  #gen .gseg button,#gen .gseg.gpart button,#gen .gstep button,#gen .gbig{height:36px}
-  #gen .gsl input{height:30px}
-  #song .spane[data-p="arr"],#song .spane[data-p="exp"]{gap:7px}
-  #song .spane[data-p="arr"] .smap{display:none}
-  #song .spane[data-p="arr"] .tl{flex:0 0 58px;min-height:58px}
-  #song .blkEd{gap:6px;padding-top:4px}
-  #song .blkEd .bseg button,#song .blkEd .acts button{height:38px}
-  .xsum{padding:8px 12px}.xsum .big{font-size:24px}
-  .fmt.big button{height:46px}
-  #renderBtn.big{height:44px}
-  #song .stabs button{height:34px}
+/* плотность панели подбирается по месту (fitSheets в app.js): '' → tight → tighter, пока всё не влезет без прокрутки */
+#gen[data-fit="tight"] .gpane{gap:5px;padding-bottom:6px}
+#gen[data-fit="tighter"] .gpane{justify-content:flex-start;gap:5px;padding-bottom:4px}
+#gen[data-fit="tight"] .gseg button,#gen[data-fit="tight"] .gseg.gpart button,#gen[data-fit="tight"] .gstep button,#gen[data-fit="tight"] .gbig{height:38px}
+#gen[data-fit="tight"] .gsl input{height:34px}
+#gen[data-fit="tighter"] .gpane{gap:3px}
+#gen[data-fit="tighter"] .shead .gtabs button,#gen[data-fit="tighter"] .shead #varBtn,#gen[data-fit="tighter"] .shead .closeX{height:34px}
+#gen[data-fit="tighter"] .gseg button,#gen[data-fit="tighter"] .gseg.gpart button,#gen[data-fit="tighter"] .gstep button,#gen[data-fit="tighter"] .gbig{height:32px}
+#gen[data-fit="tighter"] .gsl input{height:28px}
+#gen[data-fit="tighter"] #genGo{height:42px}
+#song[data-fit] .spane[data-p="arr"],#song[data-fit] .spane[data-p="exp"]{gap:7px}
+#song[data-fit] .spane[data-p="arr"] .tl{flex:0 0 62px;min-height:62px}
+#song[data-fit] .blkEd{gap:6px;padding-top:4px}
+#song[data-fit] .blkEd .bseg button,#song[data-fit] .blkEd .acts button{height:40px}
+#song[data-fit] .xsum{padding:8px 12px}#song[data-fit] .xsum .big{font-size:26px}
+#song[data-fit] .fmt.big button{height:48px}
+#song[data-fit] #renderBtn.big{height:46px}
+#song[data-fit="tighter"] .smap{display:none}
+#song[data-fit="tighter"] .stabs button{height:34px}
+#song[data-fit="tighter"] .blkEd .bseg button,#song[data-fit="tighter"] .blkEd .acts button{height:36px}
+#song[data-fit="tighter"] .xsum .kv{gap:2px 10px}
+/* ручка ползунка никогда не выше строки — ползунки не наезжают друг на друга */
+body.skin-ko #gen[data-fit] .gsl input[type=range]::-webkit-slider-thumb{width:26px;height:26px;margin-top:-11px}
+body.skin-ko #gen[data-fit] .gsl input[type=range]::-moz-range-thumb{width:26px;height:26px}
+#gen .gsl{min-height:30px}
+/* FX: в режиме пэдов виден ряд сцен — пэды делят оставшееся место, а не держат минимум */
+@media all{
+  body.pads-open .prow.pads{min-height:0}
+  body.pads-open .prow.pads .pad{min-height:40px}
 }
-@media (max-height:700px){
-  #gen .gpane{gap:3px}
-  #gen .shead .gtabs button,#gen .shead #varBtn,#gen .shead .closeX{height:34px}
-  #gen .gseg button,#gen .gseg.gpart button,#gen .gstep button,#gen .gbig{height:32px}
-  #gen .gsl input{height:26px}
-  #genGo{height:42px}
-  #song .spane[data-p="exp"] .smap{display:none}
-  .xsum .kv{gap:2px 10px}
+
+/* ---------- адаптивность: эталон — мобильная версия. На широком экране (планшет, компьютер, Telegram Desktop)
+   приложение — колонка телефонной ширины по центру; fixed-элементы позиционируются внутри неё (transform на body) ---------- */
+@media (min-width:521px){
+  html{background:#bdbcb6}
+  body{max-width:480px;margin:0 auto;position:relative;transform:translateZ(0);box-shadow:0 0 0 1px #a9a8a2,0 30px 90px rgba(0,0,0,.28)}
 }
-@media (max-height:700px){#gen .gsl input{height:24px}}
+@media (min-width:521px) and (min-height:760px){
+  body{border-radius:0}
+}
+/* нижний ряд никогда не переносится: GEN занимает остаток, а не ширину своего текста */
+.prow.main{flex-wrap:wrap}
+.prow.main>#genBtn{flex:1 1 0;min-width:0}
+.prow.main>.tb:not(#genBtn){flex:0 1 54px;min-width:42px}

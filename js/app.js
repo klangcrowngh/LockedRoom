@@ -897,7 +897,7 @@ function openVaryMenu(){
   const r = $('varBtn').getBoundingClientRect();
   m.classList.add('open');
   const w = m.offsetWidth, h = m.offsetHeight;
-  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.left = Math.max(8, Math.min(appW() - w - 8, r.left - appX() + r.width/2 - w/2)) + 'px';
   m.style.top = Math.max(8, r.top - h - 8) + 'px';
   haptic('medium'); updateBack();
 }
@@ -911,7 +911,7 @@ function openAddMenu(){
   m.querySelector('[data-a="back"]').onclick = e => { e.stopPropagation(); openVaryMenu(); };
   m.querySelectorAll('button[data-st]').forEach(b => b.onclick = e => { e.stopPropagation(); closeVaryMenu(); variate(0, false, b.dataset.st); });
   const r = $('varBtn').getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
-  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.left = Math.max(8, Math.min(appW() - w - 8, r.left - appX() + r.width/2 - w/2)) + 'px';
   m.style.top = Math.max(8, r.top - h - 8) + 'px';
   haptic('select');
 }
@@ -925,8 +925,10 @@ const $ = id => document.getElementById(id);
 const cv = $('field'), g = cv.getContext('2d');
 let W, H, DPR, C = {x:0,y:0}, RAD = 300, hover = null, drag = null, gateT = 0;
 
+// колонка приложения: на широком экране body уже окна и сдвинут — координаты считаем от него
+const appX = () => document.body.getBoundingClientRect().left, appW = () => document.body.clientWidth || innerWidth;
 function resize(){
-  DPR = Math.min(IS_MOBILE ? 1.5 : 2, window.devicePixelRatio||1); W = innerWidth; H = innerHeight;
+  DPR = Math.min(IS_MOBILE ? 1.5 : 2, window.devicePixelRatio||1); W = appW(); H = innerHeight;
   cv.width = W*DPR; cv.height = H*DPR;
   const top = $('top').offsetHeight, bot = $('bottom').offsetHeight;
   document.documentElement.style.setProperty('--topH', top+'px'); document.documentElement.style.setProperty('--botH', bot+'px');
@@ -1300,14 +1302,14 @@ function toggle(i, tr){
 cv.addEventListener('pointerdown', e=>{
   if (!ac || performance.now()-gateT < 400) return;
   cv.setPointerCapture(e.pointerId);
-  const x = e.clientX, y = e.clientY;
+  const x = e.clientX - appX(), y = e.clientY;
   if (Math.hypot(x-C.x, y-C.y) < T_R*RAD-22){ setPlaying(!playing); haptic('medium'); return; }
   const h = pick(x,y) || pickLink(x, y, e.pointerType==='touch' ? 14 : 8);
   if (!h){ closePanel(); closeLib(); closeDrawer(); if (document.body.classList.contains('pads-open')) setPadsOpen(false); if (document.body.classList.contains('song-open')) setSongOpen(false); }
   if (h) drag = { ...h, x, y, p:{x,y}, moved:false, target:null };
 });
 cv.addEventListener('pointermove', e=>{
-  const x = e.clientX, y = e.clientY;
+  const x = e.clientX - appX(), y = e.clientY;
   hover = pick(x,y) || (!drag && pickLink(x, y, 8));
   if (hover && hover.type==='l') hover.p = {x,y};
   cv.style.cursor = drag ? 'grabbing' : (hover || Math.hypot(x-C.x,y-C.y) < T_R*RAD-22) ? 'pointer' : 'default';
@@ -1718,7 +1720,7 @@ function renderBlocks(){
   box.innerHTML = '';
   arr.forEach((b, k) => {
     const el = document.createElement('div'); el.className = 'blk'; el.dataset.s = b.s;
-    el.style.width = (IS_MOBILE ? 46 + Math.min(16, b.b)*4 : 58 + Math.min(16, b.b)*5) + 'px';   // ширина ~ длине блока
+    el.style.width = (46 + Math.min(16, b.b)*4) + 'px';   // ширина ~ длине блока
     if (k === selBlk) el.classList.add('sel');
     const nb = b.b * barsPer(), role = sceneTypes[b.s] || '';
     el.innerHTML = '<div class="sc">' + 'ABCD'[b.s] + '<small>' + nb + (nb === 1 ? ' bar' : ' bars') + '</small>' + (role ? '<i>' + (ROLE_NAME[role] || role) + '</i>' : '') + '</div><div class="bar"></div>';
@@ -1733,7 +1735,7 @@ function renderBlocks(){
   const sec = arrTotal()*STEPS*stepDur();
   $('songLen').textContent = arrTotal() * barsPer() + ' bars · ' + fmtTime(sec);
   $('songLoop').classList.toggle('on', songLoop);
-  renderSongMap(sec);
+  renderSongMap(sec); if (typeof scheduleFit === 'function') scheduleFit();
   updateSongProgress();
 }
 // карта песни: все блоки в одну полосу, ширина — по длине; тап — выбрать блок
@@ -1788,7 +1790,7 @@ function updateSongGen(){ if (typeof genRender === 'function' && document.body.c
 // вкладки листа Song на телефоне: Arrange / Export
 function showSongTab(t){
   document.querySelectorAll('#song .stabs button').forEach(x => x.classList.toggle('on', x.dataset.st === t));
-  $('song').dataset.tab = t;
+  $('song').dataset.tab = t; scheduleFit();
 }
 document.querySelectorAll('#song .stabs button').forEach(b => b.onclick = () => { showSongTab(b.dataset.st); haptic('select'); });
 $('song').dataset.tab = 'arr';
@@ -2175,7 +2177,7 @@ function openBpm(){
   pop.classList.add('open'); $('bpm').classList.add('on'); showBpmSlider();
   const w = pop.offsetWidth;
   pop.style.top = (r.bottom + 8) + 'px';
-  pop.style.left = Math.max(10, Math.min(innerWidth - w - 10, r.left + r.width/2 - w/2)) + 'px';
+  pop.style.left = Math.max(10, Math.min(appW() - w - 10, r.left - appX() + r.width/2 - w/2)) + 'px';
   updateBack();
 }
 function closeBpm(){ $('bpmPop').classList.remove('open'); $('bpm').classList.remove('on'); updateBack(); }
@@ -2233,7 +2235,7 @@ function openClearMenu(btn){
   });
   clearAnchor = btn; m.classList.add('open');
   const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
-  m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + 'px';
+  m.style.left = Math.max(8, Math.min(appW() - w - 8, r.left - appX() + r.width/2 - w/2)) + 'px';
   m.style.top = (r.top - h - 8 > 8 ? r.top - h - 8 : r.bottom + 8) + 'px';
   haptic('light'); updateBack();
 }
@@ -2269,7 +2271,25 @@ function haptic(kind){
     else tg.HapticFeedback.impactOccurred(kind);
   } catch (e) {}
 }
+// плотность панелей GEN / Song: самый просторный вариант, при котором содержимое влезает без прокрутки
+function fitSheets(){
+  const song = $('song'), gen = $('gen');
+  const pairs = [[gen, gen && gen.querySelector('.gbody')], [song, song && song.querySelector('.spane[data-p="' + song.dataset.tab + '"]')]];
+  for (const [host, sc] of pairs){
+    if (!host || !sc || !host.offsetParent) continue;
+    host.style.height = '';
+    for (const lv of ['', 'tight', 'tighter']){ if (lv) host.dataset.fit = lv; else delete host.dataset.fit; if (sc.scrollHeight <= sc.clientHeight + 1) break; }
+    // всё ещё не влезает (низкий экран) — панель растёт вверх ровно на недостающее, но не выше шапки
+    const extra = sc.scrollHeight - sc.clientHeight;
+    if (extra > 1){ const top = $('top').getBoundingClientRect().bottom + 8, r = host.getBoundingClientRect(); host.style.height = Math.min(r.height + extra, r.bottom - top) + 'px'; }
+  }
+}
+let fitRaf = 0;
+function scheduleFit(){ cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(() => { fitRaf = requestAnimationFrame(fitSheets); }); }
+addEventListener('resize', scheduleFit);
+if (window.visualViewport) visualViewport.addEventListener('resize', scheduleFit);
 function updateBack(){
+  scheduleFit();
   if (!inTG || !tg.BackButton) return;
   const any = sel || bpmOpen() || document.querySelector('#varyMenu.open, #clearMenu.open') || document.body.classList.contains('pads-open') || document.body.classList.contains('song-open') || document.body.classList.contains('gen-open') || $('lib').classList.contains('open') || $('pre').classList.contains('open');
   any ? tg.BackButton.show() : tg.BackButton.hide();
