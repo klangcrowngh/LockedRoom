@@ -737,7 +737,7 @@ body.gen-open #gen{height:var(--sheetH);max-height:none}
 #song #blkAdd{min-height:0 !important}
 /* плотность панели подбирается по месту (fitSheets в app.js): '' → tight → tighter, пока всё не влезет без прокрутки */
 #gen[data-fit="tight"] .gpane{gap:5px;padding-bottom:6px}
-#gen[data-fit="tighter"] .gpane{justify-content:flex-start;gap:5px;padding-bottom:4px}
+#gen[data-fit="tighter"] .gpane{gap:5px;padding-bottom:4px}
 #gen[data-fit="tight"] .gseg button,#gen[data-fit="tight"] .gseg.gpart button,#gen[data-fit="tight"] .gstep button,#gen[data-fit="tight"] .gbig{height:38px}
 #gen[data-fit="tight"] .gsl input{height:34px}
 #gen[data-fit="tighter"] .gpane{gap:3px}

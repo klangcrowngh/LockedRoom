@@ -1633,10 +1633,16 @@ function showSwing(){
   document.querySelectorAll('.swingV').forEach(b => b.textContent = Math.round(swing*100)+'%');
 }
 // телефон: выдвижная панель с эффектами
+// FX: где кончается фон листа — на том же расстоянии над нижним рядом, что и у Song / GEN
+function fxCut(){
+  const p = $('perform'), b = $('songBtn'); if (!p || !b || !document.body.classList.contains('pads-open')) return;
+  p.style.setProperty('--fxCut', Math.round(p.getBoundingClientRect().bottom - b.getBoundingClientRect().top + 16) + 'px');
+}
+addEventListener('resize', () => requestAnimationFrame(fxCut));
 function setPadsOpen(on){   // панели взаимоисключающие: FX закрывает GEN и Song
   if (on && document.body.classList.contains('gen-open')) setGenOpen(false);
   if (on && document.body.classList.contains('song-open')) setSongOpen(false);
-  document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
+  requestAnimationFrame(fxCut); document.body.classList.toggle('pads-open', on); $('padsBtn').classList.toggle('on', on); resize(); updateBack(); }
 $('padsBtn').onclick = () => setPadsOpen(!document.body.classList.contains('pads-open'));
 $('padsClose').onclick = () => setPadsOpen(false);
 // телефон: вкладки панели звука
@@ -2288,7 +2294,7 @@ function fitSheets(){
   }
 }
 let fitRaf = 0;
-function scheduleFit(){ cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(() => { fitRaf = requestAnimationFrame(fitSheets); }); }
+function scheduleFit(){ clearTimeout(fitRaf); fitRaf = setTimeout(() => { fitSheets(); fxCut(); }, 40); }   // таймер, а не rAF: rAF не срабатывает в фоне
 addEventListener('resize', scheduleFit);
 if (window.visualViewport) visualViewport.addEventListener('resize', scheduleFit);
 function updateBack(){

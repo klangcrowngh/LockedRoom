@@ -200,3 +200,86 @@ body.skin-ko .pbox .pr.cur .t{color:#c4410f}
 body.skin-ko .psec{padding:18px 18px 6px;color:var(--dim)}
 body.skin-ko .pbox .pempty{padding:8px 22px 10px}
 body.skin-ko .gcard .pr.cur .b{background:#c4c3bd}
+
+/* =====================================================================================
+   ДИЗАЙН-СИСТЕМА КЛАВИШ (единые правила поверх всего выше)
+   Типы: светлая клавиша · тёмная клавиша-вариант (выбранная — оранжевая) · акцентная (главное действие)
+         · переключатель с LED · сегментированные вкладки. Один радиус, одна шкала шрифтов, одно «нажатое» состояние.
+   ===================================================================================== */
+body.skin-ko{--r:9px;--rBig:12px;--rSheet:18px;--fLbl:11px;--lsLbl:.1em;--fGlyph:15px;
+  --keyRaise:0 0 0 1px var(--keyEdge),0 2px 0 var(--keyShade),0 3px 6px rgba(0,0,0,.10);
+  --keyPress:0 0 0 1px var(--keyEdge),inset 0 2px 4px rgba(0,0,0,.16);
+  --darkRaise:0 0 0 1px #121212,0 2px 0 #0e0e0e,0 3px 6px rgba(0,0,0,.18);
+  --accRaise:0 0 0 1px #c2420f,0 2px 0 #a8380c,0 3px 8px rgba(240,79,23,.28);
+  --accPress:0 0 0 1px #a8380c,inset 0 2px 5px rgba(0,0,0,.28)}
+/* все клавиши: один радиус и одна типографика подписи */
+body.skin-ko button,body.skin-ko .pad{border-radius:var(--r);font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:var(--fLbl);letter-spacing:var(--lsLbl);text-transform:uppercase}
+body.skin-ko .gseg button,body.skin-ko .bseg button,body.skin-ko .fmt button,body.skin-ko .gvars button,body.skin-ko .seg .scn,body.skin-ko .pad{border-radius:var(--r)}
+/* клавиши-символы (сцены A–D, такты, стрелки): крупный глиф */
+body.skin-ko .seg .scn,body.skin-ko #edScene button,body.skin-ko #edBars button,body.skin-ko #edLeft,body.skin-ko #edRight,body.skin-ko .gseg[data-k="sc.target"] button,body.skin-ko .gseg[data-k="sc.main"] button{font-size:var(--fGlyph);font-weight:700;letter-spacing:0}
+/* светлая клавиша: одинаковый объём везде */
+body.skin-ko button:not(.on):not(.acc):not(.big):not(#genGo):not(#genBtn):not(#titleBtn):not(#bpm){box-shadow:var(--keyRaise)}
+body.skin-ko .gseg button:not(.on),body.skin-ko .bseg button:not(.on),body.skin-ko .fmt button:not(.on),body.skin-ko .seg .scn:not(.on),body.skin-ko .pad:not(.on),body.skin-ko .gvars button:not(.on){box-shadow:var(--darkRaise)}
+body.skin-ko .gseg button.on,body.skin-ko .bseg button.on,body.skin-ko .fmt button.on,body.skin-ko .seg .scn.on,body.skin-ko .gvars button.on{box-shadow:var(--accRaise)}
+body.skin-ko button.acc,body.skin-ko button.big,body.skin-ko #genGo{box-shadow:var(--accRaise)}
+body.skin-ko button:disabled{box-shadow:0 0 0 1px var(--keyEdge) !important;opacity:.45}
+/* плоские элементы без объёма: строки списков, пункты меню, стрелки внутри степпера, заголовки карточек */
+body.skin-ko .gh,body.skin-ko .item .play,body.skin-ko .pr .x,body.skin-ko #varyMenu button,body.skin-ko .popMenu button,body.skin-ko .gstep button,body.skin-ko .sheetHead button{box-shadow:none !important;background:transparent !important}
+body.skin-ko .gh{border-radius:0}
+
+/* ---------- нижний ряд: одна высота и одно «нажатое» состояние у Song / FX / GEN ---------- */
+body.skin-ko .prow.main .tb{height:54px;border-radius:var(--rBig)}
+body.skin-ko .prow.main .tb.on:not(#genBtn){background:linear-gradient(#d9d8d2,#e2e1dc) !important;color:#d9480f !important;box-shadow:var(--keyPress) !important;transform:translateY(1px)}
+body.skin-ko #genBtn{border-radius:var(--rBig);background:linear-gradient(#ff7a3d,#f04f17) !important;color:#fff !important;box-shadow:var(--accRaise) !important}
+body.skin-ko #genBtn.on{background:linear-gradient(#f05a1f,#e2470f) !important;box-shadow:var(--accPress) !important;transform:translateY(1px)}
+
+/* ---------- переключатели (Song mode, Loop, Solo, Mute): светлая клавиша + LED ---------- */
+body.skin-ko .tg:before{display:none}
+body.skin-ko .tg,body.skin-ko button.led{position:relative;padding-right:22px !important}
+body.skin-ko .tg:after,body.skin-ko button.led:after{content:'';position:absolute;top:50%;right:9px;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#a9a8a2;box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+body.skin-ko .tg.on,body.skin-ko button.led.on,body.skin-ko #song .shead .tg.on{background:linear-gradient(var(--key),var(--key2)) !important;color:var(--fg) !important;box-shadow:var(--keyRaise) !important}
+body.skin-ko .tg.on:after,body.skin-ko button.led.on:after{background:#ff5a1f;box-shadow:0 0 0 2px rgba(255,90,31,.22),0 0 8px rgba(255,90,31,.8)}
+
+/* ---------- вкладки: сегментированный переключатель (утопленная дорожка, выбранная — светлая клавиша) ---------- */
+body.skin-ko .stabs,body.skin-ko #pTabs{display:flex;gap:3px;padding:3px;border:none !important;border-radius:calc(var(--r) + 3px);background:#c2c1bb;box-shadow:inset 0 1px 3px rgba(0,0,0,.18)}
+body.skin-ko .stabs button,body.skin-ko #pTabs button{flex:1;border:none !important;margin:0;border-radius:var(--r) !important;background:transparent !important;box-shadow:none !important;color:#5f5e58;height:36px}
+body.skin-ko .stabs button.on,body.skin-ko #pTabs button.on{background:linear-gradient(#f1f0ec,#e4e3de) !important;color:var(--fg) !important;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 1px 3px rgba(0,0,0,.22) !important}
+body.skin-ko #gen .shead .gtabs button{height:36px}
+
+/* ---------- главные действия: одна высота и типографика ---------- */
+body.skin-ko #genGo,body.skin-ko #renderBtn.big{border-radius:var(--rBig);font-size:12px;letter-spacing:.2em}
+
+/* ---------- FX: лист рисуется фоном над нижним рядом (как Song и GEN), ряд не сдвигается ---------- */
+body.skin-ko.pads-open #perform{background:transparent !important;box-shadow:none !important;border-radius:0;padding:0 !important;margin-bottom:0 !important;position:relative;isolation:isolate;
+  height:calc(var(--sheetH) + var(--actRowH,70px)) !important}
+body.skin-ko.pads-open #perform:before{content:'';position:absolute;z-index:-1;left:-10px;right:-10px;top:0;bottom:var(--fxCut,72px);background:var(--panel);border-radius:14px 14px 0 0;box-shadow:0 -1px 0 rgba(255,255,255,.6),0 -6px 18px rgba(0,0,0,.12)}
+body.skin-ko.pads-open #perform>:not(.prow.main):not(.grab){margin-left:2px;margin-right:2px}
+body.skin-ko.pads-open .prow.main .scenes{padding:0 2px}
+body.skin-ko .pad{border-radius:var(--rBig)}
+/* панель звука: режим редактирования шагов — такой же сегментированный переключатель, действия — ровный ряд клавиш */
+body.skin-ko .stepsWrap .row{flex-wrap:wrap;gap:8px}
+body.skin-ko #stTabs{order:1;flex:1 1 100%;display:flex;gap:3px;padding:3px;border:none !important;border-radius:calc(var(--r) + 3px);background:#c2c1bb;box-shadow:inset 0 1px 3px rgba(0,0,0,.18)}
+body.skin-ko #stTabs button{flex:1;height:36px;padding:0 2px;border:none !important;border-radius:var(--r) !important;background:transparent !important;box-shadow:none !important;color:#5f5e58;font-size:10px;letter-spacing:.06em}
+body.skin-ko #stTabs button.on{background:linear-gradient(#f1f0ec,#e4e3de) !important;color:var(--fg) !important;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 1px 3px rgba(0,0,0,.22) !important}
+body.skin-ko #sVary,body.skin-ko #sAll,body.skin-ko #sNone{order:2;flex:1 1 0;height:40px;justify-content:center}
+body.skin-ko #stHint{order:3;flex:1 1 100%;font-size:10px;letter-spacing:.06em}
+body.skin-ko .stepsWrap .row>.dk{display:none}
+/* шаги: метка доли — чуть темнее заливка, без тёмного контура */
+body.skin-ko .st{border-radius:7px;border-color:var(--keyEdge)}
+body.skin-ko .st.beat:not(.on){border-color:var(--keyEdge);background:#dcdbd5}
+body.skin-ko .st.on{border-color:#c2420f}
+
+/* ---------- ритм отступов: 8px между клавишами, 10px между рядами, 6px — минимум даже в самом плотном режиме ---------- */
+body.skin-ko{--gap:8px;--rowGap:10px}
+body.skin-ko .gseg,body.skin-ko .bseg,body.skin-ko .seg,body.skin-ko .fmt,body.skin-ko .chips,body.skin-ko #panel .chips,
+body.skin-ko .blocks,body.skin-ko .prow.pads,body.skin-ko .steps,body.skin-ko #top,body.skin-ko #top .ctrls,
+body.skin-ko #song .shead,body.skin-ko #gen .shead,body.skin-ko .blkEd .acts,body.skin-ko .blkEd .er,body.skin-ko .tl,
+body.skin-ko #gen .grow,body.skin-ko #gen .g3,body.skin-ko .gvars,body.skin-ko .stepsWrap .row,body.skin-ko .pact,body.skin-ko .prow.extra{column-gap:var(--gap) !important}
+body.skin-ko .prow.main{column-gap:var(--gap) !important;row-gap:var(--rowGap) !important}
+body.skin-ko .prow.pads,body.skin-ko .steps,body.skin-ko .gvars{row-gap:var(--gap) !important}
+body.skin-ko .blkEd{row-gap:var(--rowGap) !important}
+body.skin-ko #gen .gpane{row-gap:var(--rowGap)}
+body.skin-ko #gen[data-fit="tight"] .gpane{row-gap:8px}
+body.skin-ko #gen[data-fit="tighter"] .gpane{row-gap:6px}
+body.skin-ko #song .spane[data-p="arr"],body.skin-ko #song .spane[data-p="exp"]{row-gap:12px}
+body.skin-ko #song[data-fit] .spane[data-p="arr"],body.skin-ko #song[data-fit] .spane[data-p="exp"]{row-gap:8px}
