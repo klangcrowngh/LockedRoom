@@ -779,3 +779,8 @@ body.skin-ko #gen[data-fit] .gsl input[type=range]::-moz-range-thumb{width:26px;
 .prow.main{flex-wrap:wrap}
 .prow.main>#genBtn{flex:1 1 0;min-width:0}
 .prow.main>.tb:not(#genBtn){flex:0 1 54px;min-width:42px}
+/* широкий экран: размеры, заданные в vw, считаем от колонки 480px, а не от окна */
+@media (min-width:521px){
+  #gate h1{font-size:33px}
+  body.skin-ko #gateCv{width:min(300px,40vh);height:min(300px,40vh)}
+}
