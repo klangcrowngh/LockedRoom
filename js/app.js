@@ -1384,16 +1384,18 @@ function openPanel(tr){
 // значение меняется только горизонтальным движением и плавно от текущего (без прыжка к пальцу); двойной тап — сброс
 function touchKnob(el, inp, K, set, done, reset){
   let st = null, lastTap = 0;
+  // любой указатель (палец, мышь, перо): сам ползунок «прозрачен» для нажатий, значение меняет только этот жест
   el.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'touch') return;
-    st = { id:e.pointerId, x:e.clientX, y:e.clientY, v:+inp.value, w:inp.getBoundingClientRect().width || 200, drag:false };
+    if (e.button > 0) return;
+    st = { id:e.pointerId, x:e.clientX, y:e.clientY, v:+inp.value, w:inp.getBoundingClientRect().width || 200, drag:false, mouse:e.pointerType === 'mouse' };
+    if (st.mouse) try { el.setPointerCapture(e.pointerId); } catch (_) {}
   });
   el.addEventListener('pointermove', e => {
     if (!st || e.pointerId !== st.id) return;
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.drag){
-      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)){ st = null; return; }   // это прокрутка
-      if (Math.abs(dx) < 8) return;
+      if (!st.mouse && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)){ st = null; return; }   // пальцем вертикально — это прокрутка
+      if (Math.abs(dx) < (st.mouse ? 3 : 8)) return;
       st.drag = true; st.x = e.clientX; el.classList.add('drag'); try { el.setPointerCapture(e.pointerId); } catch (_) {}
       return;
     }
